@@ -1,0 +1,8 @@
+[package]
+name = "proxy"
+version = "0.1.0"
+authors = ["Florin Lipan <florinlipan@gmail.com>"]
+
+[dependencies]
+hyper = "0.7.1"
+url = "0.5"
