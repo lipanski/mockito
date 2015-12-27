@@ -1,18 +1,17 @@
 use hyper::client::IntoUrl;
-use hyper::Url;
+use hyper::Url as HyperUrl;
+use servo_url::ParseError;
 
-use intercepted_url::InterceptedUrl;
+use Url;
 
-use url::ParseError;
-
-impl<'a> IntoUrl for InterceptedUrl<'a> {
+impl<'a> IntoUrl for Url<'a> {
     #[cfg(not(feature = "mock_hyper"))]
-    fn into_url(self) -> Result<Url, ParseError> {
+    fn into_url(self) -> Result<HyperUrl, ParseError> {
         self.0.into_url()
     }
 
     #[cfg(feature = "mock_hyper")]
-    fn into_url(self) -> Result<Url, ParseError> {
+    fn into_url(self) -> Result<HyperUrl, ParseError> {
         Self::proxy_host().into_url()
     }
 }

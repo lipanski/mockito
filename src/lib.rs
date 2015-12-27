@@ -1,23 +1,23 @@
 #[cfg(feature = "mock_hyper")]
 extern crate hyper;
 #[cfg(feature = "mock_hyper")]
-extern crate url;
+extern crate url as servo_url;
 
 pub mod server;
-pub mod intercepted_url;
+pub mod url;
 #[cfg(feature = "mock_hyper")]
 pub mod mock_hyper;
 #[cfg(feature = "mock_tcp_listener")]
 pub mod mock_tcp_listener;
 
-pub type InterceptedUrl<'a> = intercepted_url::InterceptedUrl<'a>;
+pub type Url<'a> = url::Url<'a>;
 
 #[cfg(test)]
 mod tests {
     use hyper::Client;
     use hyper::header::Connection;
     use server;
-    use intercepted_url::InterceptedUrl;
+    use url::Url;
     use std::io::Read;
 
     #[test]
@@ -26,7 +26,7 @@ mod tests {
         server::init();
 
         let client = Client::new();
-        let mut res = client.get(InterceptedUrl("http://www.example.com"))
+        let mut res = client.get(Url("http://www.example.com"))
             .header(Connection::close())
             .send()
             .unwrap();

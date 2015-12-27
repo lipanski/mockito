@@ -1,4 +1,4 @@
-use intercepted_url::InterceptedUrl;
+use Url;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::vec::IntoIter;
@@ -6,7 +6,7 @@ use std::io::Result;
 #[cfg(feature = "mock_tcp_listener")]
 use std::str::FromStr;
 
-impl<'a> ToSocketAddrs for InterceptedUrl<'a> {
+impl<'a> ToSocketAddrs for Url<'a> {
     type Iter = IntoIter<SocketAddr>;
 
     #[cfg(not(feature = "mock_tcp_listener"))]

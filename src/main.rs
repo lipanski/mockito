@@ -5,7 +5,7 @@ use hyper::Client;
 use hyper::header::Connection;
 
 use proxy::server;
-use proxy::intercepted_url::InterceptedUrl;
+use proxy::url::Url;
 
 use std::io::Read;
 
@@ -13,7 +13,7 @@ fn main() {
     server::init();
 
     let client = Client::new();
-    let mut res = client.get(InterceptedUrl("http://www.example.com"))
+    let mut res = client.get(Url("http://www.example.com"))
         .header(Connection::close())
         .send()
         .unwrap();
