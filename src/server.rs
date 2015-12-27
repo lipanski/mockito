@@ -8,7 +8,7 @@ pub static PROXY_PORT: AtomicUsize = ATOMIC_USIZE_INIT;
 pub fn init() {
     thread::spawn(move || {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port() as usize;
+        let port     = listener.local_addr().unwrap().port() as usize;
 
         PROXY_PORT.fetch_add(port, Ordering::Release);
 
