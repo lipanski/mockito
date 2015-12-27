@@ -1,5 +1,5 @@
 [package]
-name = "proxy"
+name = "intercepto"
 version = "0.1.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 

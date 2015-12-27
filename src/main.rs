@@ -1,11 +1,11 @@
 extern crate hyper;
-extern crate proxy;
+extern crate intercepto;
 
 use hyper::Client;
 use hyper::header::Connection;
 
-use proxy::server;
-use proxy::url::Url;
+use intercepto::server;
+use intercepto::url::Url;
 
 use std::io::Read;
 
