@@ -4,9 +4,9 @@ version = "0.1.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 
 [features]
-default = ["mock_hyper", "mock_tcp_stream"]
+default = ["mock_hyper", "mock_tcp_listener"]
 mock_hyper = ["hyper", "url"]
-mock_tcp_stream = []
+mock_tcp_listener = []
 
 [dependencies]
 hyper = { version = "0.7.1", optional = true }

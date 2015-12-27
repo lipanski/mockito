@@ -7,8 +7,8 @@ pub mod server;
 pub mod intercepted_url;
 #[cfg(feature = "mock_hyper")]
 pub mod intercept_hyper;
-#[cfg(feature = "mock_tcp_stream")]
-pub mod intercept_tcp_stream;
+#[cfg(feature = "mock_tcp_listener")]
+pub mod tcp_listener;
 
 pub type InterceptedUrl<'a> = intercepted_url::InterceptedUrl<'a>;
 
