@@ -1,13 +1,16 @@
+#[cfg(feature = "mock_hyper")]
 extern crate hyper;
+#[cfg(feature = "mock_hyper")]
 extern crate url;
 
 pub mod server;
 pub mod intercepted_url;
+#[cfg(feature = "mock_hyper")]
 pub mod intercept_hyper;
+#[cfg(feature = "mock_tcp_stream")]
 pub mod intercept_tcp_stream;
 
 pub type InterceptedUrl<'a> = intercepted_url::InterceptedUrl<'a>;
-
 
 #[cfg(test)]
 mod tests {
@@ -18,6 +21,7 @@ mod tests {
     use std::io::Read;
 
     #[test]
+    #[cfg(feature = "mock_hyper")]
     fn test_proxying() {
         server::init();
 

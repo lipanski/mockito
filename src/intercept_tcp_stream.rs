@@ -3,18 +3,18 @@ use intercepted_url::InterceptedUrl;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::vec::IntoIter;
 use std::io::Result;
-#[cfg(test)]
+#[cfg(feature = "mock_tcp_stream")]
 use std::str::FromStr;
 
 impl<'a> ToSocketAddrs for InterceptedUrl<'a> {
     type Iter = IntoIter<SocketAddr>;
 
-    #[cfg(not(test))]
+    #[cfg(not(feature = "mock_tcp_stream"))]
     fn to_socket_addrs(&self) -> Result<Self::Iter> {
         self.0.to_socket_addrs()
     }
 
-    #[cfg(test)]
+    #[cfg(feature = "mock_tcp_stream")]
     fn to_socket_addrs(&self) -> Result<Self::Iter> {
         let mut res = Vec::new();
 

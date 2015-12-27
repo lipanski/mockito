@@ -3,6 +3,11 @@ name = "proxy"
 version = "0.1.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 
+[features]
+default = ["mock_hyper", "mock_tcp_stream"]
+mock_hyper = ["hyper", "url"]
+mock_tcp_stream = []
+
 [dependencies]
-hyper = "0.7.1"
-url = "0.5"
+hyper = { version = "0.7.1", optional = true }
+url = { version = "0.5", optional = true }
