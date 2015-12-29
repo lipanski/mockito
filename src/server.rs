@@ -5,12 +5,12 @@ use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 pub static PORT: AtomicUsize = ATOMIC_USIZE_INIT;
 
-pub fn init() {
+pub fn start() {
     thread::spawn(move || {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port     = listener.local_addr().unwrap().port() as usize;
 
-        PORT.fetch_add(port, Ordering::Release);
+        PORT.fetch_add(port, Ordering::SeqCst);
 
         for stream in listener.incoming() {
             match stream {
@@ -22,7 +22,11 @@ pub fn init() {
         drop(listener);
     });
 
-    while PORT.load(Ordering::Acquire) == 0 {}
+    while !is_started() {}
+}
+
+pub fn is_started() -> bool {
+    PORT.load(Ordering::SeqCst) != 0
 }
 
 fn handle_client(mut stream: TcpStream) {

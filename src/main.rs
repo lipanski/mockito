@@ -10,7 +10,7 @@ use intercepto::url::Url;
 use std::io::Read;
 
 fn main() {
-    server::init();
+    server::start();
 
     let client = Client::new();
     let mut res = client.get(Url("http://www.example.com"))

@@ -3,6 +3,9 @@ name = "intercepto"
 version = "0.1.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 
+[lib]
+doctest = false
+
 [features]
 default = ["mock_hyper", "mock_tcp_listener"]
 mock_hyper = ["hyper", "url"]

@@ -13,7 +13,7 @@ pub mod mock_tcp_listener;
 pub type Url<'a> = url::Url<'a>;
 
 pub fn start() {
-    server::init();
+    server::start();
 }
 
 #[cfg(test)]
@@ -27,7 +27,7 @@ mod tests {
     #[test]
     #[cfg(feature = "mock_hyper")]
     fn test_proxying() {
-        server::init();
+        server::start();
 
         let client = Client::new();
         let mut res = client.get(Url("http://www.example.com"))
