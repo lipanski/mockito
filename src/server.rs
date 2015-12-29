@@ -22,10 +22,10 @@ pub fn start() {
         drop(listener);
     });
 
-    while !is_started() {}
+    while !is_running() {}
 }
 
-pub fn is_started() -> bool {
+pub fn is_running() -> bool {
     PORT.load(Ordering::SeqCst) != 0
 }
 
