@@ -12,6 +12,10 @@ pub mod mock_tcp_listener;
 
 pub type Url<'a> = url::Url<'a>;
 
+pub fn start() {
+    server::init();
+}
+
 #[cfg(test)]
 mod tests {
     use hyper::Client;
