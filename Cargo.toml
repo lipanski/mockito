@@ -1,5 +1,5 @@
 [package]
-name = "intercepto"
+name = "mockable"
 version = "0.1.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 
@@ -7,9 +7,10 @@ authors = ["Florin Lipan <florinlipan@gmail.com>"]
 doctest = false
 
 [features]
-default = ["mock_hyper", "mock_tcp_listener"]
-mock_hyper = ["hyper", "url"]
-mock_tcp_listener = []
+default = []
+use_hyper = ["hyper", "url"]
+mock_hyper = ["use_hyper"]
+mock_tcp_stream = []
 
 [dependencies]
 hyper = { version = "0.7.1", optional = true }
