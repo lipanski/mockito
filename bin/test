@@ -1,2 +1,6 @@
 #!/bin/bash
-cargo test && cargo test --features use_hyper && cargo test --features mock_hyper && cargo test --features mock_tcp_stream
+
+cargo test \
+  && cargo test --features use_hyper \
+  && cargo test --features mock_hyper \
+  && cargo test --features mock_tcp_stream
