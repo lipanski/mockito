@@ -16,29 +16,27 @@ pub fn start() {
 }
 
 #[cfg(test)]
-mod tests {
-    #[cfg(feature = "mock_hyper")]
-    mod mock_hyper_tests {
-        use hyper::Client;
-        use hyper::header::Connection;
-        use server;
-        use url::Url;
-        use std::io::Read;
+#[cfg(feature = "mock_hyper")]
+mod mock_hyper_tests {
+    use hyper::Client;
+    use hyper::header::Connection;
+    use server;
+    use url::Url;
+    use std::io::Read;
 
-        #[test]
-        fn test_proxying() {
-            server::start();
+    #[test]
+    fn test_proxying() {
+        server::start();
 
-            let client = Client::new();
-            let mut res = client.get(Url("http://www.example.com"))
-                .header(Connection::close())
-                .send()
-                .unwrap();
+        let client = Client::new();
+        let mut res = client.get(Url("http://www.example.com"))
+            .header(Connection::close())
+            .send()
+            .unwrap();
 
-            let mut body = String::new();
-            res.read_to_string(&mut body).unwrap();
+        let mut body = String::new();
+        res.read_to_string(&mut body).unwrap();
 
-            assert_eq!(body, "Hello world");
-        }
+        assert_eq!(body, "Hello world");
     }
 }
