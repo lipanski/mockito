@@ -17,26 +17,33 @@ impl<'a> IntoUrl for Url<'a> {
 }
 
 #[cfg(test)]
+#[cfg(not(feature = "mock_hyper"))]
 mod tests {
-    #[cfg(feature = "mock_hyper")]
-    mod mock_hyper_tests {
-        use hyper::client::IntoUrl;
-        use hyper::Url as HyperUrl;
-        use url::Url;
+    #[test]
+    fn test_something() {
+        assert!(true);
+    }
+}
 
-        #[test]
-        fn test_mocked_url_is_ok() {
-            let url = Url("https://www.example.com");
+#[cfg(test)]
+#[cfg(feature = "mock_hyper")]
+mod mock_hyper_tests {
+    use hyper::client::IntoUrl;
+    use hyper::Url as HyperUrl;
+    use url::Url;
 
-            assert!(url.into_url().is_ok());
-        }
+    #[test]
+    fn test_mocked_url_is_ok() {
+        let url = Url("https://www.example.com");
 
-        #[test]
-        fn test_mocked_url_points_to_localhost() {
-            let url = Url("https://www.example.com");
-            let expected_url = HyperUrl::parse("http://127.0.0.1:0").unwrap();
+        assert!(url.into_url().is_ok());
+    }
 
-            assert_eq!(expected_url, url.into_url().ok().unwrap());
-        }
+    #[test]
+    fn test_mocked_url_points_to_localhost() {
+        let url = Url("https://www.example.com");
+        let expected_url = HyperUrl::parse("http://127.0.0.1:0").unwrap();
+
+        assert_eq!(expected_url, url.into_url().ok().unwrap());
     }
 }
