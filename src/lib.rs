@@ -6,8 +6,8 @@ extern crate url as servo_url;
 pub mod server;
 pub mod url;
 #[cfg(feature = "use_hyper")]
-pub mod mock_hyper;
-pub mod mock_tcp_stream;
+pub mod mockable_hyper;
+pub mod mockable_tcp_stream;
 
 pub type Url<'a> = url::Url<'a>;
 
