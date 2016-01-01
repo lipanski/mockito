@@ -3,6 +3,8 @@ use hyper::Url as HyperUrl;
 use servo_url::ParseError;
 
 use Url;
+#[cfg(feature = "mock_hyper")]
+use server;
 
 impl<'a> IntoUrl for Url<'a> {
     #[cfg(not(feature = "mock_hyper"))]
@@ -12,7 +14,7 @@ impl<'a> IntoUrl for Url<'a> {
 
     #[cfg(feature = "mock_hyper")]
     fn into_url(self) -> Result<HyperUrl, ParseError> {
-        Self::proxy_host_with_protocol().into_url()
+        server::host_with_protocol().into_url()
     }
 }
 
@@ -45,6 +47,7 @@ mod mock_hyper_tests {
     use hyper::client::IntoUrl;
     use hyper::Url as HyperUrl;
     use url::Url;
+    use server;
 
     #[test]
     fn test_mocked_url_from_str_is_ok() {
@@ -56,7 +59,7 @@ mod mock_hyper_tests {
     #[test]
     fn test_mocked_url_from_str_points_to_localhost() {
         let url = Url("https://www.example.com");
-        let expected_url = HyperUrl::parse("http://127.0.0.1:0").unwrap();
+        let expected_url = HyperUrl::parse(&server::host_with_protocol()).unwrap();
 
         assert_eq!(expected_url, url.into_url().ok().unwrap());
     }
