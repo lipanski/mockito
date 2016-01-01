@@ -7,9 +7,12 @@ pub static PORT: AtomicUsize = ATOMIC_USIZE_INIT;
 pub static SERVER_THREAD_SPAWNED: AtomicBool = ATOMIC_BOOL_INIT;
 
 pub fn start() {
+    // Ensures only one server is running.
     if is_server_thread_spawned() { return }
 
     thread::spawn(move || {
+        SERVER_THREAD_SPAWNED.store(true, Ordering::SeqCst);
+
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port     = listener.local_addr().unwrap().port() as usize;
 
@@ -24,8 +27,6 @@ pub fn start() {
 
         drop(listener);
     });
-
-    SERVER_THREAD_SPAWNED.store(true, Ordering::SeqCst);
 
     while !is_running() {}
 }
