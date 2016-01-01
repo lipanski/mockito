@@ -19,9 +19,23 @@ impl<'a> IntoUrl for Url<'a> {
 #[cfg(test)]
 #[cfg(not(feature = "mock_hyper"))]
 mod tests {
+    use hyper::client::IntoUrl;
+    use hyper::Url as HyperUrl;
+    use url::Url;
+
     #[test]
-    fn test_something() {
-        assert!(true);
+    fn test_url_from_str_is_ok() {
+        let url = Url("https://www.exmaple.com");
+
+        assert!(url.into_url().is_ok());
+    }
+
+    #[test]
+    fn test_url_from_str_points_to_original_url() {
+        let url = Url("https://www.example.com");
+        let expected_url = HyperUrl::parse("https://www.example.com").unwrap();
+
+        assert_eq!(expected_url, url.into_url().ok().unwrap());
     }
 }
 
@@ -33,14 +47,14 @@ mod mock_hyper_tests {
     use url::Url;
 
     #[test]
-    fn test_mocked_url_is_ok() {
+    fn test_mocked_url_from_str_is_ok() {
         let url = Url("https://www.example.com");
 
         assert!(url.into_url().is_ok());
     }
 
     #[test]
-    fn test_mocked_url_points_to_localhost() {
+    fn test_mocked_url_from_str_points_to_localhost() {
         let url = Url("https://www.example.com");
         let expected_url = HyperUrl::parse("http://127.0.0.1:0").unwrap();
 

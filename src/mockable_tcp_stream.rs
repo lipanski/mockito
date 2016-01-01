@@ -24,13 +24,25 @@ impl<'a> ToSocketAddrs for Url<'a> {
 #[cfg(not(feature = "mock_tcp_stream"))]
 mod tests {
     use url::Url;
-    use std::net::ToSocketAddrs;
+    use std::net::{ToSocketAddrs, SocketAddr, SocketAddrV4, Ipv4Addr};
+    use std::str::FromStr;
 
     #[test]
     fn test_url_from_str_is_ok() {
-        let url = Url("www.example.com:443");
+        let url = Url("1.2.3.4:5678");
 
         assert!(url.to_socket_addrs().is_ok());
+    }
+
+    #[test]
+    fn test_url_from_str_points_to_original_url() {
+        let url = Url("1.2.3.4:5678");
+
+        let expected_ip = Ipv4Addr::from_str("1.2.3.4").unwrap();
+        let expected_port = 5678;
+        let expected_url = SocketAddr::V4(SocketAddrV4::new(expected_ip, expected_port));
+
+        assert_eq!(expected_url, url.to_socket_addrs().unwrap().last().unwrap());
     }
 }
 
@@ -43,17 +55,17 @@ mod mock_tcp_stream_tests {
 
     #[test]
     fn test_mocked_url_from_str_is_ok() {
-        let url = Url("https://www.example.com");
+        let url = Url("1.2.3.4:5678");
 
         assert!(url.to_socket_addrs().is_ok());
     }
 
     #[test]
     fn test_mocked_url_from_str_points_to_localhost() {
-        let url = Url("https://www.example.com");
+        let url = Url("1.2.3.4:5678");
 
         let expected_ip = Ipv4Addr::from_str("127.0.0.1").unwrap();
-        let expected_port = 0;
+        let expected_port = Url::proxy_port() as u16;
         let expected_url = SocketAddr::V4(SocketAddrV4::new(expected_ip, expected_port));
 
         assert_eq!(expected_url, url.to_socket_addrs().unwrap().last().unwrap());
