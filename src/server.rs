@@ -8,7 +8,7 @@ pub static SERVER_THREAD_SPAWNED: AtomicBool = ATOMIC_BOOL_INIT;
 
 pub fn start() {
     // Ensures only one server is running.
-    if is_server_thread_spawned() { return }
+    if is_server_thread_spawned() { wait_for_listener(); return }
 
     thread::spawn(move || {
         SERVER_THREAD_SPAWNED.store(true, Ordering::SeqCst);
@@ -28,14 +28,15 @@ pub fn start() {
         drop(listener);
     });
 
-    while !is_running() {}
+    // Wait for the server to start listening.
+    wait_for_listener()
 }
 
 pub fn is_server_thread_spawned() -> bool {
     SERVER_THREAD_SPAWNED.load(Ordering::SeqCst)
 }
 
-pub fn is_running() -> bool {
+pub fn is_listening() -> bool {
     port() != 0
 }
 
@@ -51,6 +52,10 @@ pub fn host_with_protocol() -> String {
     format!("http://127.0.0.1:{}", port())
 }
 
+fn wait_for_listener() {
+    while !is_listening() {}
+}
+
 fn handle_client(mut stream: TcpStream) {
     let response = "HTTP/1.1 200 OK\n\nHello world";
 
@@ -60,13 +65,24 @@ fn handle_client(mut stream: TcpStream) {
 #[cfg(test)]
 mod tests {
     use server;
+    use std::net::TcpStream;
 
     #[test]
     fn test_start_server() {
         server::start();
 
         assert!(server::is_server_thread_spawned());
-        assert!(server::is_running());
+        assert!(server::is_listening());
         assert!(server::port() != 0);
+    }
+
+    #[test]
+    fn test_started_server_is_listening() {
+        server::start();
+
+        let host = server::host();
+        let stream = TcpStream::connect(&*host);
+
+        assert!(stream.is_ok());
     }
 }
