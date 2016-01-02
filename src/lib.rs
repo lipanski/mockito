@@ -2,6 +2,7 @@
 extern crate hyper;
 #[cfg(feature = "use_hyper")]
 extern crate url as servo_url;
+extern crate combine;
 
 pub mod server;
 pub mod url;
@@ -9,10 +10,18 @@ pub mod url;
 pub mod mockable_hyper;
 pub mod mockable_tcp_stream;
 
+pub mod mock_builder;
+
 pub type Url<'a> = url::Url<'a>;
+pub type MockServer = server::MockServer;
+pub type MockBuilder = mock_builder::MockBuilder;
 
 pub fn start() {
-    server::start();
+    MockServer::new(vec!());
+}
+
+pub fn mock(request_line: &str) -> MockBuilder {
+    MockBuilder::new(request_line)
 }
 
 #[cfg(test)]
@@ -26,7 +35,7 @@ mod mock_hyper_tests {
 
     #[test]
     fn test_proxying() {
-        server::start();
+        super::start();
 
         let client = Client::new();
         let mut res = client.get(Url("http://www.example.com"))
@@ -38,5 +47,19 @@ mod mock_hyper_tests {
         res.read_to_string(&mut body).unwrap();
 
         assert_eq!(body, "Hello world");
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "mock_tcp_stream")]
+mod mock_tcp_stream_tests {
+    use MockBuilder;
+    use super::mock;
+
+    #[test]
+    fn test_mock() {
+        let mock = mock("GET /");
+
+        assert_eq!("GET /", mock.request_line);
     }
 }

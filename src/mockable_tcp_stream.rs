@@ -1,6 +1,6 @@
 use Url;
 #[cfg(feature = "mock_tcp_stream")]
-use server;
+use server::MockServer;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::vec::IntoIter;
@@ -16,7 +16,7 @@ impl<'a> ToSocketAddrs for Url<'a> {
 
     #[cfg(feature = "mock_tcp_stream")]
     fn to_socket_addrs(&self) -> Result<Self::Iter> {
-        let host = &server::host();
+        let host = &MockServer::host();
 
         host.to_socket_addrs()
     }
@@ -52,7 +52,7 @@ mod tests {
 #[cfg(feature = "mock_tcp_stream")]
 mod mock_tcp_stream_tests {
     use url::Url;
-    use server;
+    use server::MockServer;
     use std::net::{ToSocketAddrs, SocketAddr, SocketAddrV4, Ipv4Addr};
     use std::str::FromStr;
 
@@ -68,7 +68,7 @@ mod mock_tcp_stream_tests {
         let url = Url("1.2.3.4:5678");
 
         let expected_ip = Ipv4Addr::from_str("127.0.0.1").unwrap();
-        let expected_port = server::port() as u16;
+        let expected_port = MockServer::port() as u16;
         let expected_url = SocketAddr::V4(SocketAddrV4::new(expected_ip, expected_port));
 
         assert_eq!(expected_url, url.to_socket_addrs().unwrap().last().unwrap());
