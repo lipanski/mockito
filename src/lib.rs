@@ -2,7 +2,6 @@
 extern crate hyper;
 #[cfg(feature = "use_hyper")]
 extern crate url as servo_url;
-extern crate combine;
 
 pub mod server;
 pub mod url;
