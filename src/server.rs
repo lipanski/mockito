@@ -32,7 +32,28 @@ impl Mock {
     }
 
     pub fn matches(&self, request: &Request) -> bool {
-        request.method == self.method && request.path == self.path
+        self.method_matches(request)
+            && self.path_matches(request)
+            && self.headers_match(request)
+    }
+
+    fn method_matches(&self, request: &Request) -> bool {
+        request.method == self.method
+    }
+
+    fn path_matches(&self, request: &Request) -> bool {
+        request.path == self.path
+    }
+
+    fn headers_match(&self, request: &Request) -> bool {
+        for (field, value) in self.headers.iter() {
+            match request.headers.get(field) {
+                Some(request_value) if request_value == value => continue,
+                _ => return false
+            }
+        }
+
+        true
     }
 }
 
@@ -145,7 +166,7 @@ fn handle_mock(stream: &mut TcpStream, request: &Request, mocks: &mut Vec<Mock>)
             stream.write_all(mock.response.as_bytes()).unwrap_or(());
             return
         },
-        None => { stream.write_all(b"HTTP/1.1 404 Not Found\n\n").unwrap_or(()); }
+        None => { stream.write_all(b"HTTP/1.1 501 Not Implemented\n\n").unwrap_or(()); }
     }
 }
 
@@ -180,6 +201,8 @@ fn parse(stream: &mut TcpStream) -> Option<Request> {
             Err(_) => return None
         }
     }
+
+    // TODO: Ignore body if request is internal
 
     // Parse body
     let default_content_length = "0".to_string();
