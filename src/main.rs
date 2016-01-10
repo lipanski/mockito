@@ -1,6 +1,6 @@
-extern crate mockable;
-use mockable::server;
-use mockable::mock;
+extern crate mockito;
+
+use mockito::{server, mock};
 
 fn main() {
     server::start(Some(1234));

@@ -1,5 +1,5 @@
 [package]
-name = "mockable"
+name = "mockito"
 version = "0.1.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 
