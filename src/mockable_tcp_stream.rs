@@ -1,6 +1,6 @@
 use Url;
 #[cfg(feature = "mock_tcp_stream")]
-use server::MockServer;
+use server;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::vec::IntoIter;
@@ -16,7 +16,7 @@ impl<'a> ToSocketAddrs for Url<'a> {
 
     #[cfg(feature = "mock_tcp_stream")]
     fn to_socket_addrs(&self) -> Result<Self::Iter> {
-        let host = &MockServer::host();
+        let host = server::host();
 
         host.to_socket_addrs()
     }

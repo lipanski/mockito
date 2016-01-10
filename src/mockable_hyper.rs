@@ -4,7 +4,7 @@ use servo_url::ParseError;
 
 use Url;
 #[cfg(feature = "mock_hyper")]
-use server::MockServer;
+use server;
 
 impl<'a> IntoUrl for Url<'a> {
     #[cfg(not(feature = "mock_hyper"))]
@@ -14,7 +14,7 @@ impl<'a> IntoUrl for Url<'a> {
 
     #[cfg(feature = "mock_hyper")]
     fn into_url(self) -> Result<HyperUrl, ParseError> {
-        MockServer::host_with_protocol().into_url()
+        server::host_with_protocol().into_url()
     }
 }
 
