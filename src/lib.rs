@@ -18,6 +18,10 @@ pub fn mock(method: &str, path: &str) -> Mock {
     Mock::new(method, path)
 }
 
+pub fn reset() {
+    client::reset();
+}
+
 #[cfg(test)]
 #[cfg(feature = "mock_hyper")]
 mod mock_hyper_tests {
