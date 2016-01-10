@@ -4,23 +4,18 @@ extern crate hyper;
 extern crate url as servo_url;
 
 pub mod server;
+pub mod client;
+pub mod mock;
 pub mod url;
 #[cfg(feature = "use_hyper")]
 pub mod mockable_hyper;
 pub mod mockable_tcp_stream;
 
-pub mod mock_builder;
-
 pub type Url<'a> = url::Url<'a>;
-pub type MockServer = server::MockServer;
-pub type MockBuilder = mock_builder::MockBuilder;
+pub type Mock = mock::Mock;
 
-pub fn start() {
-    MockServer::new(vec!());
-}
-
-pub fn mock(request_line: &str) -> MockBuilder {
-    MockBuilder::new(request_line)
+pub fn mock(method: &str, path: &str) -> Mock {
+    Mock::new(method, path)
 }
 
 #[cfg(test)]
