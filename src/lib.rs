@@ -15,6 +15,8 @@ pub type Url<'a> = url::Url<'a>;
 pub type Mock = mock::Mock;
 
 pub fn mock(method: &str, path: &str) -> Mock {
+    server::listen();
+
     Mock::new(method, path)
 }
 

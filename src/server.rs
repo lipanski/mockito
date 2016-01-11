@@ -25,10 +25,8 @@ impl Request {
     }
 }
 
-pub fn instance() {
-    if is_listening() { return };
-
-    start(None)
+pub fn listen() {
+    if !is_listening() { start(None) };
 }
 
 pub fn start(port: Option<u16>) {
@@ -50,6 +48,8 @@ pub fn start(port: Option<u16>) {
 
         drop(listener);
     });
+
+    while !is_listening() {}
 }
 
 pub fn new(mock: String) {
