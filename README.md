@@ -1,4 +1,4 @@
-## Mockito
+# Mockito
 
 **This is a work in progress.**
 
@@ -6,10 +6,11 @@ Mocking web requests in Rust!
 
 Works with [Hyper](http://hyper.rs/) and [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html).
 
-### Introduction
+## Introduction
 
 Mockito is a web server you can use to test HTTP requests in Rust without actually hitting the remote server.
-It intercepts URLs wrapped within `mockito::url::Url` and responds with a preconfigured message.
+It intercepts URLs wrapped within `mockito::url::Url` and responds with a preconfigured message. Currently, it can
+only handle `&'str` URLs.
 
 Mockito will match on the HTTP method and path:
 
@@ -29,9 +30,9 @@ Mockito comes with three **feature flags**, all of them disabled by default:
 - `mock_hyper` enable this if your crate uses hyper and you'd like Mockito to intercept and mock requests
 - `mock_tcp_stream`: enable this if you'd like Mockito to intercept and mock requests from a `TcpStream`
 
-### Mocking Hyper requests
+## Mocking Hyper requests
 
-Include mockito in your `Cargo.toml`:
+Include Mockito in your `Cargo.toml`:
 
 ```rust
 [dependencies.mockito]
@@ -74,18 +75,18 @@ mod test {
   fn test_with_mockito() {
     mockito::mock("GET", "/greet").respond_with("hello");
 
-    assert_eq("hello", greet());
+    assert_eq("hello".to_string(), greet());
 
     mockito::reset();
   }
 }
 ```
 
-### Mocking requests from a file
+## Mocking requests from a file
 
 Mockito can respond to a request with the contents of a file.
 
-Given `tests/files/response.http`:
+Given the file `tests/files/response.http`:
 
 ```
 HTTP/1.1 200 OK
@@ -93,15 +94,13 @@ HTTP/1.1 200 OK
 hello
 ```
 
-You can intercept a request to `GET /greet` by calling:
+You can intercept a request to `GET /greet` with its contents by calling:
 
 ```rust
 mockito::mock("GET", "/greet").respond_with_file("tests/files/response.http")
 ```
 
-### Matching headers
-
-Matching headers is simple:
+## Matching headers
 
 ```rust
 mockito::mock("GET", "/greet")
@@ -110,7 +109,7 @@ mockito::mock("GET", "/greet")
   .respond_with("hello")
 ```
 
-### Removing registered matchers
+## Removing registered matchers
 
 Every call to `respond_with` or `respond_with_file` will register a matcher on the Mockito server.
 
@@ -122,14 +121,14 @@ You can do this by calling:
 mockito::reset()
 ```
 
-As Rust tests share some context, you might want to run this at the beginning/end of every test.
+As Rust tests share some context, you might want to run this at the beginning/end of every test method.
 
-### Enable Mockito only for some of your tests
+## Enable Mockito only for some of your tests
 
-You might want to run some tests against Mockito, while others against the remote server - in order to validate
+You might want to run some tests against the Mockito server and others against the remote server - in order to validate
 your implementation against a live system from time to time.
 
-In order to do this, you'll need to remove the `dev-dependencies.mockito` entry from your `Cargo.toml` and
+To achieve this, you'll need to remove the `dev-dependencies.mockito` entry from your `Cargo.toml` and
 map the `mock_hyper` feature to an internal feature flag:
 
 ```
@@ -184,7 +183,7 @@ All your other tests can be run by calling the default:
 cargo test
 ```
 
-### Drawbacks
+## Drawbacks
 
 Mockito doesn't interpret the host inside your URLs. This means that `http://www.example.com/greet` and
 `http://www.something.com/greet` will be handled the same way.
