@@ -82,6 +82,10 @@ mod test {
 }
 ```
 
+## Non-matched requests
+
+If a request doesn't match any of the registered mocks, the Mockito server will respond with `501 Not Implemented`.
+
 ## Mocking requests from a file
 
 Mockito can respond to a request with the contents of a file.
