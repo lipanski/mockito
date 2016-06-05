@@ -6,15 +6,5 @@ license = "MIT"
 repository = "https://github.com/lipanski/mockito"
 description = "Easy web-mocking for Rust. This is a work in progress!"
 
-[lib]
-doctest = false
-
-[features]
-default = []
-use_hyper = ["hyper", "url"]
-mock_hyper = ["use_hyper"]
-mock_tcp_stream = []
-
 [dependencies]
-hyper = { version = "0.7.1", optional = true }
-url = { version = "0.5", optional = true }
+hyper = "0.9.6"

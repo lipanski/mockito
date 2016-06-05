@@ -1,176 +1,133 @@
-use Mock;
+use std::thread::{self, sleep};
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
+use std::io::Read;
+use std::net::TcpStream;
+use std::time::Duration;
+use hyper::server::{Handler, Server, Request, Response};
+use hyper::header::ContentLength;
+use hyper::method::{Method};
+use {Mock, SERVER_ADDRESS};
 
-use std::net::{TcpStream, TcpListener};
-use std::io::{Write, Read, BufReader, BufRead};
-use std::thread;
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering, ATOMIC_USIZE_INIT, ATOMIC_BOOL_INIT};
-use std::iter::Iterator;
-use std::collections::HashMap;
+static SERVER_STARTED: AtomicBool = ATOMIC_BOOL_INIT;
 
-pub static PORT: AtomicUsize = ATOMIC_USIZE_INIT;
-pub static SERVER_THREAD_SPAWNED: AtomicBool = ATOMIC_BOOL_INIT;
-pub static REQUEST_SERVER_STOP: AtomicBool = ATOMIC_BOOL_INIT;
-pub static STOP_REQUEST: &'static [u8] = b"STOP";
-
-pub struct Request {
-    pub method: String,
-    pub path: String,
-    pub headers: HashMap<String, String>,
-    pub body: String
+#[derive(Debug)]
+enum CreateMockError {
+    MethodMissing,
+    PathMissing,
+    ContentLengthMissing,
 }
 
-impl Request {
-    pub fn is_internal(&self) -> bool {
-        self.path == "/mockito"
+struct RequestHandler {
+    mocks: Arc<Mutex<Vec<Mock>>>,
+}
+
+impl RequestHandler {
+    pub fn new(mocks: Arc<Mutex<Vec<Mock>>>) -> Self {
+        RequestHandler {
+            mocks: mocks,
+        }
     }
-}
 
-pub fn listen() {
-    if !is_listening() { start(None) };
-}
+    #[allow(unused_variables)]
+    fn handle_list_mocks(&self, request: Request, response: Response) {
+        let mocks = self.mocks.lock().unwrap();
+        // TODO: implement Display for Mock
+    }
 
-pub fn start(port: Option<u16>) {
-    let requested_port = port.unwrap_or(0);
-    let listener = TcpListener::bind(&*format!("127.0.0.1:{}", requested_port)).unwrap();
-    let assigned_port = listener.local_addr().unwrap().port();
+    #[allow(unused_variables)]
+    fn handle_create_mock(&self, request: Request, response: Response) {
+        match Self::mock_from(request) {
+            Ok(mock) => {
+                self.mocks.lock().unwrap().push(mock);
+                response.send(b"HTTP/1.1 201 OK\n\n").unwrap();
+            },
+            Err(e) => {
+                // TODO: implement Display for CreateMockError
+                response.send(b"HTTP/1.1 422 Unprocessable Entity\n\n").unwrap();
+            }
+        }
+    }
 
-    set_port(assigned_port);
+    #[allow(unused_variables)]
+    fn handle_delete_mocks(&self, request: Request, response: Response) {
+        self.mocks.lock().unwrap().clear();
 
-    thread::spawn(move || {
-        let mut mocks: Vec<Mock> = Vec::new();
+        response.send(b"HTTP/1.1 200 OK\n\n").unwrap();
+    }
 
-        for stream in listener.incoming() {
-            match stream {
-                Ok(stream) => handle_request(stream, &mut mocks),
-                Err(e)     => println!("Error: {}", e)
+    fn handle_default(&self, request: Request, response: Response) {
+        let mocks = self.mocks.lock().unwrap();
+
+        match mocks.iter().rev().find(|mock| mock.matches(&request)).and_then(|mock| mock.response()) {
+            Some(value) => { response.send(value.as_bytes()).unwrap(); },
+            None => { response.send(b"HTTP/1.1 501 Not Implemented\n\n").unwrap(); },
+        };
+    }
+
+    fn mock_from(request: Request) -> Result<Mock, CreateMockError> {
+        let method: String = try!(
+            request.headers.iter()
+                .find(|header| { header.name().to_lowercase() == "x-mock-method" })
+                .ok_or(CreateMockError::MethodMissing)
+            ).value_string();
+
+        let path: String = try!(
+            request.headers.iter()
+                .find(|header| { header.name().to_lowercase() == "x-mock-path" })
+                .ok_or(CreateMockError::PathMissing)
+            ).value_string();
+
+        let mut mock = Mock::new(&method, &path);
+
+        for header in request.headers.iter() {
+            let field = header.name().to_lowercase();
+            if field.starts_with("x-mock-") && field != "x-mock-method" && field != "x-mock-path" {
+                mock.header(&field.replace("x-mock-", ""), &header.value_string());
             }
         }
 
-        drop(listener);
+        let content_length: ContentLength = *try!(request.headers.get().ok_or(CreateMockError::ContentLengthMissing));
+
+        let mut body = String::new();
+        request.take(content_length.0).read_to_string(&mut body).unwrap();
+
+        mock.set_response(body);
+
+        Ok(mock)
+    }
+}
+
+impl Handler for RequestHandler {
+    fn handle(&self, request: Request, response: Response) {
+        match (&request.method, &*request.uri.to_string()) {
+            (&Method::Get, "/mocks") => self.handle_list_mocks(request, response),
+            (&Method::Post, "/mocks") => self.handle_create_mock(request, response),
+            (&Method::Delete, "/mocks") => self.handle_delete_mocks(request, response),
+            _ => self.handle_default(request, response),
+        };
+    }
+}
+
+pub fn try_start() {
+    if SERVER_STARTED.load(Ordering::SeqCst) { return }
+
+    SERVER_STARTED.store(true, Ordering::SeqCst);
+
+    start()
+}
+
+fn start() {
+    let mocks: Arc<Mutex<Vec<Mock>>> = Arc::new(Mutex::new(vec!()));
+
+    thread::spawn(move || {
+        Server::http(SERVER_ADDRESS).unwrap().handle(RequestHandler::new(mocks)).unwrap();
     });
 
     while !is_listening() {}
 }
 
-pub fn new(mock: String) {
-    let mut stream = TcpStream::connect(&*host()).unwrap();
-
-    stream.write_all(b"POST /mockito HTTP/1.1\n\n").unwrap_or(());
-    stream.write_all(mock.as_bytes()).unwrap_or(());
-}
-
-pub fn reset() {
-    let mut stream = TcpStream::connect(&*host()).unwrap();
-
-    stream.write_all(b"DELETE /mockito HTTP/1.1\n\n").unwrap_or(());
-}
-
-pub fn is_listening() -> bool {
-    TcpStream::connect(&*host()).is_ok()
-}
-
-pub fn port() -> u16 {
-    PORT.load(Ordering::SeqCst) as u16
-}
-
-fn set_port(port: u16) {
-    PORT.store(port as usize, Ordering::SeqCst);
-}
-
-pub fn host() -> String {
-    format!("127.0.0.1:{}", port())
-}
-
-pub fn host_with_protocol() -> String {
-    format!("http://127.0.0.1:{}", port())
-}
-
-fn handle_request(mut stream: TcpStream, mocks: &mut Vec<Mock>) {
-    match parse(&mut stream) {
-        Some(ref request) if request.is_internal() => handle_command(&mut stream, request, mocks),
-        Some(ref request) => handle_mock(&mut stream, request, mocks),
-        None => { stream.write_all(b"HTTP/1.1 400 Bad Request\n\n").unwrap_or(()); }
-    }
-}
-
-fn handle_command(stream: &mut TcpStream, request: &Request, mocks: &mut Vec<Mock>) {
-    match (&*request.method, &*request.path) {
-        ("POST", "/mockito") => {
-            match Mock::from(&request) {
-                Some(mock) => {
-                    mocks.insert(0, mock); // Last insert should match first
-                    stream.write_all(b"HTTP/1.1 200 OK\n\n").unwrap_or(());
-                },
-                _ => {
-                    stream.write_all(b"HTTP/1.1 422 Unprocessable Entity\n\nX-Mock-Method and/or X-Mock-Path headers missing.").unwrap_or(());
-
-                }
-            }
-        },
-        ("DELETE", "/mockito") => {
-            mocks.clear();
-            stream.write_all(b"HTTP/1.1 200 OK\n\n").unwrap_or(());
-        },
-        _ => { stream.write_all(b"HTTP/1.1 404 Not Found\n\n").unwrap_or(()); }
-    }
-}
-
-fn handle_mock(stream: &mut TcpStream, request: &Request, mocks: &mut Vec<Mock>) {
-    match mocks.iter().find(|mock| mock.matches(request)) {
-        Some(mock) => {
-            stream.write_all(mock.response().as_bytes()).unwrap_or(());
-            return
-        },
-        None => { stream.write_all(b"HTTP/1.1 501 Not Implemented\n\n").unwrap_or(()); }
-    }
-}
-
-fn parse(stream: &mut TcpStream) -> Option<Request> {
-    let mut reader = BufReader::new(stream);
-
-    let mut request_line = String::new();
-    if reader.read_line(&mut request_line).is_err() { return None }
-
-    // Parse request line
-    let (method, path) = match request_line.split_whitespace().collect::<Vec<&str>>() {
-        ref elements if elements.len() == 2 || elements.len() == 3 => (elements[0], elements[1]),
-        _ => return None
-    };
-
-    // Parse headers
-    let mut headers = HashMap::new();
-    loop {
-        let mut header_line = String::new();
-        match reader.read_line(&mut header_line) {
-            Ok(_) if header_line.trim().len() > 0 => {
-                let parts: Vec<&str> = header_line.splitn(2, ":").collect();
-
-                if parts.len() != 2 { return None }
-
-                let field = parts[0].trim().to_lowercase().to_string();
-                let value = parts[1].trim().to_string();
-
-                headers.insert(field, value);
-            },
-            Ok(_) => break,
-            Err(_) => return None
-        }
-    }
-
-    // TODO: Ignore body if request is internal
-
-    // Parse body
-    let default_content_length = "0".to_string();
-    let content_length = headers.get("content-length").unwrap_or(&default_content_length).clone();
-    let length = content_length.parse::<u64>().unwrap_or(0);
-
-    let mut body = String::new();
-    reader.take(length).read_to_string(&mut body).unwrap_or(0);
-
-    Some(Request {
-        method: method.to_string(),
-        path: path.to_string(),
-        headers: headers,
-        body: body
-    })
+fn is_listening() -> bool {
+    sleep(Duration::from_millis(10));
+    TcpStream::connect(SERVER_ADDRESS).is_ok()
 }
