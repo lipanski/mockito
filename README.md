@@ -35,5 +35,5 @@ cargo test
 Generate docs:
 
 ```
-cargo doc --no-deps
+rustdoc -o docs -L target/debug -L target/debug/deps --crate-name mockito src/lib.rs
 ```

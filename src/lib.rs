@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo.png", html_root_url = "http://lipanski.github.io/mockito/docs/mockito/index.html")]
 
 //!
 //! Hello world
