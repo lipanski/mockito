@@ -5,44 +5,36 @@ use std::io::{Read, Take, Write};
 use mockito::{SERVER_ADDRESS, mock};
 
 #[test]
-fn test_respond_with_starts_the_server() {
-    mock("GET", "/").respond_with("hello");
+fn test_create_starts_the_server() {
+    mock("GET", "/").with_body("hello").create();
 
     let stream = TcpStream::connect(SERVER_ADDRESS);
     assert!(stream.is_ok());
 }
 
 #[test]
-fn test_respond_with_sets_the_correct_response() {
+fn test_with_body_sets_the_correct_response() {
     let mut mock = mock("GET", "/");
-    mock.respond_with("hello");
+    mock.with_body("hello");
 
-    assert!(mock.response().is_some());
-    assert_eq!("hello", mock.response().unwrap());
+    assert!(mock.response_body().is_some());
+    assert_eq!("hello", mock.response_body().unwrap());
 }
 
 #[test]
-fn test_respond_with_file_starts_the_server() {
-    mock("GET", "/").respond_with_file("tests/files/simple.http");
-
-    let stream = TcpStream::connect(SERVER_ADDRESS);
-    assert!(stream.is_ok());
-}
-
-#[test]
-fn test_respond_with_file_sets_the_correct_response() {
+fn test_with_body_from_file_sets_the_correct_response() {
     let mut mock = mock("GET", "/");
-    mock.respond_with_file("tests/files/simple.http");
+    mock.with_body_from_file("tests/files/simple.http");
 
-    assert!(mock.response().is_some());
-    assert_eq!("HTTP/1.1 200 OK\n\n", mock.response().unwrap());
+    assert!(mock.response_body().is_some());
+    assert_eq!("HTTP/1.1 200 OK\n\n", mock.response_body().unwrap());
 }
 
 
 #[test]
 fn test_one_mock() {
     let mocked_response = "HTTP/1.1 200 OK\ncontent-length: 5\n\nhello";
-    mock("GET", "/hello").respond_with(mocked_response);
+    mock("GET", "/hello").with_header("hello", "world").with_body(mocked_response).create();
 
     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
     stream.write_all(b"GET /hello HTTP/1.1\n\n");

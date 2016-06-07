@@ -6,6 +6,7 @@
 //!
 
 extern crate hyper;
+extern crate rustc_serialize;
 
 mod server;
 
@@ -14,7 +15,9 @@ use std::fs::File;
 use std::io::Read;
 use hyper::client::Client;
 use hyper::server::Request;
-use hyper::header::{Headers, ContentLength};
+use hyper::header::{Headers, ContentLength, ContentType, Connection};
+use rustc_serialize::json;
+use rustc_serialize::{Decodable, Encodable};
 
 ///
 /// Points to the address the mock server is running at.
@@ -72,7 +75,7 @@ pub struct Mock {
     method: String,
     path: String,
     headers: HashMap<String, String>,
-    response: Option<String>,
+    response: Response,
 }
 
 impl Mock {
@@ -81,7 +84,7 @@ impl Mock {
             method: method.to_owned().to_uppercase(),
             path: path.to_owned(),
             headers: HashMap::new(),
-            response: None,
+            response: Response::new(),
         }
     }
 
@@ -108,8 +111,20 @@ impl Mock {
     ///   .header("authorization", "password");
     /// ```
     ///
-    pub fn header(&mut self, field: &str, value: &str) -> &mut Self {
+    pub fn match_header(&mut self, field: &str, value: &str) -> &mut Self {
         self.headers.insert(field.to_owned(), value.to_owned());
+
+        self
+    }
+
+    pub fn with_status(&mut self, status: usize) -> &mut Self {
+        self.response.status = status;
+
+        self
+    }
+
+    pub fn with_header(&mut self, field: &str, value: &str) -> &mut Self {
+        self.response.headers.insert(field.to_owned(), value.to_owned());
 
         self
     }
@@ -125,9 +140,8 @@ impl Mock {
     /// mock("GET", "/").respond_with("HTTP/1.1 200 OK\n\n");
     /// ```
     ///
-    pub fn respond_with(&mut self, response: &str) -> &mut Self {
-        self.response = Some(response.to_owned());
-        self.create();
+    pub fn with_body(&mut self, body: &str) -> &mut Self {
+        self.response.body = body.to_owned();
 
         self
     }
@@ -145,26 +159,33 @@ impl Mock {
     /// mock("GET", "/").respond_with_file("tests/files/simple.http");
     /// ```
     ///
-    pub fn respond_with_file(&mut self, path: &str) -> &mut Self {
+    pub fn with_body_from_file(&mut self, path: &str) -> &mut Self {
         let mut file = File::open(path).unwrap();
-        let mut response = String::new();
+        let mut body = String::new();
 
-        file.read_to_string(&mut response).unwrap();
+        file.read_to_string(&mut body).unwrap();
 
-        self.response = Some(response);
-        self.create();
+        self.response.body = body;
 
         self
     }
 
     #[allow(missing_docs)]
-    pub fn set_response(&mut self, response: String) {
-        self.response = Some(response);
+    pub fn set_response_body(&mut self, body: String) {
+        self.response.body = body;
+    }
+
+    pub fn response_status(&self) -> usize {
+        self.response.status
+    }
+
+    pub fn response_headers(&self) -> &HashMap<String, String> {
+        &self.response.headers
     }
 
     #[allow(missing_docs)]
-    pub fn response(&self) -> Option<&String> {
-        self.response.as_ref()
+    pub fn response_body(&self) -> Option<&String> {
+        Some(&self.response.body)
     }
 
     #[allow(missing_docs)]
@@ -199,14 +220,10 @@ impl Mock {
         true
     }
 
-    fn create(&self) {
+    pub fn create(&self) {
         server::try_start();
 
-        let client = Client::new();
-
-        let request = client.post(&[SERVER_URL, "/mocks"].join(""));
         let mut headers = Headers::new();
-
         headers.set_raw("x-mock-method", vec!(self.method.as_bytes().to_vec()));
         headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
 
@@ -214,13 +231,35 @@ impl Mock {
             headers.set_raw("x-mock-".to_string() + field, vec!(value.as_bytes().to_vec()));
         }
 
-        let body = self.response().unwrap();
-        headers.set(ContentLength(body.len() as u64));
+        let body = json::encode(&self.response).unwrap();
+        // headers.set(ContentLength(body.len() as u64));
 
-        request
+        Client::new()
+            .post(&[SERVER_URL, "/mocks"].join(""))
             .headers(headers)
-            .body(body)
+            .header(ContentType::json())
+            .header(Connection::close())
+            .body(&body)
             .send()
             .unwrap();
+    }
+}
+
+const DEFAULT_RESPONSE_STATUS: usize = 200;
+
+#[derive(RustcDecodable, RustcEncodable, Debug, PartialEq)]
+struct Response {
+    status: usize,
+    headers: HashMap<String, String>,
+    body: String,
+}
+
+impl Response {
+    pub fn new() -> Self {
+        Response {
+            status: DEFAULT_RESPONSE_STATUS,
+            headers: HashMap::new(),
+            body: String::new(),
+        }
     }
 }

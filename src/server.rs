@@ -55,7 +55,7 @@ impl RequestHandler {
     fn handle_default(&self, request: Request, response: Response) {
         let mocks = self.mocks.lock().unwrap();
 
-        match mocks.iter().rev().find(|mock| mock.matches(&request)).and_then(|mock| mock.response()) {
+        match mocks.iter().rev().find(|mock| mock.matches(&request)).and_then(|mock| mock.response_body()) {
             Some(value) => { response.send(value.as_bytes()).unwrap(); },
             None => { response.send(b"HTTP/1.1 501 Not Implemented\n\n").unwrap(); },
         };
@@ -79,7 +79,7 @@ impl RequestHandler {
         for header in request.headers.iter() {
             let field = header.name().to_lowercase();
             if field.starts_with("x-mock-") && field != "x-mock-method" && field != "x-mock-path" {
-                mock.header(&field.replace("x-mock-", ""), &header.value_string());
+                mock.match_header(&field.replace("x-mock-", ""), &header.value_string());
             }
         }
 
@@ -88,7 +88,7 @@ impl RequestHandler {
         let mut body = String::new();
         request.take(content_length.0).read_to_string(&mut body).unwrap();
 
-        mock.set_response(body);
+        mock.set_response_body(body);
 
         Ok(mock)
     }

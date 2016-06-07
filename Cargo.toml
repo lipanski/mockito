@@ -8,6 +8,7 @@ description = "Easy web-mocking for Rust. This is a work in progress!"
 
 [dependencies]
 hyper = "0.9.6"
+rustc-serialize = "0.3.19"
 
 [lib]
 doctest = false
