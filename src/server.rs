@@ -128,6 +128,5 @@ fn start() {
 }
 
 fn is_listening() -> bool {
-    sleep(Duration::from_millis(10));
     TcpStream::connect(SERVER_ADDRESS).is_ok()
 }

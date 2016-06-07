@@ -44,8 +44,6 @@ pub const SERVER_URL: &'static str = "http://0.0.0.0:1234";
 /// on the returned value.
 ///
 pub fn mock(method: &str, path: &str) -> Mock {
-    server::try_start();
-
     Mock::new(method, path)
 }
 
@@ -57,6 +55,8 @@ pub fn mock(method: &str, path: &str) -> Mock {
 /// will always try to match the last recorded mock so you might not need this method at all.
 ///
 pub fn reset() {
+    server::try_start();
+
     Client::new()
         .delete(&[SERVER_URL, "/mocks"].join(""))
         .send()
@@ -200,6 +200,8 @@ impl Mock {
     }
 
     fn create(&self) {
+        server::try_start();
+
         let client = Client::new();
 
         let request = client.post(&[SERVER_URL, "/mocks"].join(""));
