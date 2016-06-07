@@ -33,14 +33,13 @@ fn test_with_body_from_file_sets_the_correct_response() {
 
 #[test]
 fn test_one_mock() {
-    let mocked_response = "HTTP/1.1 200 OK\ncontent-length: 5\n\nhello";
-    mock("GET", "/hello").with_header("hello", "world").with_body(mocked_response).create();
+    mock("GET", "/hello").with_body("hello").create();
 
     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
     stream.write_all(b"GET /hello HTTP/1.1\n\n");
 
     let mut actual_response = String::new();
-    stream.take(mocked_response.len() as u64).read_to_string(&mut actual_response);
+    stream.take(5).read_to_string(&mut actual_response);
 
-    assert_eq!(mocked_response, actual_response);
+    assert_eq!("hello", actual_response);
 }

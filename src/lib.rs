@@ -15,9 +15,9 @@ use std::fs::File;
 use std::io::Read;
 use hyper::client::Client;
 use hyper::server::Request;
-use hyper::header::{Headers, ContentLength, ContentType, Connection};
+use hyper::header::{Headers, ContentType, Connection};
 use rustc_serialize::json;
-use rustc_serialize::{Decodable, Encodable};
+use rustc_serialize::{Encodable};
 
 ///
 /// Points to the address the mock server is running at.
@@ -75,7 +75,7 @@ pub struct Mock {
     method: String,
     path: String,
     headers: HashMap<String, String>,
-    response: Response,
+    response: MockResponse,
 }
 
 impl Mock {
@@ -84,7 +84,7 @@ impl Mock {
             method: method.to_owned().to_uppercase(),
             path: path.to_owned(),
             headers: HashMap::new(),
-            response: Response::new(),
+            response: MockResponse::new(),
         }
     }
 
@@ -248,15 +248,15 @@ impl Mock {
 const DEFAULT_RESPONSE_STATUS: usize = 200;
 
 #[derive(RustcDecodable, RustcEncodable, Debug, PartialEq)]
-struct Response {
+struct MockResponse {
     status: usize,
     headers: HashMap<String, String>,
     body: String,
 }
 
-impl Response {
+impl MockResponse {
     pub fn new() -> Self {
-        Response {
+        MockResponse {
             status: DEFAULT_RESPONSE_STATUS,
             headers: HashMap::new(),
             body: String::new(),

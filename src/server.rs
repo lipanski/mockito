@@ -1,17 +1,21 @@
 use std::thread::{self};
 use std::sync::{Arc, Mutex};
-use std::io::{Read, Write};
+use std::io::Read;
 use std::net::TcpStream;
+use std::mem;
 use hyper::server::{Handler, Server, Request, Response};
 use hyper::header::ContentLength;
 use hyper::method::{Method};
-use {Mock, SERVER_ADDRESS};
+use hyper::status::StatusCode;
+use rustc_serialize::json;
+use {Mock, MockResponse, SERVER_ADDRESS};
 
 #[derive(Debug)]
 enum CreateMockError {
     MethodMissing,
     PathMissing,
     ContentLengthMissing,
+    InvalidMockResponse,
 }
 
 struct RequestHandler {
@@ -52,11 +56,23 @@ impl RequestHandler {
         response.send(b"HTTP/1.1 200 OK\n\n").unwrap();
     }
 
-    fn handle_default(&self, request: Request, response: Response) {
+    fn handle_default(&self, request: Request, mut response: Response) {
         let mocks = self.mocks.lock().unwrap();
 
-        match mocks.iter().rev().find(|mock| mock.matches(&request)).and_then(|mock| mock.response_body()) {
-            Some(value) => { response.send(value.as_bytes()).unwrap(); },
+        match mocks.iter().rev().find(|mock| mock.matches(&request)) {
+            Some(mock) => {
+                // Set the response status code
+                // TODO: StatusCode::Unregistered labels everything as `<unknown status code>`
+                mem::replace(response.status_mut(), StatusCode::Unregistered(mock.response.status as u16));
+
+                // Set the response headers
+                for (field, value) in &mock.response.headers {
+                    response.headers_mut().set_raw(field.to_owned(), vec!(value.as_bytes().to_vec()));
+                }
+
+                // Set the response body
+                response.send(mock.response.body.as_bytes()).unwrap();
+            },
             None => { response.send(b"HTTP/1.1 501 Not Implemented\n\n").unwrap(); },
         };
     }
@@ -88,7 +104,8 @@ impl RequestHandler {
         let mut body = String::new();
         request.take(content_length.0).read_to_string(&mut body).unwrap();
 
-        mock.set_response_body(body);
+        let response: MockResponse = try!(json::decode(&body).map_err(|_| CreateMockError::InvalidMockResponse));
+        mock.response = response;
 
         Ok(mock)
     }
