@@ -142,7 +142,7 @@ impl Mock {
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").respond_with_file("tests/files/simple.txt");
+    /// mock("GET", "/").respond_with_file("tests/files/simple.http");
     /// ```
     ///
     pub fn respond_with_file(&mut self, path: &str) -> &mut Self {

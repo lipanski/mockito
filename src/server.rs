@@ -1,15 +1,11 @@
-use std::thread::{self, sleep};
+use std::thread::{self};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering, ATOMIC_BOOL_INIT};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::time::Duration;
 use hyper::server::{Handler, Server, Request, Response};
 use hyper::header::ContentLength;
 use hyper::method::{Method};
 use {Mock, SERVER_ADDRESS};
-
-static SERVER_STARTED: AtomicBool = ATOMIC_BOOL_INIT;
 
 #[derive(Debug)]
 enum CreateMockError {
@@ -110,9 +106,7 @@ impl Handler for RequestHandler {
 }
 
 pub fn try_start() {
-    if SERVER_STARTED.load(Ordering::SeqCst) { return }
-
-    SERVER_STARTED.store(true, Ordering::SeqCst);
+    if is_listening() { return }
 
     start()
 }
@@ -121,7 +115,10 @@ fn start() {
     let mocks: Arc<Mutex<Vec<Mock>>> = Arc::new(Mutex::new(vec!()));
 
     thread::spawn(move || {
-        Server::http(SERVER_ADDRESS).unwrap().handle(RequestHandler::new(mocks)).unwrap();
+        match Server::http(SERVER_ADDRESS) {
+            Ok(server) => { server.handle(RequestHandler::new(mocks)).unwrap(); },
+            Err(_) => {},
+        };
     });
 
     while !is_listening() {}

@@ -8,3 +8,6 @@ description = "Easy web-mocking for Rust. This is a work in progress!"
 
 [dependencies]
 hyper = "0.9.6"
+
+[lib]
+doctest = false
