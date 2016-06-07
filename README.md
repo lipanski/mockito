@@ -1,4 +1,4 @@
-![Mockito](http://lipanski.github.io/mockito/logo-medium.png)
+![Mockito](http://lipanski.github.io/mockito/logo.png)
 
 Mocking web requests in Rust!
 
