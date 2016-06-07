@@ -1,6 +1,4 @@
-# Mockito
-
-**This is a work in progress.**
+![Mockito](http://lipanski.github.io/mockito/logo-medium.png)
 
 Mocking web requests in Rust!
 
