@@ -1,5 +1,6 @@
 #![warn(missing_docs)]
-#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo.png", html_root_url = "http://lipanski.github.io/mockito/docs/mockito/index.html")]
+#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo.png",
+    html_root_url = "http://lipanski.github.io/mockito/docs/mockito/index.html")]
 
 //!
 //! Hello world
@@ -31,7 +32,9 @@ pub const SERVER_ADDRESS: &'static str = "0.0.0.0:1234";
 pub const SERVER_URL: &'static str = "http://0.0.0.0:1234";
 
 ///
-/// Creates a mock for the provided `method` and `path`.
+/// Initializes a mock for the provided `method` and `path`.
+///
+/// The mock is registered to the server only after the `create()` method has been called.
 ///
 /// # Example
 ///
@@ -43,19 +46,12 @@ pub const SERVER_URL: &'static str = "http://0.0.0.0:1234";
 /// mock("DELETE", "/users?id=1");
 /// ```
 ///
-/// The mock is sent to the server only after `respond_with()` or `respond_with_file()` are called
-/// on the returned value.
-///
 pub fn mock(method: &str, path: &str) -> Mock {
     Mock::new(method, path)
 }
 
 ///
 /// Removes all the mocks stored on the server.
-///
-/// Because Rust tests run within the same process, the mock server won't be restarted with every
-/// new test call. This method allows clearing mocks between tests. However, do note that `mockito`
-/// will always try to match the last recorded mock so you might not need this method at all.
 ///
 pub fn reset() {
     server::try_start();
@@ -67,8 +63,7 @@ pub fn reset() {
 }
 
 ///
-/// Stores information about a mocked request.
-/// Should be initialized via `mockito::mock()`.
+/// Stores information about a mocked request. Should be initialized via `mockito::mock()`.
 ///
 #[derive(PartialEq, Debug)]
 pub struct Mock {
@@ -89,14 +84,16 @@ impl Mock {
     }
 
     ///
-    /// Allows mocking a particular header based on `field` (the header field name) and `value`.
+    /// Allows matching a particular request header when responding with a mock.
+    ///
+    /// When matching a request, the field letter case is ignored.
     ///
     /// # Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").header("content-type", "application/json");
+    /// mock("GET", "/").match_header("content-type", "application/json");
     /// ```
     ///
     /// Like most other `Mock` methods, it allows chanining:
@@ -107,8 +104,8 @@ impl Mock {
     /// use mockito::mock;
     ///
     /// mock("GET", "/")
-    ///   .header("content-type", "application/json")
-    ///   .header("authorization", "password");
+    ///   .match_header("content-type", "application/json")
+    ///   .match_header("authorization", "password");
     /// ```
     ///
     pub fn match_header(&mut self, field: &str, value: &str) -> &mut Self {
@@ -117,12 +114,34 @@ impl Mock {
         self
     }
 
+    ///
+    /// Sets the status code of the mock response. The default status code is 200.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// mock("GET", "/").with_status(201);
+    /// ```
+    ///
     pub fn with_status(&mut self, status: usize) -> &mut Self {
         self.response.status = status;
 
         self
     }
 
+    ///
+    /// Sets a header of the mock response.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// mock("GET", "/").with_header("content-type", "application/json");
+    /// ```
+    ///
     pub fn with_header(&mut self, field: &str, value: &str) -> &mut Self {
         self.response.headers.insert(field.to_owned(), value.to_owned());
 
@@ -130,14 +149,14 @@ impl Mock {
     }
 
     ///
-    /// Sets the response returned by the mock server to the value of `response`. This value should be valid HTTP.
+    /// Sets the body of the mock response. Its `Content-Length` is handled automatically.
     ///
     /// # Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").respond_with("HTTP/1.1 200 OK\n\n");
+    /// mock("GET", "/").with_body("hello world");
     /// ```
     ///
     pub fn with_body(&mut self, body: &str) -> &mut Self {
@@ -147,16 +166,15 @@ impl Mock {
     }
 
     ///
-    /// Sets the response returned by the mock server to the contents of the file stored under `path`.
-    ///
-    /// The contents of this file should be valid HTTP.
+    /// Sets the body of the mock response from the contents of a file stored under `path`.
+    /// Its `Content-Length` is handled automatically.
     ///
     /// # Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").respond_with_file("tests/files/simple.http");
+    /// mock("GET", "/").with_body_from_file("tests/files/simple.http");
     /// ```
     ///
     pub fn with_body_from_file(&mut self, path: &str) -> &mut Self {
@@ -170,22 +188,39 @@ impl Mock {
         self
     }
 
-    #[allow(missing_docs)]
-    pub fn set_response_body(&mut self, body: String) {
-        self.response.body = body;
-    }
+    ///
+    /// Registers the mock to the server - your mock will be served only after calling this method.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// mock("GET", "/").with_body("hello world").create();
+    /// ```
+    ///
+    pub fn create(&self) {
+        server::try_start();
 
-    pub fn response_status(&self) -> usize {
-        self.response.status
-    }
+        let mut headers = Headers::new();
+        headers.set_raw("x-mock-method", vec!(self.method.as_bytes().to_vec()));
+        headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
 
-    pub fn response_headers(&self) -> &HashMap<String, String> {
-        &self.response.headers
-    }
+        for (field, value) in &self.headers {
+            headers.set_raw("x-mock-".to_string() + field, vec!(value.as_bytes().to_vec()));
+        }
 
-    #[allow(missing_docs)]
-    pub fn response_body(&self) -> Option<&String> {
-        Some(&self.response.body)
+        let body = json::encode(&self.response).unwrap();
+        // headers.set(ContentLength(body.len() as u64));
+
+        Client::new()
+            .post(&[SERVER_URL, "/mocks"].join(""))
+            .headers(headers)
+            .header(ContentType::json())
+            .header(Connection::close())
+            .body(&body)
+            .send()
+            .unwrap();
     }
 
     #[allow(missing_docs)]
@@ -218,30 +253,6 @@ impl Mock {
         }
 
         true
-    }
-
-    pub fn create(&self) {
-        server::try_start();
-
-        let mut headers = Headers::new();
-        headers.set_raw("x-mock-method", vec!(self.method.as_bytes().to_vec()));
-        headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
-
-        for (field, value) in &self.headers {
-            headers.set_raw("x-mock-".to_string() + field, vec!(value.as_bytes().to_vec()));
-        }
-
-        let body = json::encode(&self.response).unwrap();
-        // headers.set(ContentLength(body.len() as u64));
-
-        Client::new()
-            .post(&[SERVER_URL, "/mocks"].join(""))
-            .headers(headers)
-            .header(ContentType::json())
-            .header(Connection::close())
-            .body(&body)
-            .send()
-            .unwrap();
     }
 }
 

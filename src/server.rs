@@ -36,15 +36,14 @@ impl RequestHandler {
     }
 
     #[allow(unused_variables)]
-    fn handle_create_mock(&self, request: Request, response: Response) {
+    fn handle_create_mock(&self, request: Request, mut response: Response) {
         match Self::mock_from(request) {
             Ok(mock) => {
                 self.mocks.lock().unwrap().push(mock);
-                response.send(b"HTTP/1.1 201 OK\n\n").unwrap();
             },
             Err(e) => {
                 // TODO: implement Display for CreateMockError
-                response.send(b"HTTP/1.1 422 Unprocessable Entity\n\n").unwrap();
+                mem::replace(response.status_mut(), StatusCode::UnprocessableEntity);
             }
         }
     }
@@ -52,8 +51,6 @@ impl RequestHandler {
     #[allow(unused_variables)]
     fn handle_delete_mocks(&self, request: Request, response: Response) {
         self.mocks.lock().unwrap().clear();
-
-        response.send(b"HTTP/1.1 200 OK\n\n").unwrap();
     }
 
     fn handle_default(&self, request: Request, mut response: Response) {
@@ -73,7 +70,7 @@ impl RequestHandler {
                 // Set the response body
                 response.send(mock.response.body.as_bytes()).unwrap();
             },
-            None => { response.send(b"HTTP/1.1 501 Not Implemented\n\n").unwrap(); },
+            None => { mem::replace(response.status_mut(), StatusCode::NotImplemented); },
         };
     }
 
