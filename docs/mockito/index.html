@@ -47,8 +47,108 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/mockito/src/lib.rs.html#1-276' title='goto source code'>[src]</a></span></h1>
-<div class='docblock'><p>Hello world</p>
+               </span><a id='src-0' class='srclink' href='../src/mockito/src/lib.rs.html#1-444' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
+It runs an HTTP server on your local port 1234 and can register and remove mocks.
+The server is run on a separate thread within the same process and will be cleaned up
+at the end of the run.</p>
+
+<h1 id='getting-started' class='section-header'><a href='#getting-started'>Getting Started</a></h1>
+<p>Using compiler flags, set the URL of your web client to <code>mockito::SERVER_URL</code> or <code>mockito::SERVER_ADDRESS</code>.</p>
+
+<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>SERVER_URL</span>;
+
+<span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>not</span>(<span class='ident'>test</span>))]</span>
+<span class='kw'>const</span> <span class='ident'>URL</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> <span class='ident'>str</span> <span class='op'>=</span> <span class='string'>&quot;https://api.twitter.com&quot;</span>;
+
+<span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
+<span class='kw'>const</span> <span class='ident'>URL</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> <span class='ident'>str</span> <span class='op'>=</span> <span class='ident'>mockito</span>::<span class='ident'>SERVER_URL</span>;</pre>
+
+<p>Then start mocking:</p>
+
+<h1 id='example-1' class='section-header'><a href='#example-1'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
+<span class='kw'>mod</span> <span class='ident'>tests</span> {
+  <span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+
+  <span class='attribute'>#[<span class='ident'>test</span>]</span>
+  <span class='kw'>fn</span> <span class='ident'>test_something</span>() {
+    <span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
+      .<span class='ident'>with_status</span>(<span class='number'>201</span>)
+      .<span class='ident'>with_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;text/plain&quot;</span>)
+      .<span class='ident'>with_body</span>(<span class='string'>&quot;world&quot;</span>)
+      .<span class='ident'>create</span>();
+
+    <span class='comment'>// Any calls to GET /hello beyond this line will respond with 201, the</span>
+    <span class='comment'>// `content-type: text/plain` header and the body &quot;world&quot;.</span>
+  }
+}</pre>
+
+<p>Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.</p>
+
+<h1 id='example-2' class='section-header'><a href='#example-2'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+
+<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
+  .<span class='ident'>match_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;application/json&quot;</span>)
+  .<span class='ident'>with_body</span>(<span class='string'>&quot;{&#39;hello&#39;: &#39;world&#39;}&quot;</span>)
+  .<span class='ident'>create</span>();
+
+<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
+  .<span class='ident'>match_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;text/plain&quot;</span>)
+  .<span class='ident'>with_body</span>(<span class='string'>&quot;world&quot;</span>)
+  .<span class='ident'>create</span>();
+
+<span class='comment'>// JSON requests to GET /hello will respond with JSON, while plain requests</span>
+<span class='comment'>// will respond with text.</span></pre>
+
+<p>Even though <strong>mocks are matched in reverse order</strong> (most recent one wins), in some situations
+it might be useful to clean up right after the test. There are multiple ways of doing this:</p>
+
+<ul>
+<li>By using a closure:</li>
+</ul>
+
+<h1 id='example-3' class='section-header'><a href='#example-3'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+
+<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
+  .<span class='ident'>with_body</span>(<span class='string'>&quot;world&quot;</span>)
+  .<span class='ident'>create_for</span>(<span class='op'>||</span> {
+    <span class='comment'>// mock only valid for the lifetime of this closure</span>
+    <span class='comment'>// NOTE: it might still be accessible by separate threads</span>
+  });</pre>
+
+<ul>
+<li>By calling <code>remove()</code> on the mock:</li>
+</ul>
+
+<h1 id='example-4' class='section-header'><a href='#example-4'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+
+<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>mock</span> <span class='op'>=</span> <span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>);
+<span class='ident'>mock</span>.<span class='ident'>with_body</span>(<span class='string'>&quot;world&quot;</span>).<span class='ident'>create</span>();
+
+<span class='comment'>// do your thing</span>
+
+<span class='ident'>mock</span>.<span class='ident'>remove</span>();</pre>
+
+<ul>
+<li>By calling <code>reset()</code> to <strong>remove all mocks</strong>:</li>
+</ul>
+
+<h1 id='example-5' class='section-header'><a href='#example-5'>Example</a></h1>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>reset</span>;
+
+<span class='ident'>reset</span>();</pre>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>

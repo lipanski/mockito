@@ -44,9 +44,9 @@ fn test_create_starts_the_server() {
 #[test]
 fn test_simple_route_mock() {
     let mocked_body = "world";
-    mock("GET", "/hello2").with_body(mocked_body).create();
+    mock("GET", "/hello").with_body(mocked_body).create();
 
-    let stream = request("GET /hello2", "");
+    let stream = request("GET /hello", "");
     let (status_line, _, body) = parse_stream(stream, mocked_body.len());
 
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status_line);
@@ -69,17 +69,17 @@ fn test_two_route_mocks() {
     assert_eq!("bbb", body_b);
 }
 
-#[test]
-fn test_header_matching_mock_fails_against_different_header_value() {
-    reset();
+// #[test]
+// fn test_header_matching_mock_fails_against_different_header_value() {
+//     reset();
 
-    mock("GET", "/hello")
-        .match_header("content-type", "application/json")
-        .with_body("world")
-        .create();
+//     mock("GET", "/hello")
+//         .match_header("content-type", "application/json")
+//         .with_body("world")
+//         .create();
 
-    let stream = request("GET /hello", "content-type: text/html\n");
-    let (status, _, _) = parse_stream(stream, 0);
+//     let stream = request("GET /hello", "content-type: text/html\n");
+//     let (status, _, _) = parse_stream(stream, 0);
 
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
-}
+//     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+// }

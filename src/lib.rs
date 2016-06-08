@@ -3,7 +3,114 @@
     html_root_url = "http://lipanski.github.io/mockito/docs/mockito/index.html")]
 
 //!
-//! Hello world
+//! Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
+//! It runs an HTTP server on your local port 1234 and can register and remove mocks.
+//! The server is run on a separate thread within the same process and will be cleaned up
+//! at the end of the run.
+//!
+//! # Getting Started
+//!
+//! Using compiler flags, set the URL of your web client to `mockito::SERVER_URL` or `mockito::SERVER_ADDRESS`.
+//!
+//! # Example
+//!
+//! ```
+//! #[cfg(test)]
+//! use mockito::SERVER_URL;
+//!
+//! #[cfg(not(test))]
+//! const URL: &'static str = "https://api.twitter.com";
+//!
+//! #[cfg(test)]
+//! const URL: &'static str = mockito::SERVER_URL;
+//! ```
+//!
+//! Then start mocking:
+//!
+//! # Example
+//!
+//! ```
+//! #[cfg(test)]
+//! mod tests {
+//!   use mockito::mock;
+//!
+//!   #[test]
+//!   fn test_something() {
+//!     mock("GET", "/hello")
+//!       .with_status(201)
+//!       .with_header("content-type", "text/plain")
+//!       .with_body("world")
+//!       .create();
+//!
+//!     // Any calls to GET /hello beyond this line will respond with 201, the
+//!     // `content-type: text/plain` header and the body "world".
+//!   }
+//! }
+//! ```
+//!
+//! Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.
+//!
+//! # Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! mock("GET", "/hello")
+//!   .match_header("content-type", "application/json")
+//!   .with_body("{'hello': 'world'}")
+//!   .create();
+//!
+//! mock("GET", "/hello")
+//!   .match_header("content-type", "text/plain")
+//!   .with_body("world")
+//!   .create();
+//!
+//! // JSON requests to GET /hello will respond with JSON, while plain requests
+//! // will respond with text.
+//! ```
+//!
+//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations
+//! it might be useful to clean up right after the test. There are multiple ways of doing this:
+//!
+//! - By using a closure:
+//!
+//! # Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! mock("GET", "/hello")
+//!   .with_body("world")
+//!   .create_for(|| {
+//!     // mock only valid for the lifetime of this closure
+//!     // NOTE: it might still be accessible by separate threads
+//!   });
+//! ```
+//!
+//! - By calling `remove()` on the mock:
+//!
+//! # Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! let mut mock = mock("GET", "/hello");
+//! mock.with_body("world").create();
+//!
+//! // do your thing
+//!
+//! mock.remove();
+//! ```
+//!
+//! - By calling `reset()` to **remove all mocks**:
+//!
+//! # Example
+//!
+//! ```
+//! use mockito::reset;
+//!
+//! reset();
+//! ```
 //!
 
 extern crate hyper;
@@ -230,6 +337,8 @@ impl Mock {
 
     ///
     /// Registers the mock to the server, executes the passed closure and removes the mock afterwards.
+    ///
+    /// **NOTE:** During the closure lifetime, the mock might still be available to seperate threads.
     ///
     /// # Example
     ///
