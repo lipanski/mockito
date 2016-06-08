@@ -68,18 +68,3 @@ fn test_two_route_mocks() {
 
     assert_eq!("bbb", body_b);
 }
-
-// #[test]
-// fn test_header_matching_mock_fails_against_different_header_value() {
-//     reset();
-
-//     mock("GET", "/hello")
-//         .match_header("content-type", "application/json")
-//         .with_body("world")
-//         .create();
-
-//     let stream = request("GET /hello", "content-type: text/html\n");
-//     let (status, _, _) = parse_stream(stream, 0);
-
-//     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
-// }
