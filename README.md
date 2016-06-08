@@ -2,8 +2,7 @@
 
 HTTP mocking for Rust!
 
-Documentation available at [[http://lipanski.github.io/mockito/]].
-```
+Documentation available [here](http://lipanski.github.io/mockito/).
 
 ## Development
 
