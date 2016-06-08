@@ -175,25 +175,35 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
 </pre><pre class='rust '>
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>::{<span class='self'>self</span>, <span class='ident'>sleep</span>};
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>::{<span class='self'>self</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::{<span class='ident'>Arc</span>, <span class='ident'>Mutex</span>};
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>atomic</span>::{<span class='ident'>AtomicBool</span>, <span class='ident'>Ordering</span>, <span class='ident'>ATOMIC_BOOL_INIT</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>io</span>::<span class='ident'>Read</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>net</span>::<span class='ident'>TcpStream</span>;
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>time</span>::<span class='ident'>Duration</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>mem</span>;
 <span class='kw'>use</span> <span class='ident'>hyper</span>::<span class='ident'>server</span>::{<span class='ident'>Handler</span>, <span class='ident'>Server</span>, <span class='ident'>Request</span>, <span class='ident'>Response</span>};
 <span class='kw'>use</span> <span class='ident'>hyper</span>::<span class='ident'>header</span>::<span class='ident'>ContentLength</span>;
 <span class='kw'>use</span> <span class='ident'>hyper</span>::<span class='ident'>method</span>::{<span class='ident'>Method</span>};
-<span class='kw'>use</span> {<span class='ident'>Mock</span>, <span class='ident'>SERVER_ADDRESS</span>};
-
-<span class='kw'>static</span> <span class='ident'>SERVER_STARTED</span>: <span class='ident'>AtomicBool</span> <span class='op'>=</span> <span class='ident'>ATOMIC_BOOL_INIT</span>;
+<span class='kw'>use</span> <span class='ident'>hyper</span>::<span class='ident'>status</span>::<span class='ident'>StatusCode</span>;
+<span class='kw'>use</span> <span class='ident'>rustc_serialize</span>::<span class='ident'>json</span>;
+<span class='kw'>use</span> {<span class='ident'>Mock</span>, <span class='ident'>MockResponse</span>, <span class='ident'>SERVER_ADDRESS</span>};
 
 <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Debug</span>)]</span>
 <span class='kw'>enum</span> <span class='ident'>CreateMockError</span> {
     <span class='ident'>MethodMissing</span>,
     <span class='ident'>PathMissing</span>,
     <span class='ident'>ContentLengthMissing</span>,
+    <span class='ident'>InvalidMockResponse</span>,
 }
 
 <span class='kw'>struct</span> <span class='ident'>RequestHandler</span> {
@@ -214,15 +224,14 @@
     }
 
     <span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>unused_variables</span>)]</span>
-    <span class='kw'>fn</span> <span class='ident'>handle_create_mock</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>request</span>: <span class='ident'>Request</span>, <span class='ident'>response</span>: <span class='ident'>Response</span>) {
+    <span class='kw'>fn</span> <span class='ident'>handle_create_mock</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>request</span>: <span class='ident'>Request</span>, <span class='kw-2'>mut</span> <span class='ident'>response</span>: <span class='ident'>Response</span>) {
         <span class='kw'>match</span> <span class='ident'>Self</span>::<span class='ident'>mock_from</span>(<span class='ident'>request</span>) {
             <span class='prelude-val'>Ok</span>(<span class='ident'>mock</span>) <span class='op'>=&gt;</span> {
                 <span class='self'>self</span>.<span class='ident'>mocks</span>.<span class='ident'>lock</span>().<span class='ident'>unwrap</span>().<span class='ident'>push</span>(<span class='ident'>mock</span>);
-                <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='string'>b&quot;HTTP/1.1 201 OK\n\n&quot;</span>).<span class='ident'>unwrap</span>();
             },
             <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> {
                 <span class='comment'>// TODO: implement Display for CreateMockError</span>
-                <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='string'>b&quot;HTTP/1.1 422 Unprocessable Entity\n\n&quot;</span>).<span class='ident'>unwrap</span>();
+                <span class='ident'>mem</span>::<span class='ident'>replace</span>(<span class='ident'>response</span>.<span class='ident'>status_mut</span>(), <span class='ident'>StatusCode</span>::<span class='ident'>UnprocessableEntity</span>);
             }
         }
     }
@@ -230,16 +239,26 @@
     <span class='attribute'>#[<span class='ident'>allow</span>(<span class='ident'>unused_variables</span>)]</span>
     <span class='kw'>fn</span> <span class='ident'>handle_delete_mocks</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>request</span>: <span class='ident'>Request</span>, <span class='ident'>response</span>: <span class='ident'>Response</span>) {
         <span class='self'>self</span>.<span class='ident'>mocks</span>.<span class='ident'>lock</span>().<span class='ident'>unwrap</span>().<span class='ident'>clear</span>();
-
-        <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='string'>b&quot;HTTP/1.1 200 OK\n\n&quot;</span>).<span class='ident'>unwrap</span>();
     }
 
-    <span class='kw'>fn</span> <span class='ident'>handle_default</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>request</span>: <span class='ident'>Request</span>, <span class='ident'>response</span>: <span class='ident'>Response</span>) {
+    <span class='kw'>fn</span> <span class='ident'>handle_default</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>request</span>: <span class='ident'>Request</span>, <span class='kw-2'>mut</span> <span class='ident'>response</span>: <span class='ident'>Response</span>) {
         <span class='kw'>let</span> <span class='ident'>mocks</span> <span class='op'>=</span> <span class='self'>self</span>.<span class='ident'>mocks</span>.<span class='ident'>lock</span>().<span class='ident'>unwrap</span>();
 
-        <span class='kw'>match</span> <span class='ident'>mocks</span>.<span class='ident'>iter</span>().<span class='ident'>rev</span>().<span class='ident'>find</span>(<span class='op'>|</span><span class='ident'>mock</span><span class='op'>|</span> <span class='ident'>mock</span>.<span class='ident'>matches</span>(<span class='kw-2'>&amp;</span><span class='ident'>request</span>)).<span class='ident'>and_then</span>(<span class='op'>|</span><span class='ident'>mock</span><span class='op'>|</span> <span class='ident'>mock</span>.<span class='ident'>response</span>()) {
-            <span class='prelude-val'>Some</span>(<span class='ident'>value</span>) <span class='op'>=&gt;</span> { <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='ident'>value</span>.<span class='ident'>as_bytes</span>()).<span class='ident'>unwrap</span>(); },
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> { <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='string'>b&quot;HTTP/1.1 501 Not Implemented\n\n&quot;</span>).<span class='ident'>unwrap</span>(); },
+        <span class='kw'>match</span> <span class='ident'>mocks</span>.<span class='ident'>iter</span>().<span class='ident'>rev</span>().<span class='ident'>find</span>(<span class='op'>|</span><span class='ident'>mock</span><span class='op'>|</span> <span class='ident'>mock</span>.<span class='ident'>matches</span>(<span class='kw-2'>&amp;</span><span class='ident'>request</span>)) {
+            <span class='prelude-val'>Some</span>(<span class='ident'>mock</span>) <span class='op'>=&gt;</span> {
+                <span class='comment'>// Set the response status code</span>
+                <span class='comment'>// TODO: StatusCode::Unregistered labels everything as `&lt;unknown status code&gt;`</span>
+                <span class='ident'>mem</span>::<span class='ident'>replace</span>(<span class='ident'>response</span>.<span class='ident'>status_mut</span>(), <span class='ident'>StatusCode</span>::<span class='ident'>Unregistered</span>(<span class='ident'>mock</span>.<span class='ident'>response</span>.<span class='ident'>status</span> <span class='kw'>as</span> <span class='ident'>u16</span>));
+
+                <span class='comment'>// Set the response headers</span>
+                <span class='kw'>for</span> (<span class='ident'>field</span>, <span class='ident'>value</span>) <span class='kw'>in</span> <span class='kw-2'>&amp;</span><span class='ident'>mock</span>.<span class='ident'>response</span>.<span class='ident'>headers</span> {
+                    <span class='ident'>response</span>.<span class='ident'>headers_mut</span>().<span class='ident'>set_raw</span>(<span class='ident'>field</span>.<span class='ident'>to_owned</span>(), <span class='macro'>vec</span><span class='macro'>!</span>(<span class='ident'>value</span>.<span class='ident'>as_bytes</span>().<span class='ident'>to_vec</span>()));
+                }
+
+                <span class='comment'>// Set the response body</span>
+                <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='ident'>mock</span>.<span class='ident'>response</span>.<span class='ident'>body</span>.<span class='ident'>as_bytes</span>()).<span class='ident'>unwrap</span>();
+            },
+            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> { <span class='ident'>mem</span>::<span class='ident'>replace</span>(<span class='ident'>response</span>.<span class='ident'>status_mut</span>(), <span class='ident'>StatusCode</span>::<span class='ident'>NotImplemented</span>); },
         };
     }
 
@@ -261,7 +280,7 @@
         <span class='kw'>for</span> <span class='ident'>header</span> <span class='kw'>in</span> <span class='ident'>request</span>.<span class='ident'>headers</span>.<span class='ident'>iter</span>() {
             <span class='kw'>let</span> <span class='ident'>field</span> <span class='op'>=</span> <span class='ident'>header</span>.<span class='ident'>name</span>().<span class='ident'>to_lowercase</span>();
             <span class='kw'>if</span> <span class='ident'>field</span>.<span class='ident'>starts_with</span>(<span class='string'>&quot;x-mock-&quot;</span>) <span class='op'>&amp;&amp;</span> <span class='ident'>field</span> <span class='op'>!=</span> <span class='string'>&quot;x-mock-method&quot;</span> <span class='op'>&amp;&amp;</span> <span class='ident'>field</span> <span class='op'>!=</span> <span class='string'>&quot;x-mock-path&quot;</span> {
-                <span class='ident'>mock</span>.<span class='ident'>header</span>(<span class='kw-2'>&amp;</span><span class='ident'>field</span>.<span class='ident'>replace</span>(<span class='string'>&quot;x-mock-&quot;</span>, <span class='string'>&quot;&quot;</span>), <span class='kw-2'>&amp;</span><span class='ident'>header</span>.<span class='ident'>value_string</span>());
+                <span class='ident'>mock</span>.<span class='ident'>match_header</span>(<span class='kw-2'>&amp;</span><span class='ident'>field</span>.<span class='ident'>replace</span>(<span class='string'>&quot;x-mock-&quot;</span>, <span class='string'>&quot;&quot;</span>), <span class='kw-2'>&amp;</span><span class='ident'>header</span>.<span class='ident'>value_string</span>());
             }
         }
 
@@ -270,7 +289,8 @@
         <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>body</span> <span class='op'>=</span> <span class='ident'>String</span>::<span class='ident'>new</span>();
         <span class='ident'>request</span>.<span class='ident'>take</span>(<span class='ident'>content_length</span>.<span class='number'>0</span>).<span class='ident'>read_to_string</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>body</span>).<span class='ident'>unwrap</span>();
 
-        <span class='ident'>mock</span>.<span class='ident'>set_response</span>(<span class='ident'>body</span>);
+        <span class='kw'>let</span> <span class='ident'>response</span>: <span class='ident'>MockResponse</span> <span class='op'>=</span> <span class='macro'>try</span><span class='macro'>!</span>(<span class='ident'>json</span>::<span class='ident'>decode</span>(<span class='kw-2'>&amp;</span><span class='ident'>body</span>).<span class='ident'>map_err</span>(<span class='op'>|</span>_<span class='op'>|</span> <span class='ident'>CreateMockError</span>::<span class='ident'>InvalidMockResponse</span>));
+        <span class='ident'>mock</span>.<span class='ident'>response</span> <span class='op'>=</span> <span class='ident'>response</span>;
 
         <span class='prelude-val'>Ok</span>(<span class='ident'>mock</span>)
     }
@@ -288,9 +308,7 @@
 }
 
 <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>try_start</span>() {
-    <span class='kw'>if</span> <span class='ident'>SERVER_STARTED</span>.<span class='ident'>load</span>(<span class='ident'>Ordering</span>::<span class='ident'>SeqCst</span>) { <span class='kw'>return</span> }
-
-    <span class='ident'>SERVER_STARTED</span>.<span class='ident'>store</span>(<span class='boolval'>true</span>, <span class='ident'>Ordering</span>::<span class='ident'>SeqCst</span>);
+    <span class='kw'>if</span> <span class='ident'>is_listening</span>() { <span class='kw'>return</span> }
 
     <span class='ident'>start</span>()
 }
@@ -299,14 +317,16 @@
     <span class='kw'>let</span> <span class='ident'>mocks</span>: <span class='ident'>Arc</span><span class='op'>&lt;</span><span class='ident'>Mutex</span><span class='op'>&lt;</span><span class='ident'>Vec</span><span class='op'>&lt;</span><span class='ident'>Mock</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span> <span class='op'>=</span> <span class='ident'>Arc</span>::<span class='ident'>new</span>(<span class='ident'>Mutex</span>::<span class='ident'>new</span>(<span class='macro'>vec</span><span class='macro'>!</span>()));
 
     <span class='ident'>thread</span>::<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span> {
-        <span class='ident'>Server</span>::<span class='ident'>http</span>(<span class='ident'>SERVER_ADDRESS</span>).<span class='ident'>unwrap</span>().<span class='ident'>handle</span>(<span class='ident'>RequestHandler</span>::<span class='ident'>new</span>(<span class='ident'>mocks</span>)).<span class='ident'>unwrap</span>();
+        <span class='kw'>match</span> <span class='ident'>Server</span>::<span class='ident'>http</span>(<span class='ident'>SERVER_ADDRESS</span>) {
+            <span class='prelude-val'>Ok</span>(<span class='ident'>server</span>) <span class='op'>=&gt;</span> { <span class='ident'>server</span>.<span class='ident'>handle</span>(<span class='ident'>RequestHandler</span>::<span class='ident'>new</span>(<span class='ident'>mocks</span>)).<span class='ident'>unwrap</span>(); },
+            <span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> {},
+        };
     });
 
     <span class='kw'>while</span> <span class='op'>!</span><span class='ident'>is_listening</span>() {}
 }
 
 <span class='kw'>fn</span> <span class='ident'>is_listening</span>() <span class='op'>-&gt;</span> <span class='ident'>bool</span> {
-    <span class='ident'>sleep</span>(<span class='ident'>Duration</span>::<span class='ident'>from_millis</span>(<span class='number'>10</span>));
     <span class='ident'>TcpStream</span>::<span class='ident'>connect</span>(<span class='ident'>SERVER_ADDRESS</span>).<span class='ident'>is_ok</span>()
 }
 </pre>

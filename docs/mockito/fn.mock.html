@@ -47,8 +47,10 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-99' class='srclink' href='../src/mockito/src/lib.rs.html#46-50' title='goto source code'>[src]</a></span></h1>
-<pre class='rust fn'>pub fn mock(method: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, path: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; <a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a></pre><div class='docblock'><p>Creates a mock for the provided <code>method</code> and <code>path</code>.</p>
+               </span><a id='src-111' class='srclink' href='../src/mockito/src/lib.rs.html#49-51' title='goto source code'>[src]</a></span></h1>
+<pre class='rust fn'>pub fn mock(method: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, path: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; <a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a></pre><div class='docblock'><p>Initializes a mock for the provided <code>method</code> and <code>path</code>.</p>
+
+<p>The mock is registered to the server only after the <code>create()</code> method has been called.</p>
 
 <h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
 <pre class='rust rust-example-rendered'>
@@ -57,9 +59,6 @@
 <span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>);
 <span class='ident'>mock</span>(<span class='string'>&quot;POST&quot;</span>, <span class='string'>&quot;/users&quot;</span>);
 <span class='ident'>mock</span>(<span class='string'>&quot;DELETE&quot;</span>, <span class='string'>&quot;/users?id=1&quot;</span>);</pre>
-
-<p>The mock is sent to the server only after <code>respond_with()</code> or <code>respond_with_file()</code> are called
-on the returned value.</p>
 </div></section>
     <section id='search' class="content hidden"></section>
 
