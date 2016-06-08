@@ -62,8 +62,6 @@ impl RequestHandler {
     fn handle_default(&self, request: Request, mut response: Response) {
         let mocks = self.mocks.lock().unwrap();
 
-        println!("size: {}", mocks.len());
-
         match mocks.iter().rev().find(|mock| mock.matches(&request)) {
             Some(mock) => {
                 // Set the response status code
@@ -78,7 +76,7 @@ impl RequestHandler {
                 // Set the response body
                 response.send(mock.response.body.as_bytes()).unwrap();
             },
-            None => { mem::replace(response.status_mut(), StatusCode::NotImplemented); },
+            None => { println!("aici"); mem::replace(response.status_mut(), StatusCode::NotImplemented); },
         };
     }
 
@@ -96,9 +94,6 @@ impl RequestHandler {
             ).value_string();
 
         let mut mock = Mock::new(&method, &path);
-
-        // The mock on the server shouldn't drop itself.
-        mock._droppable = false;
 
         match request.headers.iter().find(|header| { header.name().to_lowercase() == "x-mock-id" }) {
             Some(header) => { mock.id = header.value_string(); },

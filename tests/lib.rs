@@ -44,9 +44,9 @@ fn test_create_starts_the_server() {
 #[test]
 fn test_simple_route_mock() {
     let mocked_body = "world";
-    mock("GET", "/hello").with_body(mocked_body).create();
+    mock("GET", "/hello2").with_body(mocked_body).create();
 
-    let stream = request("GET /hello", "");
+    let stream = request("GET /hello2", "");
     let (status_line, _, body) = parse_stream(stream, mocked_body.len());
 
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status_line);

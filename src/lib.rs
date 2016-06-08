@@ -15,7 +15,6 @@ mod server;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::ops::Drop;
 use hyper::client::Client;
 use hyper::server::Request;
 use hyper::header::{Headers, ContentType, Connection};
@@ -75,7 +74,6 @@ pub struct Mock {
     path: String,
     headers: HashMap<String, String>,
     response: MockResponse,
-    _droppable: bool,
 }
 
 impl Mock {
@@ -86,7 +84,6 @@ impl Mock {
             path: path.to_owned(),
             headers: HashMap::new(),
             response: MockResponse::new(),
-            _droppable: true,
         }
     }
 
@@ -206,7 +203,7 @@ impl Mock {
     /// mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
-    pub fn create(&self) {
+    pub fn create(&mut self) -> &mut Self {
         server::try_start();
 
         let mut headers = Headers::new();
@@ -227,8 +224,50 @@ impl Mock {
             .body(&body)
             .send()
             .unwrap();
+
+        self
     }
 
+    ///
+    /// Registers the mock to the server, executes the passed closure and removes the mock afterwards.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::thread::{sleep};
+    /// use std::time::Duration;
+    /// use mockito::mock;
+    ///
+    /// mock("GET", "/").with_body("hello world").create_for(|| {
+    ///   // This mock will only be available for the next 10 seconds
+    ///   sleep(Duration::new(10, 0));
+    /// });
+    /// ```
+    ///
+    pub fn create_for<F: Fn() -> ()>(&mut self, environment: F) -> &mut Self {
+        self.create();
+        environment();
+        self.remove();
+
+        self
+    }
+
+    ///
+    /// Removes the current mock from the server.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// let mut mock = mock("GET", "/");
+    /// mock.with_body("hello world").create();
+    ///
+    /// // stuff
+    ///
+    /// mock.remove();
+    /// ```
+    ///
     pub fn remove(&self) {
         server::try_start();
 
@@ -273,12 +312,6 @@ impl Mock {
         }
 
         true
-    }
-}
-
-impl Drop for Mock {
-    fn drop(&mut self) {
-        if self._droppable { println!("dropping"); self.remove(); }
     }
 }
 
