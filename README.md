@@ -26,5 +26,6 @@ cargo doc --no-deps && cp -R target/doc/mockito/* docs/mockito
 
 Release:
 
+```
 cargo package && cargo publish
 ```

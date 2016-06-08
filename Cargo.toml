@@ -1,6 +1,6 @@
 [package]
 name = "mockito"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/lipanski/mockito"
@@ -9,6 +9,6 @@ documentation = "http://lipanski.github.io/mockito"
 description = "HTTP mocking for Rust"
 
 [dependencies]
-hyper = ">=0.8.0"
-rustc-serialize = ">=0.3.16"
-rand = ">=0.3.14"
+hyper = "^0.8.0"
+rustc-serialize = "^0.3.16"
+rand = "^0.3.14"
