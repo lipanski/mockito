@@ -8,17 +8,20 @@
 
 extern crate hyper;
 extern crate rustc_serialize;
+extern crate rand;
 
 mod server;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::ops::Drop;
 use hyper::client::Client;
 use hyper::server::Request;
 use hyper::header::{Headers, ContentType, Connection};
 use rustc_serialize::json;
 use rustc_serialize::{Encodable};
+use rand::{thread_rng, Rng};
 
 ///
 /// Points to the address the mock server is running at.
@@ -67,19 +70,23 @@ pub fn reset() {
 ///
 #[derive(PartialEq, Debug)]
 pub struct Mock {
+    id: String,
     method: String,
     path: String,
     headers: HashMap<String, String>,
     response: MockResponse,
+    _droppable: bool,
 }
 
 impl Mock {
     fn new(method: &str, path: &str) -> Self {
         Mock {
+            id: thread_rng().gen_ascii_chars().take(24).collect(),
             method: method.to_owned().to_uppercase(),
             path: path.to_owned(),
             headers: HashMap::new(),
             response: MockResponse::new(),
+            _droppable: true,
         }
     }
 
@@ -203,6 +210,7 @@ impl Mock {
         server::try_start();
 
         let mut headers = Headers::new();
+        headers.set_raw("x-mock-id", vec!(self.id.as_bytes().to_vec()));
         headers.set_raw("x-mock-method", vec!(self.method.as_bytes().to_vec()));
         headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
 
@@ -211,14 +219,26 @@ impl Mock {
         }
 
         let body = json::encode(&self.response).unwrap();
-        // headers.set(ContentLength(body.len() as u64));
-
         Client::new()
             .post(&[SERVER_URL, "/mocks"].join(""))
             .headers(headers)
             .header(ContentType::json())
             .header(Connection::close())
             .body(&body)
+            .send()
+            .unwrap();
+    }
+
+    pub fn remove(&self) {
+        server::try_start();
+
+        let mut headers = Headers::new();
+        headers.set_raw("x-mock-id", vec!(self.id.as_bytes().to_vec()));
+
+        Client::new()
+            .delete(&[SERVER_URL, "/mocks"].join(""))
+            .headers(headers)
+            .header(Connection::close())
             .send()
             .unwrap();
     }
@@ -253,6 +273,12 @@ impl Mock {
         }
 
         true
+    }
+}
+
+impl Drop for Mock {
+    fn drop(&mut self) {
+        if self._droppable { println!("dropping"); self.remove(); }
     }
 }
 

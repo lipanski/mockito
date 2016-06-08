@@ -28,9 +28,7 @@ fn parse_stream(stream: TcpStream, content_length: usize) -> (String, Vec<String
     }
 
     let mut body = String::new();
-    if content_length > 0 {
-        reader.take(content_length as u64).read_to_string(&mut body).unwrap();
-    }
+    reader.take(content_length as u64).read_to_string(&mut body).unwrap();
 
     (status_line, headers, body)
 }

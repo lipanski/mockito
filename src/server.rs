@@ -30,12 +30,6 @@ impl RequestHandler {
     }
 
     #[allow(unused_variables)]
-    fn handle_list_mocks(&self, request: Request, response: Response) {
-        let mocks = self.mocks.lock().unwrap();
-        // TODO: implement Display for Mock
-    }
-
-    #[allow(unused_variables)]
     fn handle_create_mock(&self, request: Request, mut response: Response) {
         match Self::mock_from(request) {
             Ok(mock) => {
@@ -50,11 +44,25 @@ impl RequestHandler {
 
     #[allow(unused_variables)]
     fn handle_delete_mocks(&self, request: Request, response: Response) {
-        self.mocks.lock().unwrap().clear();
+        match request.headers.iter().find(|header| { header.name().to_lowercase() == "x-mock-id" }) {
+            // Remove the element with x-mock-id
+            Some(header) => {
+                let id = header.value_string();
+                let mut mocks = self.mocks.lock().unwrap();
+                match mocks.iter().position(|mock| mock.id == id) {
+                    Some(pos) => { mocks.remove(pos); },
+                    None => {},
+                };
+            },
+            // Remove all elements
+            None => { self.mocks.lock().unwrap().clear(); }
+        }
     }
 
     fn handle_default(&self, request: Request, mut response: Response) {
         let mocks = self.mocks.lock().unwrap();
+
+        println!("size: {}", mocks.len());
 
         match mocks.iter().rev().find(|mock| mock.matches(&request)) {
             Some(mock) => {
@@ -89,9 +97,17 @@ impl RequestHandler {
 
         let mut mock = Mock::new(&method, &path);
 
+        // The mock on the server shouldn't drop itself.
+        mock._droppable = false;
+
+        match request.headers.iter().find(|header| { header.name().to_lowercase() == "x-mock-id" }) {
+            Some(header) => { mock.id = header.value_string(); },
+            None => {},
+        };
+
         for header in request.headers.iter() {
             let field = header.name().to_lowercase();
-            if field.starts_with("x-mock-") && field != "x-mock-method" && field != "x-mock-path" {
+            if field.starts_with("x-mock-") && field != "x-mock-id" && field != "x-mock-method" && field != "x-mock-path" {
                 mock.match_header(&field.replace("x-mock-", ""), &header.value_string());
             }
         }
@@ -111,7 +127,6 @@ impl RequestHandler {
 impl Handler for RequestHandler {
     fn handle(&self, request: Request, response: Response) {
         match (&request.method, &*request.uri.to_string()) {
-            (&Method::Get, "/mocks") => self.handle_list_mocks(request, response),
             (&Method::Post, "/mocks") => self.handle_create_mock(request, response),
             (&Method::Delete, "/mocks") => self.handle_delete_mocks(request, response),
             _ => self.handle_default(request, response),
@@ -126,9 +141,9 @@ pub fn try_start() {
 }
 
 fn start() {
-    let mocks: Arc<Mutex<Vec<Mock>>> = Arc::new(Mutex::new(vec!()));
-
     thread::spawn(move || {
+        let mocks: Arc<Mutex<Vec<Mock>>> = Arc::new(Mutex::new(vec!()));
+
         match Server::http(SERVER_ADDRESS) {
             Ok(server) => { server.handle(RequestHandler::new(mocks)).unwrap(); },
             Err(_) => {},
