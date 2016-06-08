@@ -23,3 +23,8 @@ rustdoc -o docs -L target/debug -L target/debug/deps --crate-name mockito src/li
 
 cargo doc --no-deps && cp -R target/doc/mockito/* docs/mockito
 ```
+
+Release:
+
+cargo package && cargo publish
+```
