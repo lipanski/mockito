@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo.png",
+#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo-black.png",
     html_root_url = "http://lipanski.github.io/mockito/docs/mockito/index.html")]
 
 //!

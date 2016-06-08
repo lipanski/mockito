@@ -1,25 +1,8 @@
-![Mockito](http://lipanski.github.io/mockito/logo.png)
+![Mockito](http://lipanski.github.io/mockito/logo-black.png)
 
-Mocking web requests in Rust!
+HTTP mocking for Rust!
 
-Works with [Hyper](http://hyper.rs/) and [TcpStream](https://doc.rust-lang.org/std/net/struct.TcpStream.html).
-
-## Introduction
-
-Mockito is a web server you can use to test HTTP requests in Rust without actually hitting the remote server.
-It intercepts URLs wrapped within `mockito::url::Url` and responds with a preconfigured message. Currently, it can
-only handle `&'str` URLs.
-
-Mockito will match on the HTTP method and path:
-
-```rust
-mockito::mock("GET", "/hello?world=1")
-```
-
-But it can also match requests based on headers:
-
-```rust
-mockito::mock("POST", "/something").header("content-type", "application/json")
+Documentation available at [[http://lipanski.github.io/mockito/]].
 ```
 
 ## Development
@@ -34,4 +17,8 @@ Generate docs:
 
 ```
 rustdoc -o docs -L target/debug -L target/debug/deps --crate-name mockito src/lib.rs
+
+# or
+
+cargo doc --no-deps && cp -R target/doc/mockito/* docs/mockito
 ```
