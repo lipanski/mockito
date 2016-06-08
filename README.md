@@ -6,6 +6,8 @@ Get it on [crates.io](https://crates.io/crates/mockito/).
 
 Documentation available [here](http://lipanski.github.io/mockito/).
 
+Logo courtesy to [http://niastudio.net](http://niastudio.net).
+
 ## Development
 
 Run tests:
