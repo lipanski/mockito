@@ -76,7 +76,7 @@ impl RequestHandler {
                 // Set the response body
                 response.send(mock.response.body.as_bytes()).unwrap();
             },
-            None => { println!("aici"); mem::replace(response.status_mut(), StatusCode::NotImplemented); },
+            None => { mem::replace(response.status_mut(), StatusCode::NotImplemented); },
         };
     }
 
