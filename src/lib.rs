@@ -16,7 +16,7 @@
 //!
 //! ```
 //! #[cfg(test)]
-//! use mockito::SERVER_URL;
+//! use mockito;
 //!
 //! #[cfg(not(test))]
 //! const URL: &'static str = "https://api.twitter.com";
