@@ -9,6 +9,6 @@ documentation = "http://lipanski.github.io/mockito"
 description = "HTTP mocking for Rust"
 
 [dependencies]
-hyper = "^0.8.0"
+hyper = "^0.10.0"
 rustc-serialize = "^0.3.16"
 rand = "^0.3.14"
