@@ -1,6 +1,6 @@
 [package]
 name = "mockito"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/lipanski/mockito"
