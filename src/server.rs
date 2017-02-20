@@ -7,7 +7,7 @@ use hyper::server::{Handler, Server, Request, Response};
 use hyper::header::ContentLength;
 use hyper::method::{Method};
 use hyper::status::StatusCode;
-use rustc_serialize::json;
+use serde_json;
 use {Mock, MockResponse, SERVER_ADDRESS};
 
 #[derive(Debug)]
@@ -115,7 +115,7 @@ impl RequestHandler {
         let mut body = String::new();
         request.take(content_length.0).read_to_string(&mut body).unwrap();
 
-        let response: MockResponse = try!(json::decode(&body).map_err(|_| CreateMockError::InvalidMockResponse));
+        let response: MockResponse = try!(serde_json::from_str(&body).map_err(|_| CreateMockError::InvalidMockResponse));
         mock.response = response;
 
         Ok(mock)
