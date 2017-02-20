@@ -135,7 +135,8 @@
 //!
 
 extern crate hyper;
-extern crate rustc_serialize;
+#[macro_use] extern crate serde_derive;
+extern crate serde_json;
 extern crate rand;
 
 mod server;
@@ -146,8 +147,6 @@ use std::io::Read;
 use hyper::client::Client;
 use hyper::server::Request;
 use hyper::header::{Headers, ContentType, Connection};
-use rustc_serialize::json;
-use rustc_serialize::{Encodable};
 use rand::{thread_rng, Rng};
 
 ///
@@ -343,7 +342,7 @@ impl Mock {
             headers.set_raw("x-mock-".to_string() + field, vec!(value.as_bytes().to_vec()));
         }
 
-        let body = json::encode(&self.response).unwrap();
+        let body = serde_json::to_string(&self.response).unwrap();
         Client::new()
             .post(&[SERVER_URL, "/mocks"].join(""))
             .headers(headers)
@@ -447,7 +446,7 @@ impl Mock {
 
 const DEFAULT_RESPONSE_STATUS: usize = 200;
 
-#[derive(RustcDecodable, RustcEncodable, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct MockResponse {
     status: usize,
     headers: HashMap<String, String>,

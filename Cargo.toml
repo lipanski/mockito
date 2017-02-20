@@ -10,5 +10,7 @@ description = "HTTP mocking for Rust"
 
 [dependencies]
 hyper = "^0.10.0"
-rustc-serialize = "^0.3.16"
 rand = "^0.3.14"
+serde = "0.9"
+serde_derive = "0.9"
+serde_json = "0.9"
