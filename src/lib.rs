@@ -135,8 +135,9 @@
 //!
 
 extern crate hyper;
+extern crate serde;
 #[macro_use] extern crate serde_derive;
-extern crate serde_json;
+#[macro_use] extern crate serde_json;
 extern crate rand;
 
 mod server;
@@ -146,8 +147,9 @@ use std::fs::File;
 use std::io::Read;
 use hyper::client::Client;
 use hyper::server::Request;
-use hyper::header::{Headers, ContentType, Connection};
+use hyper::header::{Headers, ContentType, ContentLength, Connection};
 use rand::{thread_rng, Rng};
+use serde_json::Value;
 
 ///
 /// Points to the address the mock server is running at.
@@ -194,22 +196,20 @@ pub fn reset() {
 ///
 /// Stores information about a mocked request. Should be initialized via `mockito::mock()`.
 ///
-#[derive(PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Mock {
     id: String,
-    method: String,
-    path: String,
-    headers: HashMap<String, String>,
+    request: MockRequest,
     response: MockResponse,
 }
 
 impl Mock {
     fn new(method: &str, path: &str) -> Self {
+        let request = MockRequest::from_method_and_path(method, path);
+
         Mock {
             id: thread_rng().gen_ascii_chars().take(24).collect(),
-            method: method.to_owned().to_uppercase(),
-            path: path.to_owned(),
-            headers: HashMap::new(),
+            request: request,
             response: MockResponse::new(),
         }
     }
@@ -240,7 +240,24 @@ impl Mock {
     /// ```
     ///
     pub fn match_header(&mut self, field: &str, value: &str) -> &mut Self {
-        self.headers.insert(field.to_owned(), value.to_owned());
+        self.request.headers.insert(field.to_owned(), value.to_owned());
+
+        self
+    }
+
+    ///
+    /// Allows matching a particular request body when responding with a mock.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// mock("GET", "/").match_body("\"{ \"message\":\"Hello\" }\"");
+    /// ```
+    ///
+    pub fn match_body(&mut self, body: &str) -> &mut Self {
+        self.request.body = body.into();
 
         self
     }
@@ -333,19 +350,10 @@ impl Mock {
     pub fn create(&mut self) -> &mut Self {
         server::try_start();
 
-        let mut headers = Headers::new();
-        headers.set_raw("x-mock-id", vec!(self.id.as_bytes().to_vec()));
-        headers.set_raw("x-mock-method", vec!(self.method.as_bytes().to_vec()));
-        headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
+        let body = serde_json::to_string(&self).unwrap();
 
-        for (field, value) in &self.headers {
-            headers.set_raw("x-mock-".to_string() + field, vec!(value.as_bytes().to_vec()));
-        }
-
-        let body = serde_json::to_string(&self.response).unwrap();
         Client::new()
             .post(&[SERVER_URL, "/mocks"].join(""))
-            .headers(headers)
             .header(ContentType::json())
             .header(Connection::close())
             .body(&body)
@@ -412,22 +420,23 @@ impl Mock {
     }
 
     #[allow(missing_docs)]
-    pub fn matches(&self, request: &Request) -> bool {
+    pub fn matches(&self, request: &mut Request) -> bool {
         self.method_matches(request)
             && self.path_matches(request)
             && self.headers_match(request)
+            && self.body_matches(request)
     }
 
     fn method_matches(&self, request: &Request) -> bool {
-        self.method == request.method.to_string().to_uppercase()
+        self.request.method == request.method.to_string().to_uppercase()
     }
 
     fn path_matches(&self, request: &Request) -> bool {
-        self.path == request.uri.to_string()
+        self.request.path == request.uri.to_string()
     }
 
     fn headers_match(&self, request: &Request) -> bool {
-        for (field, value) in self.headers.iter() {
+        for (field, value) in self.request.headers.iter() {
             match request.headers.get_raw(&field) {
                 Some(request_header_value) => {
                     let bytes: Vec<u8> = request_header_value.iter().flat_map(|el| el.iter().cloned()).collect();
@@ -442,6 +451,20 @@ impl Mock {
 
         true
     }
+
+    fn body_matches(&self, request: &mut Request) -> bool {
+        if !self.request.body.is_empty() {
+            let mut body = String::new();
+            request.read_to_string(&mut body).unwrap();
+
+            let actual_json: Value = serde_json::from_str(&body).unwrap();
+            let expected_json: Value = serde_json::from_str(&self.request.body).unwrap();
+
+            expected_json == actual_json
+        } else {
+            true
+        }
+    }
 }
 
 const DEFAULT_RESPONSE_STATUS: usize = 200;
@@ -451,6 +474,25 @@ struct MockResponse {
     status: usize,
     headers: HashMap<String, String>,
     body: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+struct MockRequest {
+    body: String,
+    headers: HashMap<String, String>,
+    method: String,
+    path: String,
+}
+
+impl MockRequest {
+    pub fn from_method_and_path(method: &str, path: &str) -> Self {
+        MockRequest {
+            body: String::new(),
+            headers: HashMap::new(),
+            method: method.to_owned().to_uppercase(),
+            path: path.to_owned(),
+        }
+    }
 }
 
 impl MockResponse {
