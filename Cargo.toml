@@ -5,7 +5,7 @@ authors = ["Florin Lipan <florinlipan@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/lipanski/mockito"
 repository = "https://github.com/lipanski/mockito"
-documentation = "http://lipanski.github.io/mockito"
+documentation = "http://lipanski.github.io/mockito/"
 description = "HTTP mocking for Rust"
 
 [dependencies]

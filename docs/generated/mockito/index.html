@@ -27,7 +27,7 @@
     
 
     <nav class="sidebar">
-        <a href='../mockito/index.html'><img src='http://lipanski.github.io/mockito/logo-black.png' alt='logo' width='100'></a>
+        <a href='../mockito/index.html'><img src='http://lipanski.github.io/mockito/logo/logo-black.png' alt='logo' width='100'></a>
         <p class='location'></p><script>window.sidebarCurrent = {name: 'mockito', ty: 'mod', relpath: '../'};</script>
     </nav>
 
@@ -47,7 +47,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/mockito/src/lib.rs.html#1-444' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-444' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
 It runs an HTTP server on your local port 1234 and can register and remove mocks.
 The server is run on a separate thread within the same process and will be cleaned up
@@ -59,7 +59,7 @@ at the end of the run.</p>
 <h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
 <pre class='rust rust-example-rendered'>
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>SERVER_URL</span>;
+<span class='kw'>use</span> <span class='ident'>mockito</span>;
 
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>not</span>(<span class='ident'>test</span>))]</span>
 <span class='kw'>const</span> <span class='ident'>URL</span>: <span class='kw-2'>&amp;</span><span class='lifetime'>&#39;static</span> <span class='ident'>str</span> <span class='op'>=</span> <span class='string'>&quot;https://api.twitter.com&quot;</span>;
@@ -154,7 +154,7 @@ it might be useful to clean up right after the test. There are multiple ways of 
                        <tr class=' module-item'>
                            <td><a class='struct' href='struct.Mock.html'
                                   title='mockito::Mock'>Mock</a></td>
-                           <td class='docblock short'>
+                           <td class='docblock-short'>
                                 <p>Stores information about a mocked request. Should be initialized via <code>mockito::mock()</code>.</p>
                            </td>
                        </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
@@ -162,7 +162,7 @@ it might be useful to clean up right after the test. There are multiple ways of 
                        <tr class=' module-item'>
                            <td><a class='constant' href='constant.SERVER_ADDRESS.html'
                                   title='mockito::SERVER_ADDRESS'>SERVER_ADDRESS</a></td>
-                           <td class='docblock short'>
+                           <td class='docblock-short'>
                                 <p>Points to the address the mock server is running at.
 Can be used with <code>std::net::TcpStream</code>.</p>
                            </td>
@@ -170,7 +170,7 @@ Can be used with <code>std::net::TcpStream</code>.</p>
                        <tr class=' module-item'>
                            <td><a class='constant' href='constant.SERVER_URL.html'
                                   title='mockito::SERVER_URL'>SERVER_URL</a></td>
-                           <td class='docblock short'>
+                           <td class='docblock-short'>
                                 <p>Points to the URL the mock server is running at.</p>
                            </td>
                        </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
@@ -178,14 +178,14 @@ Can be used with <code>std::net::TcpStream</code>.</p>
                        <tr class=' module-item'>
                            <td><a class='fn' href='fn.mock.html'
                                   title='mockito::mock'>mock</a></td>
-                           <td class='docblock short'>
+                           <td class='docblock-short'>
                                 <p>Initializes a mock for the provided <code>method</code> and <code>path</code>.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
                            <td><a class='fn' href='fn.reset.html'
                                   title='mockito::reset'>reset</a></td>
-                           <td class='docblock short'>
+                           <td class='docblock-short'>
                                 <p>Removes all the mocks stored on the server.</p>
                            </td>
                        </tr></table></section>
@@ -211,6 +211,8 @@ Can be used with <code>std::net::TcpStream</code>.</p>
                     <dd>Move down in search results</dd>
                     <dt>&#9166;</dt>
                     <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
                 </dl>
             </div>
 
@@ -242,11 +244,9 @@ Can be used with <code>std::net::TcpStream</code>.</p>
     <script>
         window.rootPath = "../";
         window.currentCrate = "mockito";
-        window.playgroundUrl = "";
     </script>
     <script src="../jquery.js"></script>
     <script src="../main.js"></script>
-    
     <script defer src="../search-index.js"></script>
 </body>
 </html>

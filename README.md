@@ -1,4 +1,4 @@
-![Mockito](http://lipanski.github.io/mockito/logo-black.png)
+![Mockito](http://lipanski.github.io/mockito/logo/logo-black.png)
 
 [![Build Status](https://img.shields.io/crates/v/mockito.svg)](https://crates.io/crates/mockito) [![Build Status](https://travis-ci.org/lipanski/mockito.svg?branch=master)](https://travis-ci.org/lipanski/mockito)
 

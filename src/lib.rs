@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
-#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo-black.png",
-    html_root_url = "http://lipanski.github.io/mockito/docs/mockito/index.html")]
+#![doc(html_logo_url = "http://lipanski.github.io/mockito/logo/logo-black.png",
+    html_root_url = "http://lipanski.github.io/mockito/generated/mockito/index.html")]
 
 //!
 //! Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
