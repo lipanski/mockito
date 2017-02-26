@@ -21,11 +21,7 @@ cargo test
 Generate docs:
 
 ```
-rustdoc -o docs -L target/debug -L target/debug/deps --crate-name mockito src/lib.rs
-
-# or
-
-cargo doc --no-deps && cp -R target/doc/mockito/* docs/mockito
+rm -r target/doc/* && cargo doc --no-deps && rm -r docs/generated/* && cp -R target/doc/* docs/generated
 ```
 
 Release:
