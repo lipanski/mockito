@@ -4,9 +4,8 @@
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/v/mockito.svg"></a>
     <a href="https://travis-ci.org/lipanski/mockito"><img src="https://travis-ci.org/lipanski/mockito.svg?branch=master"></a>
   </p>
+  <h3 align="center">HTTP mocking for Rust!</h3>
 </p>
-
-HTTP mocking for Rust!
 
 Get it on [crates.io](https://crates.io/crates/mockito/).
 
