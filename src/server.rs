@@ -76,7 +76,10 @@ impl RequestHandler {
                 // Set the response body
                 response.send(mock.response.body.as_bytes()).unwrap();
             },
-            None => { mem::replace(response.status_mut(), StatusCode::NotImplemented); },
+            None => {
+                mem::replace(response.status_mut(), StatusCode::NotImplemented);
+                response.send("".as_bytes()).unwrap();
+            },
         };
     }
 
