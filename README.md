@@ -1,6 +1,6 @@
-![Mockito](http://lipanski.github.io/mockito/logo/logo-black.png)
+<center>![Mockito](http://lipanski.github.io/mockito/logo/logo-black.png)</center>
 
-[![Build Status](https://img.shields.io/crates/v/mockito.svg)](https://crates.io/crates/mockito) [![Build Status](https://travis-ci.org/lipanski/mockito.svg?branch=master)](https://travis-ci.org/lipanski/mockito)
+<center>[![Build Status](https://img.shields.io/crates/v/mockito.svg)](https://crates.io/crates/mockito) [![Build Status](https://travis-ci.org/lipanski/mockito.svg?branch=master)](https://travis-ci.org/lipanski/mockito)</center>
 
 HTTP mocking for Rust!
 
@@ -32,4 +32,4 @@ cargo package && cargo publish
 
 ---
 
-Logo courtesy to [http://niastudio.net](http://niastudio.net).
+Logo courtesy to [http://niastudio.net](http://niastudio.net) :ok_hand:
