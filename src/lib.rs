@@ -5,6 +5,7 @@
 //!
 //! Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
 //! It runs an HTTP server on your local port 1234 and can register and remove mocks.
+//!
 //! The server is run on a separate thread within the same process and will be cleaned up
 //! at the end of the run.
 //!
@@ -39,6 +40,7 @@
 //!     mock("GET", "/hello")
 //!       .with_status(201)
 //!       .with_header("content-type", "text/plain")
+//!       .with_header("x-api-key", "1234")
 //!       .with_body("world")
 //!       .create();
 //!
@@ -47,6 +49,23 @@
 //!   }
 //! }
 //! ```
+//!
+//! # Run your tests
+//!
+//! Due to the nature of this library (all your mocks are recorded on the same server running in background),
+//! it is highly recommended that you **run your tests on a single thread**:
+//!
+//! ```sh
+//! cargo test -- --test-threads=1
+//!
+//! # Same, but using an environment variable
+//! RUST_TEST_THREADS=1 cargo test
+//! ```
+//!
+//! In some situations, when you're *always* testing/mocking different routes and never need to reset
+//! or override the existing mocks, you might get away with running your tests on multiple threads.
+//!
+//! # Matching by header
 //!
 //! Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.
 //!
@@ -69,10 +88,12 @@
 //! // will respond with text.
 //! ```
 //!
-//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations
-//! it might be useful to clean up right after the test. There are multiple ways of doing this:
+//! # Cleaning up
 //!
-//! - By using a closure:
+//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations
+//! it might be useful to clean up right after the test. There are multiple ways of doing this.
+//!
+//! By using a closure:
 //!
 //! # Example
 //!
@@ -87,7 +108,7 @@
 //!   });
 //! ```
 //!
-//! - By calling `remove()` on the mock:
+//! By calling `remove()` on the mock:
 //!
 //! # Example
 //!
@@ -102,7 +123,7 @@
 //! mock.remove();
 //! ```
 //!
-//! - By calling `reset()` to **remove all mocks**:
+//! By calling `reset()` to **remove all mocks**:
 //!
 //! # Example
 //!

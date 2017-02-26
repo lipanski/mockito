@@ -47,10 +47,11 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-444' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-465' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
-It runs an HTTP server on your local port 1234 and can register and remove mocks.
-The server is run on a separate thread within the same process and will be cleaned up
+It runs an HTTP server on your local port 1234 and can register and remove mocks.</p>
+
+<p>The server is run on a separate thread within the same process and will be cleaned up
 at the end of the run.</p>
 
 <h1 id='getting-started' class='section-header'><a href='#getting-started'>Getting Started</a></h1>
@@ -80,6 +81,7 @@ at the end of the run.</p>
     <span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
       .<span class='ident'>with_status</span>(<span class='number'>201</span>)
       .<span class='ident'>with_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;text/plain&quot;</span>)
+      .<span class='ident'>with_header</span>(<span class='string'>&quot;x-api-key&quot;</span>, <span class='string'>&quot;1234&quot;</span>)
       .<span class='ident'>with_body</span>(<span class='string'>&quot;world&quot;</span>)
       .<span class='ident'>create</span>();
 
@@ -88,6 +90,20 @@ at the end of the run.</p>
   }
 }</pre>
 
+<h1 id='run-your-tests' class='section-header'><a href='#run-your-tests'>Run your tests</a></h1>
+<p>Due to the nature of this library (all your mocks are recorded on the same server running in background),
+it is highly recommended that you <strong>run your tests on a single thread</strong>:</p>
+
+<pre><code class="language-sh">cargo test -- --test-threads=1
+
+# Same, but using an environment variable
+RUST_TEST_THREADS=1 cargo test
+</code></pre>
+
+<p>In some situations, when you&#39;re <em>always</em> testing/mocking different routes and never need to reset
+or override the existing mocks, you might get away with running your tests on multiple threads.</p>
+
+<h1 id='matching-by-header' class='section-header'><a href='#matching-by-header'>Matching by header</a></h1>
 <p>Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.</p>
 
 <h1 id='example-2' class='section-header'><a href='#example-2'>Example</a></h1>
@@ -107,12 +123,11 @@ at the end of the run.</p>
 <span class='comment'>// JSON requests to GET /hello will respond with JSON, while plain requests</span>
 <span class='comment'>// will respond with text.</span></pre>
 
+<h1 id='cleaning-up' class='section-header'><a href='#cleaning-up'>Cleaning up</a></h1>
 <p>Even though <strong>mocks are matched in reverse order</strong> (most recent one wins), in some situations
-it might be useful to clean up right after the test. There are multiple ways of doing this:</p>
+it might be useful to clean up right after the test. There are multiple ways of doing this.</p>
 
-<ul>
-<li>By using a closure:</li>
-</ul>
+<p>By using a closure:</p>
 
 <h1 id='example-3' class='section-header'><a href='#example-3'>Example</a></h1>
 <pre class='rust rust-example-rendered'>
@@ -125,9 +140,7 @@ it might be useful to clean up right after the test. There are multiple ways of 
     <span class='comment'>// NOTE: it might still be accessible by separate threads</span>
   });</pre>
 
-<ul>
-<li>By calling <code>remove()</code> on the mock:</li>
-</ul>
+<p>By calling <code>remove()</code> on the mock:</p>
 
 <h1 id='example-4' class='section-header'><a href='#example-4'>Example</a></h1>
 <pre class='rust rust-example-rendered'>
@@ -140,9 +153,7 @@ it might be useful to clean up right after the test. There are multiple ways of 
 
 <span class='ident'>mock</span>.<span class='ident'>remove</span>();</pre>
 
-<ul>
-<li>By calling <code>reset()</code> to <strong>remove all mocks</strong>:</li>
-</ul>
+<p>By calling <code>reset()</code> to <strong>remove all mocks</strong>:</p>
 
 <h1 id='example-5' class='section-header'><a href='#example-5'>Example</a></h1>
 <pre class='rust rust-example-rendered'>

@@ -195,6 +195,9 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>::{<span class='self'>self</span>};
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::{<span class='ident'>Arc</span>, <span class='ident'>Mutex</span>};
@@ -274,7 +277,10 @@
                 <span class='comment'>// Set the response body</span>
                 <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='ident'>mock</span>.<span class='ident'>response</span>.<span class='ident'>body</span>.<span class='ident'>as_bytes</span>()).<span class='ident'>unwrap</span>();
             },
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> { <span class='ident'>mem</span>::<span class='ident'>replace</span>(<span class='ident'>response</span>.<span class='ident'>status_mut</span>(), <span class='ident'>StatusCode</span>::<span class='ident'>NotImplemented</span>); },
+            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> {
+                <span class='ident'>mem</span>::<span class='ident'>replace</span>(<span class='ident'>response</span>.<span class='ident'>status_mut</span>(), <span class='ident'>StatusCode</span>::<span class='ident'>NotImplemented</span>);
+                <span class='ident'>response</span>.<span class='ident'>send</span>(<span class='string'>&quot;&quot;</span>.<span class='ident'>as_bytes</span>()).<span class='ident'>unwrap</span>();
+            },
         };
     }
 

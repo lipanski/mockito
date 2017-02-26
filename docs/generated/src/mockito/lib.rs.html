@@ -486,6 +486,27 @@
 <span id="442">442</span>
 <span id="443">443</span>
 <span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
 </pre><pre class='rust '>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>warn</span>(<span class='ident'>missing_docs</span>)]</span>
 <span class='attribute'>#<span class='op'>!</span>[<span class='ident'>doc</span>(<span class='ident'>html_logo_url</span> <span class='op'>=</span> <span class='string'>&quot;http://lipanski.github.io/mockito/logo/logo-black.png&quot;</span>,
@@ -494,6 +515,7 @@
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.</span>
 <span class='doccomment'>//! It runs an HTTP server on your local port 1234 and can register and remove mocks.</span>
+<span class='doccomment'>//!</span>
 <span class='doccomment'>//! The server is run on a separate thread within the same process and will be cleaned up</span>
 <span class='doccomment'>//! at the end of the run.</span>
 <span class='doccomment'>//!</span>
@@ -528,6 +550,7 @@
 <span class='doccomment'>//!     mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class='doccomment'>//!       .with_status(201)</span>
 <span class='doccomment'>//!       .with_header(&quot;content-type&quot;, &quot;text/plain&quot;)</span>
+<span class='doccomment'>//!       .with_header(&quot;x-api-key&quot;, &quot;1234&quot;)</span>
 <span class='doccomment'>//!       .with_body(&quot;world&quot;)</span>
 <span class='doccomment'>//!       .create();</span>
 <span class='doccomment'>//!</span>
@@ -536,6 +559,23 @@
 <span class='doccomment'>//!   }</span>
 <span class='doccomment'>//! }</span>
 <span class='doccomment'>//! ```</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! # Run your tests</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! Due to the nature of this library (all your mocks are recorded on the same server running in background),</span>
+<span class='doccomment'>//! it is highly recommended that you **run your tests on a single thread**:</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! ```sh</span>
+<span class='doccomment'>//! cargo test -- --test-threads=1</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! # Same, but using an environment variable</span>
+<span class='doccomment'>//! RUST_TEST_THREADS=1 cargo test</span>
+<span class='doccomment'>//! ```</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! In some situations, when you&#39;re *always* testing/mocking different routes and never need to reset</span>
+<span class='doccomment'>//! or override the existing mocks, you might get away with running your tests on multiple threads.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! # Matching by header</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.</span>
 <span class='doccomment'>//!</span>
@@ -558,10 +598,12 @@
 <span class='doccomment'>//! // will respond with text.</span>
 <span class='doccomment'>//! ```</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations</span>
-<span class='doccomment'>//! it might be useful to clean up right after the test. There are multiple ways of doing this:</span>
+<span class='doccomment'>//! # Cleaning up</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! - By using a closure:</span>
+<span class='doccomment'>//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations</span>
+<span class='doccomment'>//! it might be useful to clean up right after the test. There are multiple ways of doing this.</span>
+<span class='doccomment'>//!</span>
+<span class='doccomment'>//! By using a closure:</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Example</span>
 <span class='doccomment'>//!</span>
@@ -576,7 +618,7 @@
 <span class='doccomment'>//!   });</span>
 <span class='doccomment'>//! ```</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! - By calling `remove()` on the mock:</span>
+<span class='doccomment'>//! By calling `remove()` on the mock:</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Example</span>
 <span class='doccomment'>//!</span>
@@ -591,7 +633,7 @@
 <span class='doccomment'>//! mock.remove();</span>
 <span class='doccomment'>//! ```</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! - By calling `reset()` to **remove all mocks**:</span>
+<span class='doccomment'>//! By calling `reset()` to **remove all mocks**:</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! # Example</span>
 <span class='doccomment'>//!</span>
