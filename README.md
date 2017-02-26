@@ -1,6 +1,7 @@
-<center>![Mockito](http://lipanski.github.io/mockito/logo/logo-black.png)</center>
-
-<center>[![Build Status](https://img.shields.io/crates/v/mockito.svg)](https://crates.io/crates/mockito) [![Build Status](https://travis-ci.org/lipanski/mockito.svg?branch=master)](https://travis-ci.org/lipanski/mockito)</center>
+<p>
+  <p align="center">![Mockito](http://lipanski.github.io/mockito/logo/logo-black.png)</p>
+  <p align="center">[![Build Status](https://img.shields.io/crates/v/mockito.svg)](https://crates.io/crates/mockito) [![Build Status](https://travis-ci.org/lipanski/mockito.svg?branch=master)](https://travis-ci.org/lipanski/mockito)</p>
+</p>
 
 HTTP mocking for Rust!
 
