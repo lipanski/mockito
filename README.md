@@ -13,6 +13,13 @@ Documentation available at [http://lipanski.github.io/mockito/](http://lipanski.
 
 Before upgrading, make sure to check out the [changelog](https://github.com/lipanski/mockito/releases).
 
+## Contribution Guidelines
+
+1. Check the existing issues and pull requests.
+2. One commit is one feature - consider squashing.
+3. I'll handle versioning and generating docs, after the pull request gets merged.
+4. :shipit:
+
 ## Development
 
 Run tests:
