@@ -145,7 +145,7 @@ fn start() {
 
         match Server::http(SERVER_ADDRESS) {
             Ok(server) => { server.handle(RequestHandler::new(mocks)).unwrap(); },
-            Err(_) => {},
+            Err(message) => { panic!(message); },
         };
     });
 
