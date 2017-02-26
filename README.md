@@ -6,16 +6,16 @@ HTTP mocking for Rust!
 
 Get it on [crates.io](https://crates.io/crates/mockito/).
 
-Documentation available [here](http://lipanski.github.io/mockito/).
+Documentation available at [http://lipanski.github.io/mockito/](http://lipanski.github.io/mockito/).
 
-Logo courtesy to [http://niastudio.net](http://niastudio.net).
+Before upgrading, make sure to check out the [changelog](https://github.com/lipanski/mockito/releases).
 
 ## Development
 
 Run tests:
 
 ```
-cargo test
+cargo test --no-fail-fast -- --test-threads=1
 ```
 
 Generate docs:
@@ -29,3 +29,7 @@ Release:
 ```
 cargo package && cargo publish
 ```
+
+---
+
+Logo courtesy to [http://niastudio.net](http://niastudio.net).
