@@ -143,7 +143,7 @@ fn start() {
     let mocks: Arc<Mutex<Vec<Mock>>> = Arc::new(Mutex::new(vec!()));
 
     match Server::http(SERVER_ADDRESS) {
-        Ok(server) => { server.handle(RequestHandler::new(mocks)).unwrap(); },
+        Ok(server) => { server.handle_threads(RequestHandler::new(mocks), 1).unwrap(); },
         Err(message) => { panic!(message); },
     };
 
