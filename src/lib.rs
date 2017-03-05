@@ -368,8 +368,8 @@ impl Mock {
     /// use mockito::mock;
     ///
     /// mock("GET", "/").with_body("hello world").create_for(|| {
-    ///   // This mock will only be available for the next 10 seconds
-    ///   sleep(Duration::new(10, 0));
+    ///   // This mock will only be available for the next 1 second
+    ///   sleep(Duration::new(1, 0));
     /// });
     /// ```
     ///
