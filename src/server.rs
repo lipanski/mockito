@@ -9,6 +9,7 @@ use hyper::method::{Method};
 use hyper::status::StatusCode;
 use serde_json;
 use {Mock, MockResponse, SERVER_ADDRESS};
+use std::time;
 
 #[derive(Debug)]
 enum CreateMockError {
@@ -148,7 +149,9 @@ fn start() {
         };
     });
 
-    while !is_listening() {}
+    thread::sleep(time::Duration::from_millis(500));
+
+    // while !is_listening() {}
 }
 
 fn is_listening() -> bool {
