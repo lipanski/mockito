@@ -2,7 +2,7 @@ extern crate mockito;
 
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
-use mockito::{SERVER_ADDRESS, mock, reset};
+use mockito::{SERVER_ADDRESS, mock, reset, Matcher};
 
 fn request_stream(route: &str, headers: &str) -> TcpStream {
     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
@@ -130,6 +130,84 @@ fn test_match_multiple_headers() {
 
     let (status_not_matching, _, _) = request("GET /", "content-type: text/plain\r\nauthorization: meh\r\n", 0);
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_not_matching);
+}
+
+#[test]
+fn test_match_header_any_matching() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("Content-Type", Matcher::Any)
+        .with_body("matched")
+        .create();
+
+    let (_, _, body) = request("GET /", "content-type: something\r\n", 7);
+    assert_eq!("matched", body);
+}
+
+#[test]
+fn test_match_header_any_not_matching() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("Content-Type", Matcher::Any)
+        .with_body("matched")
+        .create();
+
+    let (status, _, _) = request("GET /", "", 0);
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+}
+
+#[test]
+fn test_match_header_missing_matching() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("Authorization", Matcher::Missing)
+        .create();
+
+    let (status, _, _) = request("GET /", "", 0);
+    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status);
+}
+
+#[test]
+fn test_match_header_missing_not_matching() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("Authorization", Matcher::Missing)
+        .create();
+
+    let (status, _, _) = request("GET /", "Authorization: something\r\n", 0);
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+}
+
+#[test]
+fn test_match_multiple_header_conditions_matching() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("Hello", "World")
+        .match_header("Content-Type", Matcher::Any)
+        .match_header("Authorization", Matcher::Missing)
+        .create();
+
+    let (status, _, _) = request("GET /", "Hello: World\r\nContent-Type: something\r\n", 0);
+    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status);
+}
+
+#[test]
+fn test_match_multiple_header_conditions_not_matching() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("hello", "world")
+        .match_header("Content-Type", Matcher::Any)
+        .match_header("Authorization", Matcher::Missing)
+        .create();
+
+    let (status, _, _) = request("GET /", "Hello: World\r\n", 0);
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
 #[test]

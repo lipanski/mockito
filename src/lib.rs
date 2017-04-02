@@ -144,6 +144,8 @@ mod server;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::cmp::PartialEq;
+use std::convert::{From, Into};
 use hyper::client::Client;
 use hyper::server::Request;
 use hyper::header::{Headers, ContentType, Connection};
@@ -191,6 +193,29 @@ pub fn reset() {
         .unwrap();
 }
 
+#[derive(PartialEq, Debug)]
+pub enum Matcher {
+    Exact(String),
+    Any,
+    Missing,
+}
+
+impl<'a> From<&'a str> for Matcher {
+    fn from(value: &str) -> Matcher {
+        Matcher::Exact(value.to_string())
+    }
+}
+
+impl PartialEq<String> for Matcher {
+    fn eq(&self, other: &String) -> bool {
+        match self {
+            &Matcher::Exact(ref value) => { value == other },
+            &Matcher::Any => true,
+            &Matcher::Missing => false,
+        }
+    }
+}
+
 ///
 /// Stores information about a mocked request. Should be initialized via `mockito::mock()`.
 ///
@@ -199,7 +224,7 @@ pub struct Mock {
     id: String,
     method: String,
     path: String,
-    headers: HashMap<String, String>,
+    headers: HashMap<String, Matcher>,
     response: MockResponse,
 }
 
@@ -239,8 +264,8 @@ impl Mock {
     ///   .match_header("authorization", "password");
     /// ```
     ///
-    pub fn match_header(&mut self, field: &str, value: &str) -> &mut Self {
-        self.headers.insert(field.to_owned(), value.to_owned());
+    pub fn match_header<M: Into<Matcher>>(&mut self, field: &str, value: M) -> &mut Self {
+        self.headers.insert(field.to_owned(), value.into());
 
         self
     }
@@ -339,7 +364,14 @@ impl Mock {
         headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
 
         for (field, value) in &self.headers {
-            headers.set_raw("x-mock-".to_string() + field, vec!(value.as_bytes().to_vec()));
+            let (header_field, header_value) =
+                match value {
+                    &Matcher::Missing => ("x-mock-header-missing".to_string(), field.as_bytes()),
+                    &Matcher::Any => ("x-mock-header-any".to_string(), field.as_bytes()),
+                    &Matcher::Exact(ref exact_value) => ("x-mock-".to_string() + field, exact_value.as_bytes()),
+                };
+
+            headers.set_raw(header_field, vec!(header_value.to_vec()));
         }
 
         let body = serde_json::to_string(&self.response).unwrap();
@@ -436,7 +468,11 @@ impl Mock {
 
                     return false
                 },
-                _ => return false
+                None => {
+                    if value == &Matcher::Missing { continue }
+
+                    return false
+                },
             }
         }
 

@@ -8,7 +8,7 @@ use hyper::header::ContentLength;
 use hyper::method::{Method};
 use hyper::status::StatusCode;
 use serde_json;
-use {Mock, MockResponse, SERVER_ADDRESS};
+use {Matcher, Mock, MockResponse, SERVER_ADDRESS};
 
 #[derive(Debug)]
 enum CreateMockError {
@@ -106,7 +106,14 @@ impl RequestHandler {
         for header in request.headers.iter() {
             let field = header.name().to_lowercase();
             if field.starts_with("x-mock-") && field != "x-mock-id" && field != "x-mock-method" && field != "x-mock-path" {
-                mock.match_header(&field.replace("x-mock-", ""), &header.value_string());
+                let (header_field, header_value) =
+                    match field.as_ref() {
+                        "x-mock-header-any" => (header.value_string(), Matcher::Any),
+                        "x-mock-header-missing" => (header.value_string(), Matcher::Missing),
+                        _ => (field.replace("x-mock-", ""), Matcher::Exact(header.value_string())),
+                    };
+
+                mock.match_header(&header_field, header_value);
             }
         }
 
