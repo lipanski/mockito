@@ -3,7 +3,7 @@
     html_root_url = "http://lipanski.github.io/mockito/generated/mockito/index.html")]
 
 //!
-//! Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
+//! Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
 //! It runs an HTTP server on your local port 1234 and can register and remove mocks.
 //!
 //! The server is run on a separate thread within the same process and will be cleaned up
@@ -13,7 +13,7 @@
 //!
 //! Using compiler flags, set the URL of your web client to `mockito::SERVER_URL` or `mockito::SERVER_ADDRESS`.
 //!
-//! # Example
+//! ## Example
 //!
 //! ```
 //! #[cfg(test)]
@@ -28,7 +28,7 @@
 //!
 //! Then start mocking:
 //!
-//! # Example
+//! ## Example
 //!
 //! ```
 //! #[cfg(test)]
@@ -69,7 +69,7 @@
 //!
 //! Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.
 //!
-//! # Example
+//! ## Example
 //!
 //! ```
 //! use mockito::mock;
@@ -88,6 +88,43 @@
 //! // will respond with text.
 //! ```
 //!
+//! # Other header matchers
+//!
+//! You can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! mock("GET", "/hello")
+//!  .match_header("content-type", Matcher::Any)
+//!  .with_body("something");
+//!
+//! // Requests containing any content-type header value will be mocked.
+//! // Requests not containing this header will return `501 Not Implemented`.
+//! ```
+//!
+//! You can mock requests that should be *missing a particular header field*, by setting the `Mock::match_header`
+//! value to `Matcher::Missing`.
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! mock("GET", "/hello")
+//!   .match_header("authorization", Matcher::Missing)
+//!   .with_body("no authorization header");
+//!
+//! // Requests without the authorization header will be matched.
+//! // Requests containing the authorization header will return `501 Not Implemented`.
+//! ```
+//!
+//! # Non-matching calls
+//!
+//! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.
+//!
 //! # Cleaning up
 //!
 //! Even though **mocks are matched in reverse order** (most recent one wins), in some situations
@@ -95,7 +132,7 @@
 //!
 //! By using a closure:
 //!
-//! # Example
+//! ## Example
 //!
 //! ```
 //! use mockito::mock;
@@ -110,7 +147,7 @@
 //!
 //! By calling `remove()` on the mock:
 //!
-//! # Example
+//! ## Example
 //!
 //! ```
 //! use mockito::mock;
@@ -125,7 +162,7 @@
 //!
 //! By calling `reset()` to **remove all mocks**:
 //!
-//! # Example
+//! ## Example
 //!
 //! ```
 //! use mockito::reset;
@@ -193,10 +230,20 @@ pub fn reset() {
         .unwrap();
 }
 
+///
+/// Allows matching headers in multiple ways: matching the exact field name and value, matching only by field name
+/// or matching that the field name is not present at all.
+///
+/// These matchers are used within the `Mock::match_header` call.
+///
 #[derive(PartialEq, Debug)]
 pub enum Matcher {
+    /// Given the header field, matches the exact header value. There's also an implementation of `From<&str>`
+    /// to keep things simple and backwards compatible.
     Exact(String),
+    /// Given the header field, matches any header value.
     Any,
+    /// Matches when the header field is *not* be present in the request.
     Missing,
 }
 

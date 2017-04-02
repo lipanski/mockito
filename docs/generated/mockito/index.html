@@ -9,6 +9,7 @@
 
     <title>mockito - Rust</title>
 
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
     <link rel="stylesheet" type="text/css" href="../rustdoc.css">
     <link rel="stylesheet" type="text/css" href="../main.css">
     
@@ -47,8 +48,8 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-465' title='goto source code'>[src]</a></span></h1>
-<div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in (integration) tests or for offline work.
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-547' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
 It runs an HTTP server on your local port 1234 and can register and remove mocks.</p>
 
 <p>The server is run on a separate thread within the same process and will be cleaned up
@@ -57,7 +58,7 @@ at the end of the run.</p>
 <h1 id='getting-started' class='section-header'><a href='#getting-started'>Getting Started</a></h1>
 <p>Using compiler flags, set the URL of your web client to <code>mockito::SERVER_URL</code> or <code>mockito::SERVER_ADDRESS</code>.</p>
 
-<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<h2 id='example' class='section-header'><a href='#example'>Example</a></h2>
 <pre class='rust rust-example-rendered'>
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
 <span class='kw'>use</span> <span class='ident'>mockito</span>;
@@ -70,7 +71,7 @@ at the end of the run.</p>
 
 <p>Then start mocking:</p>
 
-<h1 id='example-1' class='section-header'><a href='#example-1'>Example</a></h1>
+<h2 id='example-1' class='section-header'><a href='#example-1'>Example</a></h2>
 <pre class='rust rust-example-rendered'>
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span>
 <span class='kw'>mod</span> <span class='ident'>tests</span> {
@@ -106,7 +107,7 @@ or override the existing mocks, you might get away with running your tests on mu
 <h1 id='matching-by-header' class='section-header'><a href='#matching-by-header'>Matching by header</a></h1>
 <p>Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.</p>
 
-<h1 id='example-2' class='section-header'><a href='#example-2'>Example</a></h1>
+<h2 id='example-2' class='section-header'><a href='#example-2'>Example</a></h2>
 <pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
 
@@ -123,13 +124,44 @@ or override the existing mocks, you might get away with running your tests on mu
 <span class='comment'>// JSON requests to GET /hello will respond with JSON, while plain requests</span>
 <span class='comment'>// will respond with text.</span></pre>
 
+<h1 id='other-header-matchers' class='section-header'><a href='#other-header-matchers'>Other header matchers</a></h1>
+<p>You can match a header <em>only by its field name</em>, by setting the <code>Mock::match_header</code> value to <code>Matcher::Any</code>.</p>
+
+<h2 id='example-3' class='section-header'><a href='#example-3'>Example</a></h2>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::{<span class='ident'>mock</span>, <span class='ident'>Matcher</span>};
+
+<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
+ .<span class='ident'>match_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='ident'>Matcher</span>::<span class='ident'>Any</span>)
+ .<span class='ident'>with_body</span>(<span class='string'>&quot;something&quot;</span>);
+
+<span class='comment'>// Requests containing any content-type header value will be mocked.</span>
+<span class='comment'>// Requests not containing this header will return `501 Not Implemented`.</span></pre>
+
+<p>You can mock requests that should be <em>missing a particular header field</em>, by setting the <code>Mock::match_header</code>
+value to <code>Matcher::Missing</code>.</p>
+
+<h2 id='example-4' class='section-header'><a href='#example-4'>Example</a></h2>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>use</span> <span class='ident'>mockito</span>::{<span class='ident'>mock</span>, <span class='ident'>Matcher</span>};
+
+<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/hello&quot;</span>)
+  .<span class='ident'>match_header</span>(<span class='string'>&quot;authorization&quot;</span>, <span class='ident'>Matcher</span>::<span class='ident'>Missing</span>)
+  .<span class='ident'>with_body</span>(<span class='string'>&quot;no authorization header&quot;</span>);
+
+<span class='comment'>// Requests without the authorization header will be matched.</span>
+<span class='comment'>// Requests containing the authorization header will return `501 Not Implemented`.</span></pre>
+
+<h1 id='non-matching-calls' class='section-header'><a href='#non-matching-calls'>Non-matching calls</a></h1>
+<p>Any calls to the Mockito server that are not matched will return <em>501 Not Implemented</em>.</p>
+
 <h1 id='cleaning-up' class='section-header'><a href='#cleaning-up'>Cleaning up</a></h1>
 <p>Even though <strong>mocks are matched in reverse order</strong> (most recent one wins), in some situations
 it might be useful to clean up right after the test. There are multiple ways of doing this.</p>
 
 <p>By using a closure:</p>
 
-<h1 id='example-3' class='section-header'><a href='#example-3'>Example</a></h1>
+<h2 id='example-5' class='section-header'><a href='#example-5'>Example</a></h2>
 <pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
 
@@ -142,7 +174,7 @@ it might be useful to clean up right after the test. There are multiple ways of 
 
 <p>By calling <code>remove()</code> on the mock:</p>
 
-<h1 id='example-4' class='section-header'><a href='#example-4'>Example</a></h1>
+<h2 id='example-6' class='section-header'><a href='#example-6'>Example</a></h2>
 <pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
 
@@ -155,7 +187,7 @@ it might be useful to clean up right after the test. There are multiple ways of 
 
 <p>By calling <code>reset()</code> to <strong>remove all mocks</strong>:</p>
 
-<h1 id='example-5' class='section-header'><a href='#example-5'>Example</a></h1>
+<h2 id='example-7' class='section-header'><a href='#example-7'>Example</a></h2>
 <pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>reset</span>;
 
@@ -167,6 +199,15 @@ it might be useful to clean up right after the test. There are multiple ways of 
                                   title='mockito::Mock'>Mock</a></td>
                            <td class='docblock-short'>
                                 <p>Stores information about a mocked request. Should be initialized via <code>mockito::mock()</code>.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class='enum' href='enum.Matcher.html'
+                                  title='mockito::Matcher'>Matcher</a></td>
+                           <td class='docblock-short'>
+                                <p>Allows matching headers in multiple ways: matching the exact field name and value, matching only by field name
+or matching that the field name is not present at all.</p>
                            </td>
                        </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
 <table>
