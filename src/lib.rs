@@ -230,6 +230,11 @@ pub fn reset() {
         .unwrap();
 }
 
+#[allow(missing_docs)]
+pub fn start() {
+    server::try_start();
+}
+
 ///
 /// Allows matching headers in multiple ways: matching the exact field name and value, matching only by field name
 /// or matching that the field name is not present at all.
