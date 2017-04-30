@@ -36,8 +36,8 @@ impl RequestHandler {
                 self.mocks.lock().unwrap().push(mock);
             },
             Err(e) => {
-                // TODO: implement Display for CreateMockError
-                mem::replace(response.status_mut(), StatusCode::UnprocessableEntity);
+                *response.status_mut() = StatusCode::UnprocessableEntity;
+                let _ = response.send(&format!("{:?}", e).as_bytes());
             }
         }
     }
