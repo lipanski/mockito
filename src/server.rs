@@ -8,12 +8,10 @@ use hyper::header::ContentLength;
 use hyper::method::{Method};
 use hyper::status::StatusCode;
 use serde_json;
-use {Matcher, Mock, MockResponse, SERVER_ADDRESS};
+use {Mock, SERVER_ADDRESS};
 
 #[derive(Debug)]
 enum CreateMockError {
-    MethodMissing,
-    PathMissing,
     ContentLengthMissing,
     InvalidMockResponse,
 }
@@ -84,48 +82,12 @@ impl RequestHandler {
     }
 
     fn mock_from(request: Request) -> Result<Mock, CreateMockError> {
-        let method: String = try!(
-            request.headers.iter()
-                .find(|header| { header.name().to_lowercase() == "x-mock-method" })
-                .ok_or(CreateMockError::MethodMissing)
-            ).value_string();
-
-        let path: String = try!(
-            request.headers.iter()
-                .find(|header| { header.name().to_lowercase() == "x-mock-path" })
-                .ok_or(CreateMockError::PathMissing)
-            ).value_string();
-
-        let mut mock = Mock::new(&method, &path);
-
-        match request.headers.iter().find(|header| { header.name().to_lowercase() == "x-mock-id" }) {
-            Some(header) => { mock.id = header.value_string(); },
-            None => {},
-        };
-
-        for header in request.headers.iter() {
-            let field = header.name().to_lowercase();
-            if field.starts_with("x-mock-") && field != "x-mock-id" && field != "x-mock-method" && field != "x-mock-path" {
-                let (header_field, header_value) =
-                    match field.as_ref() {
-                        "x-mock-header-any" => (header.value_string(), Matcher::Any),
-                        "x-mock-header-missing" => (header.value_string(), Matcher::Missing),
-                        _ => (field.replace("x-mock-", ""), Matcher::Exact(header.value_string())),
-                    };
-
-                mock.match_header(&header_field, header_value);
-            }
-        }
-
         let content_length: ContentLength = *try!(request.headers.get().ok_or(CreateMockError::ContentLengthMissing));
 
         let mut body = String::new();
         request.take(content_length.0).read_to_string(&mut body).unwrap();
 
-        let response: MockResponse = try!(serde_json::from_str(&body).map_err(|_| CreateMockError::InvalidMockResponse));
-        mock.response = response;
-
-        Ok(mock)
+        serde_json::from_str(&body).map_err(|_| CreateMockError::InvalidMockResponse)
     }
 }
 
