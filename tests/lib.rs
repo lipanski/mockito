@@ -2,6 +2,7 @@ extern crate mockito;
 
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
+use std::str::FromStr;
 use mockito::{SERVER_ADDRESS, mock, reset, Matcher};
 
 fn request_stream(route: &str, headers: &str) -> TcpStream {
@@ -12,29 +13,36 @@ fn request_stream(route: &str, headers: &str) -> TcpStream {
     stream
 }
 
-fn parse_stream(stream: TcpStream, content_length: usize) -> (String, Vec<String>, String) {
+fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
     let mut reader = BufReader::new(stream);
 
     let mut status_line = String::new();
     reader.read_line(&mut status_line).unwrap();
 
     let mut headers = vec![];
+    let mut content_length: u64 = 0;
     loop {
         let mut header_line = String::new();
         reader.read_line(&mut header_line).unwrap();
 
         if header_line == "\r\n" { break }
-        else { headers.push(header_line); }
+
+        if header_line.starts_with("Content-Length:") {
+            let mut parts = header_line.split(":");
+            content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
+        }
+
+        headers.push(header_line.trim_right().to_string());
     }
 
     let mut body = String::new();
-    reader.take(content_length as u64).read_to_string(&mut body).unwrap();
+    reader.take(content_length).read_to_string(&mut body).unwrap();
 
     (status_line, headers, body)
 }
 
-fn request(route: &str, headers: &str, expected_content_length: usize) -> (String, Vec<String>, String) {
-    parse_stream(request_stream(route, headers), expected_content_length)
+fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
+    parse_stream(request_stream(route, headers))
 }
 
 #[test]
@@ -52,7 +60,7 @@ fn test_simple_route_mock() {
     let mocked_body = "world";
     mock("GET", "/hello").with_body(mocked_body).create();
 
-    let (status_line, _, body) = request("GET /hello", "", 5);
+    let (status_line, _, body) = request("GET /hello", "");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status_line);
     assert_eq!(mocked_body, body);
 }
@@ -64,10 +72,10 @@ fn test_two_route_mocks() {
     mock("GET", "/a").with_body("aaa").create();
     mock("GET", "/b").with_body("bbb").create();
 
-    let (_, _, body_a) = request("GET /a", "", 3);
+    let (_, _, body_a) = request("GET /a", "");
 
     assert_eq!("aaa", body_a);
-    let (_, _, body_b) = request("GET /b", "", 3);
+    let (_, _, body_b) = request("GET /b", "");
     assert_eq!("bbb", body_b);
 }
 
@@ -77,7 +85,7 @@ fn test_no_match_returns_501() {
 
     mock("GET", "/").with_body("matched").create();
 
-    let (status_line, _, _) = request("GET /nope", "", 0);
+    let (status_line, _, _) = request("GET /nope", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 }
 
@@ -95,10 +103,10 @@ fn test_match_header() {
         .with_body("hello")
         .create();
 
-    let (_, _, body_json) = request("GET /", "content-type: application/json\r\n", 2);
+    let (_, _, body_json) = request("GET /", "content-type: application/json\r\n");
     assert_eq!("{}", body_json);
 
-    let (_, _, body_text) = request("GET /", "content-type: text/plain\r\n", 5);
+    let (_, _, body_text) = request("GET /", "content-type: text/plain\r\n");
     assert_eq!("hello", body_text);
 }
 
@@ -108,10 +116,10 @@ fn test_match_header_is_case_insensitive_on_the_field_name() {
 
     mock("GET", "/").match_header("content-type", "text/plain").create();
 
-    let (uppercase_status_line, _, _) = request("GET /", "Content-Type: text/plain\r\n", 0);
+    let (uppercase_status_line, _, _) = request("GET /", "Content-Type: text/plain\r\n");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", uppercase_status_line);
 
-    let (lowercase_status_line, _, _) = request("GET /", "content-type: text/plain\r\n", 0);
+    let (lowercase_status_line, _, _) = request("GET /", "content-type: text/plain\r\n");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", lowercase_status_line);
 }
 
@@ -125,10 +133,10 @@ fn test_match_multiple_headers() {
         .with_body("matched")
         .create();
 
-    let (_, _, body_matching) = request("GET /", "content-type: text/plain\r\nauthorization: secret\r\n", 7);
+    let (_, _, body_matching) = request("GET /", "content-type: text/plain\r\nauthorization: secret\r\n");
     assert_eq!("matched", body_matching);
 
-    let (status_not_matching, _, _) = request("GET /", "content-type: text/plain\r\nauthorization: meh\r\n", 0);
+    let (status_not_matching, _, _) = request("GET /", "content-type: text/plain\r\nauthorization: meh\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_not_matching);
 }
 
@@ -141,7 +149,7 @@ fn test_match_header_any_matching() {
         .with_body("matched")
         .create();
 
-    let (_, _, body) = request("GET /", "content-type: something\r\n", 7);
+    let (_, _, body) = request("GET /", "content-type: something\r\n");
     assert_eq!("matched", body);
 }
 
@@ -154,7 +162,7 @@ fn test_match_header_any_not_matching() {
         .with_body("matched")
         .create();
 
-    let (status, _, _) = request("GET /", "", 0);
+    let (status, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -166,7 +174,7 @@ fn test_match_header_missing_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request("GET /", "", 0);
+    let (status, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status);
 }
 
@@ -178,7 +186,7 @@ fn test_match_header_missing_not_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request("GET /", "Authorization: something\r\n", 0);
+    let (status, _, _) = request("GET /", "Authorization: something\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -192,7 +200,7 @@ fn test_match_multiple_header_conditions_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request("GET /", "Hello: World\r\nContent-Type: something\r\n", 0);
+    let (status, _, _) = request("GET /", "Hello: World\r\nContent-Type: something\r\n");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status);
 }
 
@@ -206,7 +214,7 @@ fn test_match_multiple_header_conditions_not_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request("GET /", "Hello: World\r\n", 0);
+    let (status, _, _) = request("GET /", "Hello: World\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -219,7 +227,7 @@ fn test_mock_with_status() {
         .with_body("")
         .create();
 
-    let (status_line, _, _) = request("GET /", "", 0);
+    let (status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 204 <unknown status code>\r\n", status_line);
 }
 
@@ -232,8 +240,8 @@ fn test_mock_with_header() {
         .with_body("{}")
         .create();
 
-    let (_, headers, _) = request("GET /", "", 0);
-    assert!(headers.contains(&"content-type: application/json\r\n".to_string()));
+    let (_, headers, _) = request("GET /", "");
+    assert!(headers.contains(&"content-type: application/json".to_string()));
 }
 
 #[test]
@@ -246,9 +254,9 @@ fn test_mock_with_multiple_headers() {
         .with_body("{}")
         .create();
 
-    let (_, headers, _) = request("GET /", "", 0);
-    assert!(headers.contains(&"content-type: application/json\r\n".to_string()));
-    assert!(headers.contains(&"x-api-key: 1234\r\n".to_string()));
+    let (_, headers, _) = request("GET /", "");
+    assert!(headers.contains(&"content-type: application/json".to_string()));
+    assert!(headers.contains(&"x-api-key: 1234".to_string()));
 }
 
 #[test]
@@ -257,12 +265,12 @@ fn test_reset_clears_mocks() {
 
     mock("GET", "/reset").create();
 
-    let (working_status_line, _, _) = request("GET /reset", "", 0);
+    let (working_status_line, _, _) = request("GET /reset", "");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", working_status_line);
 
     reset();
 
-    let (reset_status_line, _, _) = request("GET /reset", "", 0);
+    let (reset_status_line, _, _) = request("GET /reset", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
 }
 
@@ -273,12 +281,12 @@ fn test_mock_remove_clears_the_mock() {
     let mut mock = mock("GET", "/");
     mock.create();
 
-    let (working_status_line, _, _) = request("GET /", "", 0);
+    let (working_status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", working_status_line);
 
     mock.remove();
 
-    let (reset_status_line, _, _) = request("GET /", "", 0);
+    let (reset_status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
 }
 
@@ -287,10 +295,10 @@ fn test_mock_create_for_is_only_available_during_the_closure_lifetime() {
     reset();
 
     mock("GET", "/").create_for( || {
-        let (working_status_line, _, _) = request("GET /", "", 0);
+        let (working_status_line, _, _) = request("GET /", "");
         assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", working_status_line);
     });
 
-    let (reset_status_line, _, _) = request("GET /", "", 0);
+    let (reset_status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
 }
