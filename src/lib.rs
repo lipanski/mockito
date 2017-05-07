@@ -185,7 +185,7 @@ use std::cmp::PartialEq;
 use std::convert::{From, Into};
 use hyper::client::Client;
 use hyper::server::Request;
-use hyper::header::{Headers, ContentType, Connection};
+use hyper::header::{Headers, ContentType, ContentLength, Connection};
 use rand::{thread_rng, Rng};
 
 ///
@@ -277,6 +277,7 @@ pub struct Mock {
     method: String,
     path: String,
     headers: HashMap<String, Matcher>,
+    body: Matcher,
     response: MockResponse,
 }
 
@@ -287,6 +288,7 @@ impl Mock {
             method: method.to_owned().to_uppercase(),
             path: path.to_owned(),
             headers: HashMap::new(),
+            body: Matcher::Any,
             response: MockResponse::new(),
         }
     }
@@ -318,6 +320,12 @@ impl Mock {
     ///
     pub fn match_header<M: Into<Matcher>>(&mut self, field: &str, value: M) -> &mut Self {
         self.headers.insert(field.to_owned(), value.into());
+
+        self
+    }
+
+    pub fn match_body<M: Into<Matcher>>(&mut self, value: M) -> &mut Self {
+        self.body = value.into();
 
         self
     }
@@ -496,10 +504,11 @@ impl Mock {
     }
 
     #[allow(missing_docs)]
-    pub fn matches(&self, request: &Request) -> bool {
+    pub fn matches(&self, request: &mut Request) -> bool {
         self.method_matches(request)
             && self.path_matches(request)
             && self.headers_match(request)
+            && self.body_matches(request)
     }
 
     fn method_matches(&self, request: &Request) -> bool {
@@ -529,6 +538,20 @@ impl Mock {
         }
 
         true
+    }
+
+    fn body_matches(&self, request: &mut Request) -> bool {
+        if self.body == Matcher::Any { return true };
+
+        let content_length: ContentLength = match request.headers.get() {
+            Some(value) => *value,
+            None => { return self.body == Matcher::Missing },
+        };
+
+        let mut body = String::new();
+        request.take(content_length.0).read_to_string(&mut body).unwrap();
+
+        self.body == body
     }
 }
 

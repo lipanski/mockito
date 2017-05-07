@@ -57,10 +57,10 @@ impl RequestHandler {
         }
     }
 
-    fn handle_default(&self, request: Request, mut response: Response) {
+    fn handle_default(&self, mut request: Request, mut response: Response) {
         let mocks = self.mocks.lock().unwrap();
 
-        match mocks.iter().rev().find(|mock| mock.matches(&request)) {
+        match mocks.iter().rev().find(|mock| mock.matches(&mut request)) {
             Some(mock) => {
                 // Set the response status code
                 // TODO: StatusCode::Unregistered labels everything as `<unknown status code>`
