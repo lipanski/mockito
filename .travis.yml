@@ -3,3 +3,6 @@ rust:
   - stable
   - nightly
 script: cargo test --no-fail-fast -- --test-threads=1
+notifications:
+  email:
+    on_success: never
