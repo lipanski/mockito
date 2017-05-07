@@ -27,7 +27,7 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
 
         if header_line == "\r\n" { break }
 
-        if header_line.starts_with("Content-Length:") {
+        if header_line.starts_with("content-length:") {
             let mut parts = header_line.split(":");
             content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
         }
@@ -61,7 +61,7 @@ fn test_simple_route_mock() {
     mock("GET", "/hello").with_body(mocked_body).create();
 
     let (status_line, _, body) = request("GET /hello", "");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status_line);
+    assert_eq!("HTTP/1.1 200\r\n", status_line);
     assert_eq!(mocked_body, body);
 }
 
@@ -117,10 +117,10 @@ fn test_match_header_is_case_insensitive_on_the_field_name() {
     mock("GET", "/").match_header("content-type", "text/plain").create();
 
     let (uppercase_status_line, _, _) = request("GET /", "Content-Type: text/plain\r\n");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", uppercase_status_line);
+    assert_eq!("HTTP/1.1 200\r\n", uppercase_status_line);
 
     let (lowercase_status_line, _, _) = request("GET /", "content-type: text/plain\r\n");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", lowercase_status_line);
+    assert_eq!("HTTP/1.1 200\r\n", lowercase_status_line);
 }
 
 #[test]
@@ -175,7 +175,7 @@ fn test_match_header_missing_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status);
+    assert_eq!("HTTP/1.1 200\r\n", status);
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn test_match_multiple_header_conditions_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "Hello: World\r\nContent-Type: something\r\n");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", status);
+    assert_eq!("HTTP/1.1 200\r\n", status);
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn test_mock_with_status() {
         .create();
 
     let (status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 204 <unknown status code>\r\n", status_line);
+    assert_eq!("HTTP/1.1 204\r\n", status_line);
 }
 
 #[test]
@@ -291,7 +291,7 @@ fn test_reset_clears_mocks() {
     mock("GET", "/reset").create();
 
     let (working_status_line, _, _) = request("GET /reset", "");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", working_status_line);
+    assert_eq!("HTTP/1.1 200\r\n", working_status_line);
 
     reset();
 
@@ -307,7 +307,7 @@ fn test_mock_remove_clears_the_mock() {
     mock.create();
 
     let (working_status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", working_status_line);
+    assert_eq!("HTTP/1.1 200\r\n", working_status_line);
 
     mock.remove();
 
@@ -316,12 +316,26 @@ fn test_mock_remove_clears_the_mock() {
 }
 
 #[test]
+fn test_mock_remove_doesnt_clear_other_mocks() {
+    reset();
+
+    mock("POST", "/").create();
+
+    let mut mock = mock("GET", "/");
+    mock.create();
+    mock.remove();
+
+    let (reset_status_line, _, _) = request("POST /", "");
+    assert_eq!("HTTP/1.1 200\r\n", reset_status_line);
+}
+
+#[test]
 fn test_mock_create_for_is_only_available_during_the_closure_lifetime() {
     reset();
 
     mock("GET", "/").create_for( || {
         let (working_status_line, _, _) = request("GET /", "");
-        assert_eq!("HTTP/1.1 200 <unknown status code>\r\n", working_status_line);
+        assert_eq!("HTTP/1.1 200\r\n", working_status_line);
     });
 
     let (reset_status_line, _, _) = request("GET /", "");
