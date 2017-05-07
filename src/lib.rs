@@ -171,21 +171,23 @@
 //! ```
 //!
 
-extern crate hyper;
+extern crate curl;
+extern crate http_muncher;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate rand;
 
 mod server;
+mod request;
+type Request = request::Request;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::cmp::PartialEq;
 use std::convert::{From, Into};
-use hyper::client::Client;
-use hyper::server::Request;
-use hyper::header::{Headers, ContentType, Connection};
+use curl::easy::Easy;
+use curl::easy::List as HeaderList;
 use rand::{thread_rng, Rng};
 
 ///
@@ -224,10 +226,10 @@ pub fn mock(method: &str, path: &str) -> Mock {
 pub fn reset() {
     server::try_start();
 
-    Client::new()
-        .delete(&[SERVER_URL, "/mocks"].join(""))
-        .send()
-        .unwrap();
+    let mut request = Easy::new();
+    request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
+    request.custom_request("DELETE").unwrap();
+    request.perform().unwrap();
 }
 
 #[allow(missing_docs)]
@@ -317,7 +319,7 @@ impl Mock {
     /// ```
     ///
     pub fn match_header<M: Into<Matcher>>(&mut self, field: &str, value: M) -> &mut Self {
-        self.headers.insert(field.to_owned(), value.into());
+        self.headers.insert(field.to_owned().to_lowercase(), value.into());
 
         self
     }
@@ -412,13 +414,11 @@ impl Mock {
 
         let body = serde_json::to_string(&self).unwrap();
 
-        Client::new()
-            .post(&[SERVER_URL, "/mocks"].join(""))
-            .header(ContentType::json())
-            .header(Connection::close())
-            .body(&body)
-            .send()
-            .unwrap();
+        let mut request = Easy::new();
+        request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
+        request.post(true).unwrap();
+        request.post_fields_copy(body.as_bytes()).unwrap();
+        request.perform().unwrap();
 
         self
     }
@@ -468,15 +468,16 @@ impl Mock {
     pub fn remove(&self) {
         server::try_start();
 
-        let mut headers = Headers::new();
-        headers.set_raw("x-mock-id", vec!(self.id.as_bytes().to_vec()));
 
-        Client::new()
-            .delete(&[SERVER_URL, "/mocks"].join(""))
-            .headers(headers)
-            .header(Connection::close())
-            .send()
-            .unwrap();
+        let mut request = Easy::new();
+        request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
+        request.custom_request("DELETE").unwrap();
+
+        let mut headers = HeaderList::new();
+        headers.append(&["x-mock-id", &self.id].join(":")).unwrap();
+        request.http_headers(headers).unwrap();
+
+        request.perform().unwrap();
     }
 
     #[allow(missing_docs)]
@@ -487,20 +488,18 @@ impl Mock {
     }
 
     fn method_matches(&self, request: &Request) -> bool {
-        self.method == request.method.to_string().to_uppercase()
+        self.method == request.method
     }
 
     fn path_matches(&self, request: &Request) -> bool {
-        self.path == request.uri.to_string()
+        self.path == request.path
     }
 
     fn headers_match(&self, request: &Request) -> bool {
         for (field, value) in self.headers.iter() {
-            match request.headers.get_raw(&field) {
+            match request.headers.get(field) {
                 Some(request_header_value) => {
-                    let bytes: Vec<u8> = request_header_value.iter().flat_map(|el| el.iter().cloned()).collect();
-
-                    if value == &String::from_utf8(bytes).unwrap() { continue }
+                    if value == request_header_value { continue }
 
                     return false
                 },
