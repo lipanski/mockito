@@ -410,24 +410,8 @@ impl Mock {
     pub fn create(&mut self) -> &mut Self {
         server::try_start();
 
-        // let mut headers = Headers::new();
-        // headers.set_raw("x-mock-id", vec!(self.id.as_bytes().to_vec()));
-        // headers.set_raw("x-mock-method", vec!(self.method.as_bytes().to_vec()));
-        // headers.set_raw("x-mock-path", vec!(self.path.as_bytes().to_vec()));
-
-        // for (field, value) in &self.headers {
-        //     let (header_field, header_value) =
-        //         match value {
-        //             &Matcher::Missing => ("x-mock-header-missing".to_string(), field.as_bytes()),
-        //             &Matcher::Any => ("x-mock-header-any".to_string(), field.as_bytes()),
-        //             &Matcher::Exact(ref exact_value) => ("x-mock-".to_string() + field, exact_value.as_bytes()),
-        //         };
-
-        //     headers.set_raw(header_field, vec!(header_value.to_vec()));
-        // }
-
         let body = serde_json::to_string(&self).unwrap();
-        println!("{:?}", body);
+
         Client::new()
             .post(&[SERVER_URL, "/mocks"].join(""))
             .header(ContentType::json())
