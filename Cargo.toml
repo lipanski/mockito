@@ -1,6 +1,6 @@
 [package]
 name = "mockito"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/lipanski/mockito"
@@ -11,6 +11,6 @@ description = "HTTP mocking for Rust"
 [dependencies]
 hyper = "^0.10.0"
 rand = "^0.3.14"
-serde = "1"
-serde_derive = "1"
-serde_json = "1"
+serde = "^1.0"
+serde_derive = "^1.0"
+serde_json = "^1.0"
