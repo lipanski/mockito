@@ -192,12 +192,12 @@ use rand::{thread_rng, Rng};
 /// Points to the address the mock server is running at.
 /// Can be used with `std::net::TcpStream`.
 ///
-pub const SERVER_ADDRESS: &'static str = "0.0.0.0:1234";
+pub const SERVER_ADDRESS: &'static str = "127.0.0.1:1234";
 
 ///
 /// Points to the URL the mock server is running at.
 ///
-pub const SERVER_URL: &'static str = "http://0.0.0.0:1234";
+pub const SERVER_URL: &'static str = "http://127.0.0.1:1234";
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
