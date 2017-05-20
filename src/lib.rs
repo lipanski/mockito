@@ -351,7 +351,7 @@ impl Mock {
     /// ```
     ///
     pub fn with_header(&mut self, field: &str, value: &str) -> &mut Self {
-        self.response.headers.insert(field.to_owned(), value.to_owned());
+        self.response.headers.push((field.to_owned(), value.to_owned()));
 
         self
     }
@@ -521,7 +521,7 @@ const DEFAULT_RESPONSE_STATUS: usize = 200;
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct MockResponse {
     status: usize,
-    headers: HashMap<String, String>,
+    headers: Vec<(String, String)>,
     body: String,
 }
 
@@ -529,7 +529,7 @@ impl MockResponse {
     pub fn new() -> Self {
         MockResponse {
             status: DEFAULT_RESPONSE_STATUS,
-            headers: HashMap::new(),
+            headers: Vec::new(),
             body: String::new(),
         }
     }
