@@ -67,7 +67,7 @@ impl RequestHandler {
                 mem::replace(response.status_mut(), StatusCode::Unregistered(mock.response.status as u16));
 
                 // Set the response headers
-                for (field, value) in &mock.response.headers {
+                for &(ref field, ref value) in &mock.response.headers {
                     response.headers_mut().set_raw(field.to_owned(), vec!(value.as_bytes().to_vec()));
                 }
 

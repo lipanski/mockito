@@ -260,6 +260,30 @@ fn test_mock_with_multiple_headers() {
 }
 
 #[test]
+fn test_mock_preserves_header_order() {
+    reset();
+
+    let mut expected_headers = Vec::new();
+    let mut mock = mock("GET", "/");
+
+    // Add a large number of headers so getting the same order accidentally is unlikely.
+    for i in 0..100 {
+        let field = format!("x-custom-header-{}", i);
+        let value = "test";
+        mock.with_header(&field, value);
+        expected_headers.push(format!("{}: {}", field, value));
+    }
+
+    mock.create();
+
+    let (_, headers, _) = request("GET /", "");
+    let custom_headers: Vec<_> = headers.into_iter()
+        .filter(|header| header.starts_with("x-custom-header"))
+        .collect();
+    assert_eq!(custom_headers, expected_headers);
+}
+
+#[test]
 fn test_reset_clears_mocks() {
     reset();
 
