@@ -280,6 +280,7 @@ fn test_mock_preserves_header_order() {
     let custom_headers: Vec<_> = headers.into_iter()
         .filter(|header| header.starts_with("x-custom-header"))
         .collect();
+
     assert_eq!(custom_headers, expected_headers);
 }
 
