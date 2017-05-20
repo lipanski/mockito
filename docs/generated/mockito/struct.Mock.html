@@ -17,7 +17,7 @@
     
     
 </head>
-<body class="rustdoc">
+<body class="rustdoc struct">
     <!--[if lte IE 8]>
     <div class="warning">
         This old browser is unsupported and will most likely display funky
@@ -43,111 +43,111 @@
         </form>
     </nav>
 
-    <section id='main' class="content struct">
-<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>mockito</a>::<wbr><a class='struct' href=''>Mock</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>mockito</a>::<wbr><a class="struct" href=''>Mock</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#270-276' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#275-281' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Mock { /* fields omitted */ }</pre><div class='docblock'><p>Stores information about a mocked request. Should be initialized via <code>mockito::mock()</code>.</p>
-</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mockito/lib.rs.html#278-528' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='method.match_header' class='method'><span id='match_header.v' class='invisible'><code>fn <a href='#method.match_header' class='fnname'>match_header</a>&lt;M:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html' title='core::convert::Into'>Into</a>&lt;<a class='enum' href='../mockito/enum.Matcher.html' title='mockito::Matcher'>Matcher</a>&gt;&gt;(&amp;mut self, field: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, value: M) -&gt; &amp;mut Self</code></span></h4>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="struct" href="../mockito/struct.Mock.html" title="struct mockito::Mock">Mock</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mockito/lib.rs.html#283-517' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.match_header' class="method"><span id='match_header.v' class='invisible'><code>fn <a href='#method.match_header' class='fnname'>match_header</a>&lt;M:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;<a class="enum" href="../mockito/enum.Matcher.html" title="enum mockito::Matcher">Matcher</a>&gt;&gt;(&amp;mut self, field: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, value: M) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Allows matching a particular request header when responding with a mock.</p>
 
 <p>When matching a request, the field letter case is ignored.</p>
 
 <h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>match_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;application/json&quot;</span>);</pre>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">match_header</span>(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/json&quot;</span>);</pre>
 
 <p>Like most other <code>Mock</code> methods, it allows chanining:</p>
 
 <h1 id='example-1' class='section-header'><a href='#example-1'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>)
-  .<span class='ident'>match_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;application/json&quot;</span>)
-  .<span class='ident'>match_header</span>(<span class='string'>&quot;authorization&quot;</span>, <span class='string'>&quot;password&quot;</span>);</pre>
-</div><h4 id='method.with_status' class='method'><span id='with_status.v' class='invisible'><code>fn <a href='#method.with_status' class='fnname'>with_status</a>(&amp;mut self, status: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; &amp;mut Self</code></span></h4>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>)
+  .<span class="ident">match_header</span>(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/json&quot;</span>)
+  .<span class="ident">match_header</span>(<span class="string">&quot;authorization&quot;</span>, <span class="string">&quot;password&quot;</span>);</pre>
+</div><h4 id='method.with_status' class="method"><span id='with_status.v' class='invisible'><code>fn <a href='#method.with_status' class='fnname'>with_status</a>(&amp;mut self, status: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Sets the status code of the mock response. The default status code is 200.</p>
 
 <h1 id='example-2' class='section-header'><a href='#example-2'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>with_status</span>(<span class='number'>201</span>);</pre>
-</div><h4 id='method.with_header' class='method'><span id='with_header.v' class='invisible'><code>fn <a href='#method.with_header' class='fnname'>with_header</a>(&amp;mut self, field: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>, value: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">with_status</span>(<span class="number">201</span>);</pre>
+</div><h4 id='method.with_header' class="method"><span id='with_header.v' class='invisible'><code>fn <a href='#method.with_header' class='fnname'>with_header</a>(&amp;mut self, field: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, value: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Sets a header of the mock response.</p>
 
 <h1 id='example-3' class='section-header'><a href='#example-3'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>with_header</span>(<span class='string'>&quot;content-type&quot;</span>, <span class='string'>&quot;application/json&quot;</span>);</pre>
-</div><h4 id='method.with_body' class='method'><span id='with_body.v' class='invisible'><code>fn <a href='#method.with_body' class='fnname'>with_body</a>(&amp;mut self, body: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">with_header</span>(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/json&quot;</span>);</pre>
+</div><h4 id='method.with_body' class="method"><span id='with_body.v' class='invisible'><code>fn <a href='#method.with_body' class='fnname'>with_body</a>(&amp;mut self, body: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Sets the body of the mock response. Its <code>Content-Length</code> is handled automatically.</p>
 
 <h1 id='example-4' class='section-header'><a href='#example-4'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>with_body</span>(<span class='string'>&quot;hello world&quot;</span>);</pre>
-</div><h4 id='method.with_body_from_file' class='method'><span id='with_body_from_file.v' class='invisible'><code>fn <a href='#method.with_body_from_file' class='fnname'>with_body_from_file</a>(&amp;mut self, path: &amp;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.str.html'>str</a>) -&gt; &amp;mut Self</code></span></h4>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">with_body</span>(<span class="string">&quot;hello world&quot;</span>);</pre>
+</div><h4 id='method.with_body_from_file' class="method"><span id='with_body_from_file.v' class='invisible'><code>fn <a href='#method.with_body_from_file' class='fnname'>with_body_from_file</a>(&amp;mut self, path: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Sets the body of the mock response from the contents of a file stored under <code>path</code>.
 Its <code>Content-Length</code> is handled automatically.</p>
 
 <h1 id='example-5' class='section-header'><a href='#example-5'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>with_body_from_file</span>(<span class='string'>&quot;tests/files/simple.http&quot;</span>);</pre>
-</div><h4 id='method.create' class='method'><span id='create.v' class='invisible'><code>fn <a href='#method.create' class='fnname'>create</a>(&amp;mut self) -&gt; &amp;mut Self</code></span></h4>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">with_body_from_file</span>(<span class="string">&quot;tests/files/simple.http&quot;</span>);</pre>
+</div><h4 id='method.create' class="method"><span id='create.v' class='invisible'><code>fn <a href='#method.create' class='fnname'>create</a>(&amp;mut self) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Registers the mock to the server - your mock will be served only after calling this method.</p>
 
 <h1 id='example-6' class='section-header'><a href='#example-6'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>with_body</span>(<span class='string'>&quot;hello world&quot;</span>).<span class='ident'>create</span>();</pre>
-</div><h4 id='method.create_for' class='method'><span id='create_for.v' class='invisible'><code>fn <a href='#method.create_for' class='fnname'>create_for</a>&lt;F:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>() -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;(&amp;mut self, environment: F) -&gt; &amp;mut Self</code></span></h4>
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">with_body</span>(<span class="string">&quot;hello world&quot;</span>).<span class="ident">create</span>();</pre>
+</div><h4 id='method.create_for' class="method"><span id='create_for.v' class='invisible'><code>fn <a href='#method.create_for' class='fnname'>create_for</a>&lt;F:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html" title="trait core::ops::Fn">Fn</a>() -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;(&amp;mut self, environment: F) -&gt; &amp;mut Self</code></span></h4>
 <div class='docblock'><p>Registers the mock to the server, executes the passed closure and removes the mock afterwards.</p>
 
 <p><strong>NOTE:</strong> During the closure lifetime, the mock might still be available to seperate threads.</p>
 
 <h1 id='example-7' class='section-header'><a href='#example-7'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>::{<span class='ident'>sleep</span>};
-<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>time</span>::<span class='ident'>Duration</span>;
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>::{<span class="ident">sleep</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>).<span class='ident'>with_body</span>(<span class='string'>&quot;hello world&quot;</span>).<span class='ident'>create_for</span>(<span class='op'>||</span> {
-  <span class='comment'>// This mock will only be available for the next 1 second</span>
-  <span class='ident'>sleep</span>(<span class='ident'>Duration</span>::<span class='ident'>new</span>(<span class='number'>1</span>, <span class='number'>0</span>));
+<span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">with_body</span>(<span class="string">&quot;hello world&quot;</span>).<span class="ident">create_for</span>(<span class="op">||</span> {
+  <span class="comment">// This mock will only be available for the next 1 second</span>
+  <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">new</span>(<span class="number">1</span>, <span class="number">0</span>));
 });</pre>
-</div><h4 id='method.remove' class='method'><span id='remove.v' class='invisible'><code>fn <a href='#method.remove' class='fnname'>remove</a>(&amp;self)</code></span></h4>
+</div><h4 id='method.remove' class="method"><span id='remove.v' class='invisible'><code>fn <a href='#method.remove' class='fnname'>remove</a>(&amp;self)</code></span></h4>
 <div class='docblock'><p>Removes the current mock from the server.</p>
 
 <h1 id='example-8' class='section-header'><a href='#example-8'>Example</a></h1>
-<pre class='rust rust-example-rendered'>
-<span class='kw'>use</span> <span class='ident'>mockito</span>::<span class='ident'>mock</span>;
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 
-<span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>mock</span> <span class='op'>=</span> <span class='ident'>mock</span>(<span class='string'>&quot;GET&quot;</span>, <span class='string'>&quot;/&quot;</span>);
-<span class='ident'>mock</span>.<span class='ident'>with_body</span>(<span class='string'>&quot;hello world&quot;</span>).<span class='ident'>create</span>();
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mock</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/&quot;</span>);
+<span class="ident">mock</span>.<span class="ident">with_body</span>(<span class="string">&quot;hello world&quot;</span>).<span class="ident">create</span>();
 
-<span class='comment'>// stuff</span>
+<span class="comment">// stuff</span>
 
-<span class='ident'>mock</span>.<span class='ident'>remove</span>();</pre>
-</div><h4 id='method.matches' class='method'><span id='matches.v' class='invisible'><code>fn <a href='#method.matches' class='fnname'>matches</a>(&amp;self, request: &amp;<a class='struct' href='https://hyperium.github.io/hyper/hyper/server/request/struct.Request.html' title='hyper::server::request::Request'>Request</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></span></h4>
-</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mockito/lib.rs.html#269' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='method.eq' class='method'><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></span></h4>
+<span class="ident">mock</span>.<span class="ident">remove</span>();</pre>
+</div><h4 id='method.matches' class="method"><span id='matches.v' class='invisible'><code>fn <a href='#method.matches' class='fnname'>matches</a>(&amp;self, request: &amp;<a class="struct" href="https://hyper.rs/hyper/v0.10.10/hyper/hyper/server/request/struct.Request.html" title="struct hyper::server::request::Request">Request</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="struct" href="../mockito/struct.Mock.html" title="struct mockito::Mock">Mock</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mockito/lib.rs.html#274' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../mockito/struct.Mock.html" title="struct mockito::Mock">Mock</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
 <div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
-</div><h4 id='method.ne' class='method'><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></span></h4>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, __arg_0: &amp;<a class="struct" href="../mockito/struct.Mock.html" title="struct mockito::Mock">Mock</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h4>
 <div class='docblock'><p>This method tests for <code>!=</code>.</p>
-</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../mockito/struct.Mock.html' title='mockito::Mock'>Mock</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mockito/lib.rs.html#269' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='method.fmt' class='method'><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></span></h4>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../mockito/struct.Mock.html" title="struct mockito::Mock">Mock</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mockito/lib.rs.html#274' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span></h4>
 <div class='docblock'><p>Formats the value using the given formatter.</p>
 </div></div></section>
     <section id='search' class="content hidden"></section>
