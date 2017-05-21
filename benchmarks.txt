@@ -1,0 +1,9 @@
+* 269e090 2017-05-07 | Replace hyper with curl + TcpStream
+
+test bench_create_simple_mock ... bench:     362,959 ns/iter (+/- 191,776)
+test bench_match_simple_mock  ... bench:      30,510 ns/iter (+/- 4,431)
+
+* 0ea46cf 2017-05-20 | Bump to 0.4.2
+
+test bench_create_simple_mock ... bench:   4,822,109 ns/iter (+/- 493,422)
+test bench_match_simple_mock  ... bench:   2,392,456 ns/iter (+/- 180,787)
