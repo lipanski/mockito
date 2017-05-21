@@ -16,7 +16,6 @@ pub struct Request {
     pub body: String,
     error: Option<String>,
     is_parsed: bool,
-    is_chunked: bool,
     last_header_field: Option<String>,
     last_header_value: Option<String>,
 }
@@ -53,7 +52,6 @@ impl Default for Request {
             body: String::new(),
             error: None,
             is_parsed: false,
-            is_chunked: false,
             last_header_field: None,
             last_header_value: None,
         }
@@ -68,8 +66,9 @@ impl<'a> From<&'a mut TcpStream> for Request {
         loop {
             if request.is_parsed() { break; }
 
-            let mut buffer = [0;10];
+            let mut buffer = [0; 1024];
             let read_length = stream.read(&mut buffer).unwrap_or(0);
+
             if read_length == 0 { break; }
 
             let parse_length = parser.parse(&mut request, (&buffer).chunks(read_length).nth(0).unwrap());
@@ -120,12 +119,6 @@ impl ParserHandler for Request {
         !parser.has_error()
     }
 
-    fn on_chunk_header(&mut self, parser: &mut Parser) -> bool {
-        self.is_chunked = true;
-
-        !parser.has_error()
-    }
-
     fn on_headers_complete(&mut self, parser: &mut Parser) -> bool {
         self.record_last_header();
 
@@ -135,10 +128,6 @@ impl ParserHandler for Request {
     fn on_body(&mut self, parser: &mut Parser, value: &[u8]) -> bool {
         self.body.push_str(str::from_utf8(value).unwrap());
 
-        !parser.has_error()
-    }
-
-    fn on_chunk_complete(&mut self, parser: &mut Parser) -> bool {
         !parser.has_error()
     }
 
