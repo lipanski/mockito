@@ -1,3 +1,8 @@
+* ffed296 2017-05-21 | Small improvements to Request & curl call
+
+test bench_create_simple_mock ... bench:     351,812 ns/iter (+/- 179,845)
+test bench_match_simple_mock  ... bench:      30,093 ns/iter (+/- 3,756)
+
 * 269e090 2017-05-07 | Replace hyper with curl + TcpStream
 
 test bench_create_simple_mock ... bench:     362,959 ns/iter (+/- 191,776)
