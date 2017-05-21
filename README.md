@@ -35,17 +35,17 @@ Generate docs:
 rm -r target/doc/* && cargo doc --no-deps && rm -r docs/generated/* && cp -R target/doc/* docs/generated
 ```
 
-Run benchmarks:
-
-```
-rustup install nightly
-rustup run nightly run cargo bench
-```
-
 Release:
 
 ```
 cargo package && cargo publish
+```
+
+Run benchmarks:
+
+```
+rustup install nightly
+rustup run nightly cargo bench
 ```
 
 ---
