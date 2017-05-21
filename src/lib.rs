@@ -417,7 +417,12 @@ impl Mock {
         let mut request = Easy::new();
         request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
         request.post(true).unwrap();
-        request.post_fields_copy(body.as_bytes()).unwrap();
+        request.post_field_size(body.len() as u64).unwrap();
+
+        request.read_function(move |into| {
+            Ok(body.as_bytes().read(into).unwrap_or(0))
+        }).unwrap();
+
         request.perform().unwrap();
 
         self
