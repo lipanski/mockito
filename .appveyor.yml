@@ -6,11 +6,6 @@ environment:
   matrix:
     - channel: stable
       target: x86_64-pc-windows-msvc
-    - channel: stable
-      target: i686-pc-windows-msvc
-matrix:
-  allow_failures:
-    - channel: nightly
 clone_depth: 1
 install:
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -20,4 +15,4 @@ install:
   - cargo -vV
 build: false
 test_script:
-  - cargo test -v -- --test-threads=1
+  - cargo test -- --test-threads=1
