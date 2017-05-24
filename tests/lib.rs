@@ -83,7 +83,7 @@ fn test_two_route_mocks() {
 fn test_no_match_returns_501() {
     reset();
 
-    mock("GET", "/").with_body("matched").create();
+    mock("GET", Matcher::Exact("/".to_string())).with_body("matched").create();
 
     let (status_line, _, _) = request("GET /nope", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
@@ -340,4 +340,40 @@ fn test_mock_create_for_is_only_available_during_the_closure_lifetime() {
 
     let (reset_status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
+}
+
+
+#[test]
+fn test_regex_match_path() {
+    reset();
+    mock("GET", r"^/a/\d{1}$").with_body("aaa").create();
+    mock("GET", r"^/b/\d{1}$").with_body("bbb").create();
+
+    let (_, _, body_a) = request("GET /a/1", "");
+    assert_eq!("aaa", body_a);
+
+    let (_, _, body_b) = request("GET /b/2", "");
+    assert_eq!("bbb", body_b);
+
+    let (status_line, _, _) = request("GET /a/11", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /c/2", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+}
+
+#[test]
+fn test_regex_match_header() {
+    reset();
+
+    mock("GET", "/")
+        .match_header("Authorization", r"^Bearer token\.\w+$")
+        .with_body("{}")
+        .create();
+
+    let (_, _, body_json) = request("GET /", "Authorization: Bearer token.payload\r\n");
+    assert_eq!("{}", body_json);
+
+    let (status_line, _, _) = request("GET /", "authorization: Beare none\r\n");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 }
