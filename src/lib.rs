@@ -173,9 +173,11 @@
 
 extern crate curl;
 extern crate http_muncher;
+extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate rand;
+extern crate regex;
 
 mod server;
 mod request;
@@ -184,11 +186,14 @@ type Request = request::Request;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::ops::Deref;
 use std::cmp::PartialEq;
 use std::convert::{From, Into};
 use curl::easy::Easy;
 use curl::easy::List as HeaderList;
 use rand::{thread_rng, Rng};
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+
 
 ///
 /// Points to the address the mock server is running at.
@@ -216,7 +221,7 @@ pub const SERVER_URL: &'static str = "http://127.0.0.1:1234";
 /// mock("DELETE", "/users?id=1");
 /// ```
 ///
-pub fn mock(method: &str, path: &str) -> Mock {
+pub fn mock<P: Into<Matcher>>(method: &str, path: P) -> Mock {
     Mock::new(method, path)
 }
 
@@ -237,6 +242,45 @@ pub fn start() {
     server::try_start();
 }
 
+#[allow(missing_docs)]
+#[derive(Debug)]
+// wrapper type for remote regex::Regex create to implement:
+//  - Serialize/Deserialize regex as str
+//  - PartialEq
+pub struct MRegex(regex::Regex);
+
+impl Deref for MRegex {
+    type Target = regex::Regex;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Serialize for MRegex {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+
+impl<'de> Deserialize<'de> for MRegex {
+    fn deserialize<D>(deserializer: D) -> Result<MRegex, D::Error>
+        where D: Deserializer<'de>
+    {
+        let value = String::deserialize(deserializer)?;
+        regex::Regex::new(&value).map(|re| MRegex(re)).map_err(serde::de::Error::custom)
+    }
+}
+
+impl PartialEq<MRegex> for MRegex {
+    fn eq(&self, other: &MRegex) -> bool {
+        self == other
+    }
+}
+
 ///
 /// Allows matching headers in multiple ways: matching the exact field name and value, matching only by field name
 /// or matching that the field name is not present at all.
@@ -252,11 +296,13 @@ pub enum Matcher {
     Any,
     /// Matches when the header field is *not* be present in the request.
     Missing,
+    /// Matches by regex.
+    Regex(MRegex),
 }
 
 impl<'a> From<&'a str> for Matcher {
     fn from(value: &str) -> Matcher {
-        Matcher::Exact(value.to_string())
+        Matcher::Regex(MRegex(regex::Regex::new(value).unwrap()))
     }
 }
 
@@ -266,6 +312,7 @@ impl PartialEq<String> for Matcher {
             &Matcher::Exact(ref value) => { value == other },
             &Matcher::Any => true,
             &Matcher::Missing => false,
+            &Matcher::Regex(ref re) => { re.is_match(other) },
         }
     }
 }
@@ -277,17 +324,17 @@ impl PartialEq<String> for Matcher {
 pub struct Mock {
     id: String,
     method: String,
-    path: String,
+    path: Matcher,
     headers: HashMap<String, Matcher>,
     response: MockResponse,
 }
 
 impl Mock {
-    fn new(method: &str, path: &str) -> Self {
+    fn new<P: Into<Matcher>>(method: &str, path: P) -> Self {
         Mock {
             id: thread_rng().gen_ascii_chars().take(24).collect(),
             method: method.to_owned().to_uppercase(),
-            path: path.to_owned(),
+            path: path.into(),
             headers: HashMap::new(),
             response: MockResponse::new(),
         }
