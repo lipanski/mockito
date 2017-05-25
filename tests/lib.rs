@@ -1,8 +1,10 @@
+extern crate rand;
 extern crate mockito;
 
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
+use rand::Rng;
 use mockito::{SERVER_ADDRESS, mock, reset, Matcher};
 
 fn request_stream(route: &str, headers: &str) -> TcpStream {
@@ -376,4 +378,20 @@ fn test_regex_match_header() {
 
     let (status_line, _, _) = request("GET /", "authorization: Beare none\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+}
+
+
+#[test]
+fn test_large_utf8_body() {
+    reset();
+
+    let mock_body: String = rand::thread_rng()
+        .gen_iter::<char>()
+        .take(3 * 1024) // IMPORTANT: must be large then request read buffer
+        .collect();
+
+    mock("GET", "/").with_body(&mock_body).create();
+
+    let (_, _, body) = request("GET /", "");
+    assert_eq!(mock_body, body);
 }
