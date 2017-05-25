@@ -45,7 +45,7 @@ fn handle_request(mut mocks: &mut Vec<Mock>, request: Request, stream: TcpStream
 }
 
 fn handle_create_mock(mut mocks: &mut Vec<Mock>, request: Request, mut stream: TcpStream) {
-    match serde_json::from_str(&request.body) {
+    match serde_json::from_slice(&request.body) {
         Ok(mock) => {
             mocks.push(mock);
             stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();

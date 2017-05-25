@@ -13,7 +13,7 @@ pub struct Request {
     pub method: String,
     pub path: String,
     pub headers: HashMap<String, String>,
-    pub body: String,
+    pub body: Vec<u8>,
     error: Option<String>,
     is_parsed: bool,
     last_header_field: Option<String>,
@@ -49,7 +49,7 @@ impl Default for Request {
             method: String::new(),
             path: String::new(),
             headers: HashMap::new(),
-            body: String::new(),
+            body: Vec::new(),
             error: None,
             is_parsed: false,
             last_header_field: None,
@@ -126,7 +126,7 @@ impl ParserHandler for Request {
     }
 
     fn on_body(&mut self, parser: &mut Parser, value: &[u8]) -> bool {
-        self.body.push_str(str::from_utf8(value).unwrap());
+        self.body.extend(value);
 
         !parser.has_error()
     }
