@@ -85,7 +85,7 @@ fn test_two_route_mocks() {
 fn test_no_match_returns_501() {
     reset();
 
-    mock("GET", Matcher::Exact("/".to_string())).with_body("matched").create();
+    mock("GET", "/").with_body("matched").create();
 
     let (status_line, _, _) = request("GET /nope", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
@@ -348,8 +348,8 @@ fn test_mock_create_for_is_only_available_during_the_closure_lifetime() {
 #[test]
 fn test_regex_match_path() {
     reset();
-    mock("GET", r"^/a/\d{1}$").with_body("aaa").create();
-    mock("GET", r"^/b/\d{1}$").with_body("bbb").create();
+    mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string())).with_body("aaa").create();
+    mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string())).with_body("bbb").create();
 
     let (_, _, body_a) = request("GET /a/1", "");
     assert_eq!("aaa", body_a);
@@ -369,7 +369,7 @@ fn test_regex_match_header() {
     reset();
 
     mock("GET", "/")
-        .match_header("Authorization", r"^Bearer token\.\w+$")
+        .match_header("Authorization", Matcher::Regex(r"^Bearer token\.\w+$".to_string()))
         .with_body("{}")
         .create();
 

@@ -65,9 +65,51 @@
 //! In some situations, when you're *always* testing/mocking different routes and never need to reset
 //! or override the existing mocks, you might get away with running your tests on multiple threads.
 //!
+//! # Matchers
+//!
+//! Mockito can match your request by method, path and headers. The header field letter case is ignored.
+//!
+//! Various matchers are provided by the `Matcher` type: exact, partial (regular expressions), any or missing.
+//!
+//! # Matching by path
+//!
+//! By default, the request path is compared by its exact value.
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! // Matched only calls to GET /hello
+//! mock("GET", "/hello").create();
+//!
+//! ```
+//!
+//! You can also match the path partially, by using a regular expression:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! // Will match calls to GET /hello/1 and GET /hello/2
+//! mock("GET", Matcher::Regex(r"^/hello/(1|2)$".to_string())).create();
+//! ```
+//!
+//! You can also catch all requests, by using the `Matcher::Any` variant:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! // Will match any GET request
+//! mock("GET", Matcher::Any).create();
+//! ```
+//!
 //! # Matching by header
 //!
-//! Mockito currently matches by method and path, but also by headers. The header field letter case is ignored.
+//! By default, headers are compared by their exact value.
 //!
 //! ## Example
 //!
@@ -88,7 +130,18 @@
 //! // will respond with text.
 //! ```
 //!
-//! # Other header matchers
+//! You can also match a header value with a *regular expressions*, by using the `Matcher::Regex` matcher:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! mock("GET", "/hello")
+//!   .match_header("content-type", Matcher::Regex(r".*json.*".to_string()))
+//!   .with_body("{'hello': 'world'}")
+//!   .create();
+//! ```
 //!
 //! You can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.
 //!
@@ -186,14 +239,12 @@ type Request = request::Request;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::ops::Deref;
 use std::cmp::PartialEq;
 use std::convert::{From, Into};
 use curl::easy::Easy;
 use curl::easy::List as HeaderList;
 use rand::{thread_rng, Rng};
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-
+use regex::Regex;
 
 ///
 /// Points to the address the mock server is running at.
@@ -242,67 +293,28 @@ pub fn start() {
     server::try_start();
 }
 
-#[allow(missing_docs)]
-#[derive(Debug)]
-// wrapper type for remote regex::Regex create to implement:
-//  - Serialize/Deserialize regex as str
-//  - PartialEq
-pub struct MRegex(regex::Regex);
-
-impl Deref for MRegex {
-    type Target = regex::Regex;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Serialize for MRegex {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        serializer.serialize_str(self.as_str())
-    }
-}
-
-
-impl<'de> Deserialize<'de> for MRegex {
-    fn deserialize<D>(deserializer: D) -> Result<MRegex, D::Error>
-        where D: Deserializer<'de>
-    {
-        let value = String::deserialize(deserializer)?;
-        regex::Regex::new(&value).map(|re| MRegex(re)).map_err(serde::de::Error::custom)
-    }
-}
-
-impl PartialEq<MRegex> for MRegex {
-    fn eq(&self, other: &MRegex) -> bool {
-        self == other
-    }
-}
-
 ///
-/// Allows matching headers in multiple ways: matching the exact field name and value, matching only by field name
-/// or matching that the field name is not present at all.
+/// Allows matching the request path or headers in multiple ways: matching the exact value, matching any value (as
+/// long as it is present), matching by regular expression or checking that a particular header is missing.
 ///
-/// These matchers are used within the `Mock::match_header` call.
+/// These matchers are used within the `mock` and `Mock::match_header` calls.
 ///
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum Matcher {
-    /// Given the header field, matches the exact header value. There's also an implementation of `From<&str>`
+    /// Matches the exact path or header value. There's also an implementation of `From<&str>`
     /// to keep things simple and backwards compatible.
     Exact(String),
-    /// Given the header field, matches any header value.
+    /// Matches a path or header value by a regular expression.
+    Regex(String),
+    /// Matches any path or any header value.
     Any,
-    /// Matches when the header field is *not* be present in the request.
+    /// Checks that a header is not present in the request.
     Missing,
-    /// Matches by regex.
-    Regex(MRegex),
 }
 
 impl<'a> From<&'a str> for Matcher {
     fn from(value: &str) -> Matcher {
-        Matcher::Regex(MRegex(regex::Regex::new(value).unwrap()))
+        Matcher::Exact(value.to_string())
     }
 }
 
@@ -310,9 +322,9 @@ impl PartialEq<String> for Matcher {
     fn eq(&self, other: &String) -> bool {
         match self {
             &Matcher::Exact(ref value) => { value == other },
+            &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
             &Matcher::Any => true,
             &Matcher::Missing => false,
-            &Matcher::Regex(ref re) => { re.is_match(other) },
         }
     }
 }
