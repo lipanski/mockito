@@ -2,6 +2,7 @@ use std::thread;
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use serde_json;
+use regex::Regex;
 use {Mock, SERVER_ADDRESS, Request};
 
 pub fn try_start() {
@@ -37,14 +38,48 @@ fn is_listening() -> bool {
 }
 
 fn handle_request(mut mocks: &mut Vec<Mock>, request: Request, stream: TcpStream) {
-    match (&*request.method, &*request.path) {
-        ("POST", "/mocks") => handle_create_mock(mocks, request, stream),
-        ("DELETE", "/mocks") => handle_delete_mock(mocks, request, stream),
-        _ => handle_match_mock(mocks, request, stream),
+    lazy_static! {
+        static ref GET_MOCK_REGEX: Regex = Regex::new(r"^GET /mocks/(?P<mock_id>\w+)$").unwrap();
+        static ref POST_MOCKS_REGEX: Regex = Regex::new(r"^POST /mocks$").unwrap();
+        static ref DELETE_MOCKS_REGEX: Regex = Regex::new(r"^DELETE /mocks$").unwrap();
+        static ref DELETE_MOCK_REGEX: Regex = Regex::new(r"^DELETE /mocks/(?P<mock_id>\w+)$").unwrap();
+    }
+
+    let request_line = format!("{} {}", request.method, request.path);
+
+    if let Some(captures) = GET_MOCK_REGEX.captures(&request_line) {
+        return handle_get_mock(mocks, captures["mock_id"].to_string(), stream);
+    }
+
+    if let Some(_) = POST_MOCKS_REGEX.captures(&request_line) {
+        return handle_post_mock(mocks, request, stream);
+    }
+
+    if let Some(_) = DELETE_MOCKS_REGEX.captures(&request_line) {
+        return handle_delete_mocks(mocks, stream);
+    }
+
+    if let Some(captures) = DELETE_MOCK_REGEX.captures(&request_line) {
+        return handle_delete_mock(mocks, captures["mock_id"].to_string(), stream);
+    }
+
+    handle_match_mock(mocks, request, stream);
+}
+
+fn handle_get_mock(mocks: &mut Vec<Mock>, mock_id: String, mut stream: TcpStream) {
+    match mocks.iter().find(|mock| mock.id == mock_id) {
+        Some(mock) => {
+            let body = serde_json::to_string(mock).unwrap();
+            let response = format!("HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}", body.len(), body);
+            stream.write(response.as_bytes()).unwrap();
+        },
+        None => {
+            stream.write("HTTP/1.1 404 Not Found\r\n\r\n".as_bytes()).unwrap();
+        },
     }
 }
 
-fn handle_create_mock(mut mocks: &mut Vec<Mock>, request: Request, mut stream: TcpStream) {
+fn handle_post_mock(mut mocks: &mut Vec<Mock>, request: Request, mut stream: TcpStream) {
     match serde_json::from_slice(&request.body) {
         Ok(mock) => {
             mocks.push(mock);
@@ -58,25 +93,28 @@ fn handle_create_mock(mut mocks: &mut Vec<Mock>, request: Request, mut stream: T
     }
 }
 
-fn handle_delete_mock(mut mocks: &mut Vec<Mock>, request: Request, mut stream: TcpStream) {
-    match request.headers.iter().find(|&(ref field, _)| { field.to_lowercase() == "x-mock-id" }) {
-        // Remove the element with x-mock-id
-        Some((_, value)) => {
-            match mocks.iter().position(|mock| &mock.id == value) {
-                Some(pos) => { mocks.remove(pos); },
-                None => {},
-            };
-        },
-        // Remove all elements
-        None => { mocks.clear(); }
-    }
-
+fn handle_delete_mocks(mut mocks: &mut Vec<Mock>, mut stream: TcpStream) {
+    mocks.clear();
     stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();
 }
 
+fn handle_delete_mock(mut mocks: &mut Vec<Mock>, mock_id: String, mut stream: TcpStream) {
+    match mocks.iter().position(|mock| mock.id == mock_id) {
+        Some(pos) => {
+            mocks.remove(pos);
+            stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();
+        },
+        None => {
+            stream.write("HTTP/1.1 404 Not Found\r\n\r\n".as_bytes()).unwrap();
+        },
+    };
+}
+
 fn handle_match_mock(mocks: &mut Vec<Mock>, request: Request, mut stream: TcpStream) {
-    match mocks.iter().rev().find(|mock| mock.matches(&request)) {
-        Some(mock) => {
+    match mocks.iter_mut().rev().find(|mock| mock.matches(&request)) {
+        Some(mut mock) => {
+            mock.hits = mock.hits + 1;
+
             let mut headers = String::new();
             for &(ref key, ref value) in &mock.response.headers {
                 headers.push_str(key);

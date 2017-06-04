@@ -231,6 +231,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate rand;
 extern crate regex;
+#[macro_use] extern crate lazy_static;
 
 mod server;
 mod request;
@@ -241,8 +242,8 @@ use std::fs::File;
 use std::io::Read;
 use std::cmp::PartialEq;
 use std::convert::{From, Into};
+use std::fmt;
 use curl::easy::Easy;
-use curl::easy::List as HeaderList;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 
@@ -339,6 +340,8 @@ pub struct Mock {
     path: Matcher,
     headers: HashMap<String, Matcher>,
     response: MockResponse,
+    hits: usize,
+    expected_hits: usize,
 }
 
 impl Mock {
@@ -349,6 +352,8 @@ impl Mock {
             path: path.into(),
             headers: HashMap::new(),
             response: MockResponse::new(),
+            hits: 0,
+            expected_hits: 1,
         }
     }
 
@@ -458,6 +463,25 @@ impl Mock {
     }
 
     ///
+    /// Sets the expected amount of requests that this mock is supposed to receive.
+    /// This is only enforced when calling the `assert` method.
+    /// Defaults to 1 request.
+    ///
+    pub fn expect(&mut self, hits: usize) -> &mut Self {
+        self.expected_hits = hits;
+
+        self
+    }
+
+    ///
+    /// Asserts that the expected amount of requests (defaults to 1 request) where performed.
+    ///
+    pub fn assert(&mut self) {
+        self.sync();
+        assert_eq!(self.expected_hits, self.hits, "Expected {} request(s) to {}, but received {}", self.expected_hits, self, self.hits);
+    }
+
+    ///
     /// Registers the mock to the server - your mock will be served only after calling this method.
     ///
     /// # Example
@@ -529,13 +553,8 @@ impl Mock {
 
 
         let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
+        request.url(&[SERVER_URL, "/mocks/", &self.id].join("")).unwrap();
         request.custom_request("DELETE").unwrap();
-
-        let mut headers = HeaderList::new();
-        headers.append(&["x-mock-id", &self.id].join(":")).unwrap();
-        request.http_headers(headers).unwrap();
-
         request.perform().unwrap();
     }
 
@@ -572,7 +591,47 @@ impl Mock {
 
         true
     }
+
+    ///
+    /// Syncs the current Mock with its copy on the server.
+    /// Mainly used to sync the hit count.
+    ///
+    fn sync(&mut self) -> () {
+        server::try_start();
+
+        let mut buffer = Vec::new();
+
+        let mut request = Easy::new();
+        request.url(&[SERVER_URL, "/mocks/", &self.id].join("")).unwrap();
+
+        {
+            let mut transfer = request.transfer();
+
+            transfer.write_function(|data| {
+                buffer.extend_from_slice(data);
+                Ok(data.len())
+            }).unwrap();
+
+            transfer.perform().unwrap();
+        }
+
+        if let Ok(mock) = serde_json::from_slice::<Mock>(&buffer) {
+            self.hits = mock.hits;
+        }
+    }
 }
+
+impl fmt::Display for Mock {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.path {
+            Matcher::Exact(ref value) => write!(f, "{} {}", self.method, value),
+            Matcher::Regex(ref value) => write!(f, "{} {}", self.method, value),
+            Matcher::Any => write!(f, "{} *", self.method),
+            Matcher::Missing => write!(f, "{} -", self.method),
+        }
+    }
+}
+
 
 const DEFAULT_RESPONSE_STATUS: usize = 200;
 
