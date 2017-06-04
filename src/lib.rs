@@ -65,15 +65,56 @@
 //! In some situations, when you're *always* testing/mocking different routes and never need to reset
 //! or override the existing mocks, you might get away with running your tests on multiple threads.
 //!
+//! # Asserts
+//!
+//! You can use the `Mock::assert` method to assert that a mock was called. By default, the method expects
+//! that only one request to your mock was triggered.
+//!
+//! ## Example
+//!
+//! ```
+//! extern crate mockito;
+//! extern crate curl;
+//!
+//! let mut mock = mockito::mock("GET", "/hello");
+//! mock.create();
+//!
+//! let mut request = curl::easy::Easy::new();
+//! request.url(&[mockito::SERVER_URL, "/hello"].join("")).unwrap();
+//! request.perform().unwrap();
+//!
+//! mock.assert();
+//! ```
+//!
+//! However, you can use the `Mock::expect` method to specify the exact amount of requests you are expecting:
+//!
+//! ## Example
+//!
+//! ```
+//! extern crate mockito;
+//! extern crate curl;
+//!
+//! let mut mock = mockito::mock("GET", "/hello");
+//! mock.expect(3).create();
+//!
+//! for _ in 0..3 {
+//!     let mut request = curl::easy::Easy::new();
+//!     request.url(&[mockito::SERVER_URL, "/hello"].join("")).unwrap();
+//!     request.perform().unwrap();
+//! }
+//!
+//! mock.assert();
+//! ```
+//!
 //! # Matchers
 //!
-//! Mockito can match your request by method, path and headers. The header field letter case is ignored.
+//! Mockito can match your request by method, path and headers.
 //!
 //! Various matchers are provided by the `Matcher` type: exact, partial (regular expressions), any or missing.
 //!
 //! # Matching by path
 //!
-//! By default, the request path is compared by its exact value.
+//! By default, the request path is compared by its exact value:
 //!
 //! ## Example
 //!
@@ -82,7 +123,6 @@
 //!
 //! // Matched only calls to GET /hello
 //! mock("GET", "/hello").create();
-//!
 //! ```
 //!
 //! You can also match the path partially, by using a regular expression:
@@ -96,7 +136,7 @@
 //! mock("GET", Matcher::Regex(r"^/hello/(1|2)$".to_string())).create();
 //! ```
 //!
-//! You can also catch all requests, by using the `Matcher::Any` variant:
+//! Or you can catch all requests, by using the `Matcher::Any` variant:
 //!
 //! ## Example
 //!
@@ -109,7 +149,7 @@
 //!
 //! # Matching by header
 //!
-//! By default, headers are compared by their exact value.
+//! By default, headers are compared by their exact value. The header name letter case is ignored though.
 //!
 //! ## Example
 //!
@@ -143,7 +183,7 @@
 //!   .create();
 //! ```
 //!
-//! You can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.
+//! Or you can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.
 //!
 //! ## Example
 //!
