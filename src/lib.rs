@@ -598,13 +598,6 @@ impl Mock {
         request.perform().unwrap();
     }
 
-    #[allow(missing_docs)]
-    pub fn matches(&self, request: &Request) -> bool {
-        self.method_matches(request)
-            && self.path_matches(request)
-            && self.headers_match(request)
-    }
-
     fn method_matches(&self, request: &Request) -> bool {
         self.method == request.method
     }
@@ -658,6 +651,14 @@ impl Mock {
         if let Ok(mock) = serde_json::from_slice::<Mock>(&buffer) {
             self.hits = mock.hits;
         }
+    }
+}
+
+impl<'a> PartialEq<Request> for &'a mut Mock {
+    fn eq(&self, other: &Request) -> bool {
+        self.method_matches(other)
+            && self.path_matches(other)
+            && self.headers_match(other)
     }
 }
 

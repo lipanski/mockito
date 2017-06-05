@@ -111,7 +111,7 @@ fn handle_delete_mock(mut mocks: &mut Vec<Mock>, mock_id: String, mut stream: Tc
 }
 
 fn handle_match_mock(mocks: &mut Vec<Mock>, request: Request, mut stream: TcpStream) {
-    match mocks.iter_mut().rev().find(|mock| mock.matches(&request)) {
+    match mocks.iter_mut().rev().find(|mock| mock == &request) {
         Some(mut mock) => {
             mock.hits = mock.hits + 1;
 
