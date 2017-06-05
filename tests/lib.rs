@@ -272,7 +272,7 @@ fn test_mock_preserves_header_order() {
     for i in 0..100 {
         let field = format!("x-custom-header-{}", i);
         let value = "test";
-        mock.with_header(&field, value);
+        mock = mock.with_header(&field, value);
         expected_headers.push(format!("{}: {}", field, value));
     }
 
@@ -305,8 +305,7 @@ fn test_reset_clears_mocks() {
 fn test_mock_remove_clears_the_mock() {
     reset();
 
-    let mut mock = mock("GET", "/");
-    mock.create();
+    let mock = mock("GET", "/").create();
 
     let (working_status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 200\r\n", working_status_line);
@@ -324,7 +323,7 @@ fn test_mock_remove_doesnt_clear_other_mocks() {
     mock("POST", "/").create();
 
     let mut mock = mock("GET", "/");
-    mock.create();
+    mock = mock.create();
     mock.remove();
 
     let (reset_status_line, _, _) = request("POST /", "");
@@ -420,8 +419,7 @@ fn test_display_mock_with_any_path() {
 fn test_assert_defaults_to_one_hit() {
     reset();
 
-    let mut mock = mock("GET", "/hello");
-    mock.create();
+    let mut mock = mock("GET", "/hello").create();
 
     request("GET /hello", "");
 
@@ -433,8 +431,7 @@ fn test_assert_defaults_to_one_hit() {
 fn test_assert_panics_if_no_request_was_performed() {
     reset();
 
-    let mut mock = mock("GET", "/hello");
-    mock.create();
+    let mut mock = mock("GET", "/hello").create();
 
     mock.assert();
 }
@@ -443,8 +440,7 @@ fn test_assert_panics_if_no_request_was_performed() {
 fn test_expect() {
     reset();
 
-    let mut mock = mock("GET", "/hello");
-    mock.expect(3).create();
+    let mut mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");
@@ -458,8 +454,7 @@ fn test_expect() {
 fn test_assert_panics_with_too_few_requests() {
     reset();
 
-    let mut mock = mock("GET", "/hello");
-    mock.expect(3).create();
+    let mut mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");
@@ -472,8 +467,7 @@ fn test_assert_panics_with_too_few_requests() {
 fn test_assert_panics_with_too_many_requests() {
     reset();
 
-    let mut mock = mock("GET", "/hello");
-    mock.expect(3).create();
+    let mut mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");

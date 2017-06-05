@@ -76,8 +76,7 @@
 //! extern crate mockito;
 //! extern crate curl;
 //!
-//! let mut mock = mockito::mock("GET", "/hello");
-//! mock.create();
+//! let mut mock = mockito::mock("GET", "/hello").create();
 //!
 //! let mut request = curl::easy::Easy::new();
 //! request.url(&[mockito::SERVER_URL, "/hello"].join("")).unwrap();
@@ -94,8 +93,7 @@
 //! extern crate mockito;
 //! extern crate curl;
 //!
-//! let mut mock = mockito::mock("GET", "/hello");
-//! mock.expect(3).create();
+//! let mut mock = mockito::mock("GET", "/hello").expect(3).create();
 //!
 //! for _ in 0..3 {
 //!     let mut request = curl::easy::Easy::new();
@@ -245,8 +243,7 @@
 //! ```
 //! use mockito::mock;
 //!
-//! let mut mock = mock("GET", "/hello");
-//! mock.with_body("world").create();
+//! let mut mock = mock("GET", "/hello").with_body("world").create();
 //!
 //! // do your thing
 //!
@@ -422,7 +419,7 @@ impl Mock {
     ///   .match_header("authorization", "password");
     /// ```
     ///
-    pub fn match_header<M: Into<Matcher>>(&mut self, field: &str, value: M) -> &mut Self {
+    pub fn match_header<M: Into<Matcher>>(mut self, field: &str, value: M) -> Self {
         self.headers.insert(field.to_owned().to_lowercase(), value.into());
 
         self
@@ -439,7 +436,7 @@ impl Mock {
     /// mock("GET", "/").with_status(201);
     /// ```
     ///
-    pub fn with_status(&mut self, status: usize) -> &mut Self {
+    pub fn with_status(mut self, status: usize) -> Self {
         self.response.status = status;
 
         self
@@ -456,7 +453,7 @@ impl Mock {
     /// mock("GET", "/").with_header("content-type", "application/json");
     /// ```
     ///
-    pub fn with_header(&mut self, field: &str, value: &str) -> &mut Self {
+    pub fn with_header(mut self, field: &str, value: &str) -> Self {
         self.response.headers.push((field.to_owned(), value.to_owned()));
 
         self
@@ -473,7 +470,7 @@ impl Mock {
     /// mock("GET", "/").with_body("hello world");
     /// ```
     ///
-    pub fn with_body(&mut self, body: &str) -> &mut Self {
+    pub fn with_body(mut self, body: &str) -> Self {
         self.response.body = body.to_owned();
 
         self
@@ -491,7 +488,7 @@ impl Mock {
     /// mock("GET", "/").with_body_from_file("tests/files/simple.http");
     /// ```
     ///
-    pub fn with_body_from_file(&mut self, path: &str) -> &mut Self {
+    pub fn with_body_from_file(mut self, path: &str) -> Self {
         let mut file = File::open(path).unwrap();
         let mut body = String::new();
 
@@ -507,7 +504,7 @@ impl Mock {
     /// This is only enforced when calling the `assert` method.
     /// Defaults to 1 request.
     ///
-    pub fn expect(&mut self, hits: usize) -> &mut Self {
+    pub fn expect(mut self, hits: usize) -> Self {
         self.expected_hits = hits;
 
         self
@@ -532,7 +529,7 @@ impl Mock {
     /// mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
-    pub fn create(&mut self) -> &mut Self {
+    pub fn create(self) -> Self {
         server::try_start();
 
         let body = serde_json::to_string(&self).unwrap();
@@ -564,12 +561,12 @@ impl Mock {
     /// });
     /// ```
     ///
-    pub fn create_for<F: Fn() -> ()>(&mut self, environment: F) -> &mut Self {
-        self.create();
+    pub fn create_for<F: Fn() -> ()>(self, environment: F) -> Self {
+        let mock = self.create();
         environment();
-        self.remove();
+        mock.remove();
 
-        self
+        mock
     }
 
     ///
@@ -580,8 +577,7 @@ impl Mock {
     /// ```
     /// use mockito::mock;
     ///
-    /// let mut mock = mock("GET", "/");
-    /// mock.with_body("hello world").create();
+    /// let mut mock = mock("GET", "/").with_body("hello world").create();
     ///
     /// // stuff
     ///
@@ -590,7 +586,6 @@ impl Mock {
     ///
     pub fn remove(&self) {
         server::try_start();
-
 
         let mut request = Easy::new();
         request.url(&[SERVER_URL, "/mocks/", &self.id].join("")).unwrap();
