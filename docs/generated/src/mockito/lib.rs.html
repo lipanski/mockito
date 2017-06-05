@@ -637,6 +637,105 @@
 <span id="592">592</span>
 <span id="593">593</span>
 <span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
+<span id="671">671</span>
+<span id="672">672</span>
+<span id="673">673</span>
+<span id="674">674</span>
+<span id="675">675</span>
+<span id="676">676</span>
+<span id="677">677</span>
+<span id="678">678</span>
+<span id="679">679</span>
+<span id="680">680</span>
+<span id="681">681</span>
+<span id="682">682</span>
+<span id="683">683</span>
+<span id="684">684</span>
+<span id="685">685</span>
+<span id="686">686</span>
+<span id="687">687</span>
+<span id="688">688</span>
+<span id="689">689</span>
+<span id="690">690</span>
+<span id="691">691</span>
+<span id="692">692</span>
+<span id="693">693</span>
 </pre><pre class="rust ">
 <span class="attribute">#<span class="op">!</span>[<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
 <span class="attribute">#<span class="op">!</span>[<span class="ident">doc</span>(<span class="ident">html_logo_url</span> <span class="op">=</span> <span class="string">&quot;http://lipanski.github.io/mockito/logo/logo-black.png&quot;</span>,
@@ -705,15 +804,56 @@
 <span class="doccomment">//! In some situations, when you&#39;re *always* testing/mocking different routes and never need to reset</span>
 <span class="doccomment">//! or override the existing mocks, you might get away with running your tests on multiple threads.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! # Asserts</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! You can use the `Mock::assert` method to assert that a mock was called. By default, the method expects</span>
+<span class="doccomment">//! that only one request to your mock was triggered.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Example</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! extern crate mockito;</span>
+<span class="doccomment">//! extern crate curl;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let mut mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;);</span>
+<span class="doccomment">//! mock.create();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let mut request = curl::easy::Easy::new();</span>
+<span class="doccomment">//! request.url(&amp;[mockito::SERVER_URL, &quot;/hello&quot;].join(&quot;&quot;)).unwrap();</span>
+<span class="doccomment">//! request.perform().unwrap();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! mock.assert();</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! However, you can use the `Mock::expect` method to specify the exact amount of requests you are expecting:</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Example</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! extern crate mockito;</span>
+<span class="doccomment">//! extern crate curl;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let mut mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;);</span>
+<span class="doccomment">//! mock.expect(3).create();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! for _ in 0..3 {</span>
+<span class="doccomment">//!     let mut request = curl::easy::Easy::new();</span>
+<span class="doccomment">//!     request.url(&amp;[mockito::SERVER_URL, &quot;/hello&quot;].join(&quot;&quot;)).unwrap();</span>
+<span class="doccomment">//!     request.perform().unwrap();</span>
+<span class="doccomment">//! }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! mock.assert();</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! # Matchers</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Mockito can match your request by method, path and headers. The header field letter case is ignored.</span>
+<span class="doccomment">//! Mockito can match your request by method, path and headers.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Various matchers are provided by the `Matcher` type: exact, partial (regular expressions), any or missing.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Matching by path</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! By default, the request path is compared by its exact value.</span>
+<span class="doccomment">//! By default, the request path is compared by its exact value:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
@@ -722,7 +862,6 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // Matched only calls to GET /hello</span>
 <span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
-<span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! You can also match the path partially, by using a regular expression:</span>
@@ -736,7 +875,7 @@
 <span class="doccomment">//! mock(&quot;GET&quot;, Matcher::Regex(r&quot;^/hello/(1|2)$&quot;.to_string())).create();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! You can also catch all requests, by using the `Matcher::Any` variant:</span>
+<span class="doccomment">//! Or you can catch all requests, by using the `Matcher::Any` variant:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
@@ -749,7 +888,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Matching by header</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! By default, headers are compared by their exact value.</span>
+<span class="doccomment">//! By default, headers are compared by their exact value. The header name letter case is ignored though.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
@@ -783,7 +922,7 @@
 <span class="doccomment">//!   .create();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! You can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.</span>
+<span class="doccomment">//! Or you can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
@@ -871,6 +1010,7 @@
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde_json</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rand</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">regex</span>;
+<span class="attribute">#[<span class="ident">macro_use</span>]</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lazy_static</span>;
 
 <span class="kw">mod</span> <span class="ident">server</span>;
 <span class="kw">mod</span> <span class="ident">request</span>;
@@ -881,8 +1021,8 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Read</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">cmp</span>::<span class="ident">PartialEq</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::{<span class="ident">From</span>, <span class="ident">Into</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
 <span class="kw">use</span> <span class="ident">curl</span>::<span class="ident">easy</span>::<span class="ident">Easy</span>;
-<span class="kw">use</span> <span class="ident">curl</span>::<span class="ident">easy</span>::<span class="ident">List</span> <span class="kw">as</span> <span class="ident">HeaderList</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">thread_rng</span>, <span class="ident">Rng</span>};
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 
@@ -979,6 +1119,8 @@
     <span class="ident">path</span>: <span class="ident">Matcher</span>,
     <span class="ident">headers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Matcher</span><span class="op">&gt;</span>,
     <span class="ident">response</span>: <span class="ident">MockResponse</span>,
+    <span class="ident">hits</span>: <span class="ident">usize</span>,
+    <span class="ident">expected_hits</span>: <span class="ident">usize</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Mock</span> {
@@ -989,6 +1131,8 @@
             <span class="ident">path</span>: <span class="ident">path</span>.<span class="ident">into</span>(),
             <span class="ident">headers</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">response</span>: <span class="ident">MockResponse</span>::<span class="ident">new</span>(),
+            <span class="ident">hits</span>: <span class="number">0</span>,
+            <span class="ident">expected_hits</span>: <span class="number">1</span>,
         }
     }
 
@@ -1098,6 +1242,25 @@
     }
 
     <span class="doccomment">///</span>
+    <span class="doccomment">/// Sets the expected amount of requests that this mock is supposed to receive.</span>
+    <span class="doccomment">/// This is only enforced when calling the `assert` method.</span>
+    <span class="doccomment">/// Defaults to 1 request.</span>
+    <span class="doccomment">///</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">hits</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="self">self</span>.<span class="ident">expected_hits</span> <span class="op">=</span> <span class="ident">hits</span>;
+
+        <span class="self">self</span>
+    }
+
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Asserts that the expected amount of requests (defaults to 1 request) where performed.</span>
+    <span class="doccomment">///</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">sync</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>.<span class="ident">hits</span>, <span class="string">&quot;Expected {} request(s) to {}, but received {}&quot;</span>, <span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>, <span class="self">self</span>.<span class="ident">hits</span>);
+    }
+
+    <span class="doccomment">///</span>
     <span class="doccomment">/// Registers the mock to the server - your mock will be served only after calling this method.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Example</span>
@@ -1169,13 +1332,8 @@
 
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
-        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mocks&quot;</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
+        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mocks/&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">id</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
         <span class="ident">request</span>.<span class="ident">custom_request</span>(<span class="string">&quot;DELETE&quot;</span>).<span class="ident">unwrap</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">headers</span> <span class="op">=</span> <span class="ident">HeaderList</span>::<span class="ident">new</span>();
-        <span class="ident">headers</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;x-mock-id&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">id</span>].<span class="ident">join</span>(<span class="string">&quot;:&quot;</span>)).<span class="ident">unwrap</span>();
-        <span class="ident">request</span>.<span class="ident">http_headers</span>(<span class="ident">headers</span>).<span class="ident">unwrap</span>();
-
         <span class="ident">request</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
     }
 
@@ -1212,7 +1370,47 @@
 
         <span class="bool-val">true</span>
     }
+
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Syncs the current Mock with its copy on the server.</span>
+    <span class="doccomment">/// Mainly used to sync the hit count.</span>
+    <span class="doccomment">///</span>
+    <span class="kw">fn</span> <span class="ident">sync</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> () {
+        <span class="ident">server</span>::<span class="ident">try_start</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
+        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mocks/&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">id</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
+
+        {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transfer</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">transfer</span>();
+
+            <span class="ident">transfer</span>.<span class="ident">write_function</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> {
+                <span class="ident">buffer</span>.<span class="ident">extend_from_slice</span>(<span class="ident">data</span>);
+                <span class="prelude-val">Ok</span>(<span class="ident">data</span>.<span class="ident">len</span>())
+            }).<span class="ident">unwrap</span>();
+
+            <span class="ident">transfer</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
+        }
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">mock</span>) <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_slice</span>::<span class="op">&lt;</span><span class="ident">Mock</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>) {
+            <span class="self">self</span>.<span class="ident">hits</span> <span class="op">=</span> <span class="ident">mock</span>.<span class="ident">hits</span>;
+        }
+    }
 }
+
+<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Mock</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">path</span> {
+            <span class="ident">Matcher</span>::<span class="ident">Exact</span>(<span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{} {}&quot;</span>, <span class="self">self</span>.<span class="ident">method</span>, <span class="ident">value</span>),
+            <span class="ident">Matcher</span>::<span class="ident">Regex</span>(<span class="kw-2">ref</span> <span class="ident">value</span>) <span class="op">=&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{} {}&quot;</span>, <span class="self">self</span>.<span class="ident">method</span>, <span class="ident">value</span>),
+            <span class="ident">Matcher</span>::<span class="ident">Any</span> <span class="op">=&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{} *&quot;</span>, <span class="self">self</span>.<span class="ident">method</span>),
+            <span class="ident">Matcher</span>::<span class="ident">Missing</span> <span class="op">=&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{} -&quot;</span>, <span class="self">self</span>.<span class="ident">method</span>),
+        }
+    }
+}
+
 
 <span class="kw">const</span> <span class="ident">DEFAULT_RESPONSE_STATUS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">200</span>;
 
