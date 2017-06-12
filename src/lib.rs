@@ -4,9 +4,9 @@
 
 //!
 //! Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
-//! It runs an HTTP server on your local port 1234 and can register and remove mocks.
+//! It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.
 //!
-//! The server is run on a separate thread within the same process and will be cleaned up
+//! The server is run on a separate thread within the same process and will be removed
 //! at the end of the run.
 //!
 //! # Getting Started
@@ -37,7 +37,7 @@
 //!
 //!   #[test]
 //!   fn test_something() {
-//!     mock("GET", "/hello")
+//!     let _m = mock("GET", "/hello")
 //!       .with_status(201)
 //!       .with_header("content-type", "text/plain")
 //!       .with_header("x-api-key", "1234")
@@ -49,6 +49,30 @@
 //!   }
 //! }
 //! ```
+//!
+//! # Lifetime
+//!
+//! Just like any Rust object, a mock is available only through its lifetime. That is why you'll want to assign
+//! the mocks to variables.
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! let _m1 = mock("GET", "/long").with_body("hello").create();
+//!
+//! {
+//!     let _m2 = mock("GET", "/short").with_body("hi").create();
+//!
+//!     // Requests to GET /short will be mocked til here
+//! }
+//!
+//! // Requests to GET /long will be mocked til here
+//! ```
+//!
+//! Note how I **didn't use the same variable name** for both mocks (e.g. `let _`), as it would have ended the
+//! lifetime of the first mock with the second assignment.
 //!
 //! # Run your tests
 //!
@@ -62,12 +86,9 @@
 //! RUST_TEST_THREADS=1 cargo test
 //! ```
 //!
-//! In some situations, when you're *always* testing/mocking different routes and never need to reset
-//! or override the existing mocks, you might get away with running your tests on multiple threads.
-//!
 //! # Asserts
 //!
-//! You can use the `Mock::assert` method to assert that a mock was called. By default, the method expects
+//! You can use the `Mock::assert` method to **assert that a mock was called**. By default, the method expects
 //! that only one request to your mock was triggered.
 //!
 //! ## Example
@@ -120,7 +141,7 @@
 //! use mockito::mock;
 //!
 //! // Matched only calls to GET /hello
-//! mock("GET", "/hello").create();
+//! let _m = mock("GET", "/hello").create();
 //! ```
 //!
 //! You can also match the path partially, by using a regular expression:
@@ -131,7 +152,7 @@
 //! use mockito::{mock, Matcher};
 //!
 //! // Will match calls to GET /hello/1 and GET /hello/2
-//! mock("GET", Matcher::Regex(r"^/hello/(1|2)$".to_string())).create();
+//! let _m = mock("GET", Matcher::Regex(r"^/hello/(1|2)$".to_string())).create();
 //! ```
 //!
 //! Or you can catch all requests, by using the `Matcher::Any` variant:
@@ -142,7 +163,7 @@
 //! use mockito::{mock, Matcher};
 //!
 //! // Will match any GET request
-//! mock("GET", Matcher::Any).create();
+//! let _m = mock("GET", Matcher::Any).create();
 //! ```
 //!
 //! # Matching by header
@@ -154,12 +175,12 @@
 //! ```
 //! use mockito::mock;
 //!
-//! mock("GET", "/hello")
+//! let _m1 = mock("GET", "/hello")
 //!   .match_header("content-type", "application/json")
 //!   .with_body("{'hello': 'world'}")
 //!   .create();
 //!
-//! mock("GET", "/hello")
+//! let _m2 = mock("GET", "/hello")
 //!   .match_header("content-type", "text/plain")
 //!   .with_body("world")
 //!   .create();
@@ -175,7 +196,7 @@
 //! ```
 //! use mockito::{mock, Matcher};
 //!
-//! mock("GET", "/hello")
+//! let _m = mock("GET", "/hello")
 //!   .match_header("content-type", Matcher::Regex(r".*json.*".to_string()))
 //!   .with_body("{'hello': 'world'}")
 //!   .create();
@@ -188,7 +209,7 @@
 //! ```
 //! use mockito::{mock, Matcher};
 //!
-//! mock("GET", "/hello")
+//! let _m = mock("GET", "/hello")
 //!  .match_header("content-type", Matcher::Any)
 //!  .with_body("something");
 //!
@@ -204,7 +225,7 @@
 //! ```
 //! use mockito::{mock, Matcher};
 //!
-//! mock("GET", "/hello")
+//! let _m = mock("GET", "/hello")
 //!   .match_header("authorization", Matcher::Missing)
 //!   .with_body("no authorization header");
 //!
@@ -220,35 +241,6 @@
 //!
 //! Even though **mocks are matched in reverse order** (most recent one wins), in some situations
 //! it might be useful to clean up right after the test. There are multiple ways of doing this.
-//!
-//! By using a closure:
-//!
-//! ## Example
-//!
-//! ```
-//! use mockito::mock;
-//!
-//! mock("GET", "/hello")
-//!   .with_body("world")
-//!   .create_for(|| {
-//!     // mock only valid for the lifetime of this closure
-//!     // NOTE: it might still be accessible by separate threads
-//!   });
-//! ```
-//!
-//! By calling `remove()` on the mock:
-//!
-//! ## Example
-//!
-//! ```
-//! use mockito::mock;
-//!
-//! let mut mock = mock("GET", "/hello").with_body("world").create();
-//!
-//! // do your thing
-//!
-//! mock.remove();
-//! ```
 //!
 //! By calling `reset()` to **remove all mocks**:
 //!
@@ -279,6 +271,7 @@ use std::fs::File;
 use std::io::Read;
 use std::cmp::PartialEq;
 use std::convert::{From, Into};
+use std::ops::Drop;
 use std::fmt;
 use curl::easy::Easy;
 use rand::{thread_rng, Rng};
@@ -300,14 +293,14 @@ pub const SERVER_URL: &'static str = "http://127.0.0.1:1234";
 ///
 /// The mock is registered to the server only after the `create()` method has been called.
 ///
-/// # Example
+/// ## Example
 ///
 /// ```
 /// use mockito::mock;
 ///
-/// mock("GET", "/");
-/// mock("POST", "/users");
-/// mock("DELETE", "/users?id=1");
+/// let _m1 = mock("GET", "/");
+/// let _m2 = mock("POST", "/users");
+/// let _m3 = mock("DELETE", "/users?id=1");
 /// ```
 ///
 pub fn mock<P: Into<Matcher>>(method: &str, path: P) -> Mock {
@@ -399,22 +392,22 @@ impl Mock {
     ///
     /// When matching a request, the field letter case is ignored.
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").match_header("content-type", "application/json");
+    /// let _m = mock("GET", "/").match_header("content-type", "application/json");
     /// ```
     ///
     /// Like most other `Mock` methods, it allows chanining:
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/")
+    /// let _m = mock("GET", "/")
     ///   .match_header("content-type", "application/json")
     ///   .match_header("authorization", "password");
     /// ```
@@ -428,12 +421,12 @@ impl Mock {
     ///
     /// Sets the status code of the mock response. The default status code is 200.
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").with_status(201);
+    /// let _m = mock("GET", "/").with_status(201);
     /// ```
     ///
     pub fn with_status(mut self, status: usize) -> Self {
@@ -445,12 +438,12 @@ impl Mock {
     ///
     /// Sets a header of the mock response.
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").with_header("content-type", "application/json");
+    /// let _m = mock("GET", "/").with_header("content-type", "application/json");
     /// ```
     ///
     pub fn with_header(mut self, field: &str, value: &str) -> Self {
@@ -462,12 +455,12 @@ impl Mock {
     ///
     /// Sets the body of the mock response. Its `Content-Length` is handled automatically.
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").with_body("hello world");
+    /// let _m = mock("GET", "/").with_body("hello world");
     /// ```
     ///
     pub fn with_body(mut self, body: &str) -> Self {
@@ -480,12 +473,12 @@ impl Mock {
     /// Sets the body of the mock response from the contents of a file stored under `path`.
     /// Its `Content-Length` is handled automatically.
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").with_body_from_file("tests/files/simple.http");
+    /// let _m = mock("GET", "/").with_body_from_file("tests/files/simple.http");
     /// ```
     ///
     pub fn with_body_from_file(mut self, path: &str) -> Self {
@@ -521,12 +514,12 @@ impl Mock {
     ///
     /// Registers the mock to the server - your mock will be served only after calling this method.
     ///
-    /// # Example
+    /// ## Example
     ///
     /// ```
     /// use mockito::mock;
     ///
-    /// mock("GET", "/").with_body("hello world").create();
+    /// let _m = mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
     pub fn create(self) -> Self {
@@ -544,80 +537,15 @@ impl Mock {
     }
 
     ///
-    /// Registers the mock to the server, executes the passed closure and removes the mock afterwards.
-    ///
-    /// **NOTE:** During the closure lifetime, the mock might still be available to seperate threads.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use std::thread::{sleep};
-    /// use std::time::Duration;
-    /// use mockito::mock;
-    ///
-    /// mock("GET", "/").with_body("hello world").create_for(|| {
-    ///   // This mock will only be available for the next 1 second
-    ///   sleep(Duration::new(1, 0));
-    /// });
-    /// ```
-    ///
-    pub fn create_for<F: Fn() -> ()>(self, environment: F) -> Self {
-        let mock = self.create();
-        environment();
-        mock.remove();
-
-        mock
-    }
-
-    ///
     /// Removes the current mock from the server.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// use mockito::mock;
-    ///
-    /// let mut mock = mock("GET", "/").with_body("hello world").create();
-    ///
-    /// // stuff
-    ///
-    /// mock.remove();
-    /// ```
-    ///
-    pub fn remove(&self) {
+    fn remove(&self) {
         server::try_start();
 
         let mut request = Easy::new();
         request.url(&[SERVER_URL, "/mocks/", &self.id].join("")).unwrap();
         request.custom_request("DELETE").unwrap();
         request.perform().unwrap();
-    }
-
-    fn method_matches(&self, request: &Request) -> bool {
-        self.method == request.method
-    }
-
-    fn path_matches(&self, request: &Request) -> bool {
-        self.path == request.path
-    }
-
-    fn headers_match(&self, request: &Request) -> bool {
-        for (field, value) in self.headers.iter() {
-            match request.headers.get(field) {
-                Some(request_header_value) => {
-                    if value == request_header_value { continue }
-
-                    return false
-                },
-                None => {
-                    if value == &Matcher::Missing { continue }
-
-                    return false
-                },
-            }
-        }
-
-        true
     }
 
     ///
@@ -649,11 +577,9 @@ impl Mock {
     }
 }
 
-impl<'a> PartialEq<Request> for &'a mut Mock {
-    fn eq(&self, other: &Request) -> bool {
-        self.method_matches(other)
-            && self.path_matches(other)
-            && self.headers_match(other)
+impl Drop for Mock {
+    fn drop(&mut self) {
+        self.remove();
     }
 }
 
@@ -667,7 +593,6 @@ impl fmt::Display for Mock {
         }
     }
 }
-
 
 const DEFAULT_RESPONSE_STATUS: usize = 200;
 

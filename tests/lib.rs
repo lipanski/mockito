@@ -5,7 +5,7 @@ use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
 use rand::Rng;
-use mockito::{SERVER_ADDRESS, mock, reset, Matcher};
+use mockito::{SERVER_ADDRESS, mock, Matcher};
 
 fn request_stream(route: &str, headers: &str) -> TcpStream {
     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
@@ -49,7 +49,7 @@ fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
 
 #[test]
 fn test_create_starts_the_server() {
-    mock("GET", "/").with_body("hello").create();
+    let _m = mock("GET", "/").with_body("hello").create();
 
     let stream = TcpStream::connect(SERVER_ADDRESS);
     assert!(stream.is_ok());
@@ -57,22 +57,17 @@ fn test_create_starts_the_server() {
 
 #[test]
 fn test_simple_route_mock() {
-    reset();
-
-    let mocked_body = "world";
-    mock("GET", "/hello").with_body(mocked_body).create();
+    let _m = mock("GET", "/hello").with_body("world").create();
 
     let (status_line, _, body) = request("GET /hello", "");
     assert_eq!("HTTP/1.1 200\r\n", status_line);
-    assert_eq!(mocked_body, body);
+    assert_eq!("world", body);
 }
 
 #[test]
 fn test_two_route_mocks() {
-    reset();
-
-    mock("GET", "/a").with_body("aaa").create();
-    mock("GET", "/b").with_body("bbb").create();
+    let _m1 = mock("GET", "/a").with_body("aaa").create();
+    let _m2 = mock("GET", "/b").with_body("bbb").create();
 
     let (_, _, body_a) = request("GET /a", "");
 
@@ -83,9 +78,7 @@ fn test_two_route_mocks() {
 
 #[test]
 fn test_no_match_returns_501() {
-    reset();
-
-    mock("GET", "/").with_body("matched").create();
+    let _m = mock("GET", "/").with_body("matched").create();
 
     let (status_line, _, _) = request("GET /nope", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
@@ -93,14 +86,12 @@ fn test_no_match_returns_501() {
 
 #[test]
 fn test_match_header() {
-    reset();
-
-    mock("GET", "/")
+    let _m1 = mock("GET", "/")
         .match_header("content-type", "application/json")
         .with_body("{}")
         .create();
 
-    mock("GET", "/")
+    let _m2 = mock("GET", "/")
         .match_header("content-type", "text/plain")
         .with_body("hello")
         .create();
@@ -114,9 +105,7 @@ fn test_match_header() {
 
 #[test]
 fn test_match_header_is_case_insensitive_on_the_field_name() {
-    reset();
-
-    mock("GET", "/").match_header("content-type", "text/plain").create();
+    let _m = mock("GET", "/").match_header("content-type", "text/plain").create();
 
     let (uppercase_status_line, _, _) = request("GET /", "Content-Type: text/plain\r\n");
     assert_eq!("HTTP/1.1 200\r\n", uppercase_status_line);
@@ -127,9 +116,7 @@ fn test_match_header_is_case_insensitive_on_the_field_name() {
 
 #[test]
 fn test_match_multiple_headers() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Content-Type", "text/plain")
         .match_header("Authorization", "secret")
         .with_body("matched")
@@ -144,9 +131,7 @@ fn test_match_multiple_headers() {
 
 #[test]
 fn test_match_header_any_matching() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Content-Type", Matcher::Any)
         .with_body("matched")
         .create();
@@ -157,9 +142,7 @@ fn test_match_header_any_matching() {
 
 #[test]
 fn test_match_header_any_not_matching() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Content-Type", Matcher::Any)
         .with_body("matched")
         .create();
@@ -170,9 +153,7 @@ fn test_match_header_any_not_matching() {
 
 #[test]
 fn test_match_header_missing_matching() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Authorization", Matcher::Missing)
         .create();
 
@@ -182,9 +163,7 @@ fn test_match_header_missing_matching() {
 
 #[test]
 fn test_match_header_missing_not_matching() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Authorization", Matcher::Missing)
         .create();
 
@@ -194,9 +173,7 @@ fn test_match_header_missing_not_matching() {
 
 #[test]
 fn test_match_multiple_header_conditions_matching() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Hello", "World")
         .match_header("Content-Type", Matcher::Any)
         .match_header("Authorization", Matcher::Missing)
@@ -208,9 +185,7 @@ fn test_match_multiple_header_conditions_matching() {
 
 #[test]
 fn test_match_multiple_header_conditions_not_matching() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("hello", "world")
         .match_header("Content-Type", Matcher::Any)
         .match_header("Authorization", Matcher::Missing)
@@ -222,9 +197,7 @@ fn test_match_multiple_header_conditions_not_matching() {
 
 #[test]
 fn test_mock_with_status() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .with_status(204)
         .with_body("")
         .create();
@@ -235,9 +208,7 @@ fn test_mock_with_status() {
 
 #[test]
 fn test_mock_with_header() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .with_header("content-type", "application/json")
         .with_body("{}")
         .create();
@@ -248,9 +219,7 @@ fn test_mock_with_header() {
 
 #[test]
 fn test_mock_with_multiple_headers() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .with_header("content-type", "application/json")
         .with_header("x-api-key", "1234")
         .with_body("{}")
@@ -263,8 +232,6 @@ fn test_mock_with_multiple_headers() {
 
 #[test]
 fn test_mock_preserves_header_order() {
-    reset();
-
     let mut expected_headers = Vec::new();
     let mut mock = mock("GET", "/");
 
@@ -276,7 +243,7 @@ fn test_mock_preserves_header_order() {
         expected_headers.push(format!("{}: {}", field, value));
     }
 
-    mock.create();
+    let _m = mock.create();
 
     let (_, headers, _) = request("GET /", "");
     let custom_headers: Vec<_> = headers.into_iter()
@@ -287,68 +254,37 @@ fn test_mock_preserves_header_order() {
 }
 
 #[test]
-fn test_reset_clears_mocks() {
-    reset();
+fn test_going_out_of_context_removes_mock() {
+    {
+        let _m = mock("GET", "/reset").create();
 
-    mock("GET", "/reset").create();
-
-    let (working_status_line, _, _) = request("GET /reset", "");
-    assert_eq!("HTTP/1.1 200\r\n", working_status_line);
-
-    reset();
+        let (working_status_line, _, _) = request("GET /reset", "");
+        assert_eq!("HTTP/1.1 200\r\n", working_status_line);
+    }
 
     let (reset_status_line, _, _) = request("GET /reset", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
 }
 
 #[test]
-fn test_mock_remove_clears_the_mock() {
-    reset();
+fn test_going_out_of_context_doesnt_remove_other_mocks() {
+    let _m1 = mock("GET", "/long").create();
 
-    let mock = mock("GET", "/").create();
+    {
+        let _m2 = mock("GET", "/short").create();
 
-    let (working_status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 200\r\n", working_status_line);
+        let (short_status_line, _, _) = request("GET /short", "");
+        assert_eq!("HTTP/1.1 200\r\n", short_status_line);
+    }
 
-    mock.remove();
-
-    let (reset_status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
+    let (long_status_line, _, _) = request("GET /long", "");
+    assert_eq!("HTTP/1.1 200\r\n", long_status_line);
 }
-
-#[test]
-fn test_mock_remove_doesnt_clear_other_mocks() {
-    reset();
-
-    mock("POST", "/").create();
-
-    let mut mock = mock("GET", "/");
-    mock = mock.create();
-    mock.remove();
-
-    let (reset_status_line, _, _) = request("POST /", "");
-    assert_eq!("HTTP/1.1 200\r\n", reset_status_line);
-}
-
-#[test]
-fn test_mock_create_for_is_only_available_during_the_closure_lifetime() {
-    reset();
-
-    mock("GET", "/").create_for( || {
-        let (working_status_line, _, _) = request("GET /", "");
-        assert_eq!("HTTP/1.1 200\r\n", working_status_line);
-    });
-
-    let (reset_status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
-}
-
 
 #[test]
 fn test_regex_match_path() {
-    reset();
-    mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string())).with_body("aaa").create();
-    mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string())).with_body("bbb").create();
+    let _m1 = mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string())).with_body("aaa").create();
+    let _m2 = mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string())).with_body("bbb").create();
 
     let (_, _, body_a) = request("GET /a/1", "");
     assert_eq!("aaa", body_a);
@@ -365,9 +301,7 @@ fn test_regex_match_path() {
 
 #[test]
 fn test_regex_match_header() {
-    reset();
-
-    mock("GET", "/")
+    let _m = mock("GET", "/")
         .match_header("Authorization", Matcher::Regex(r"^Bearer token\.\w+$".to_string()))
         .with_body("{}")
         .create();
@@ -381,14 +315,12 @@ fn test_regex_match_header() {
 
 #[test]
 fn test_large_utf8_body() {
-    reset();
-
     let mock_body: String = rand::thread_rng()
         .gen_iter::<char>()
-        .take(3 * 1024) // IMPORTANT: must be large then request read buffer
+        .take(3 * 1024) // Must be larger than the request read buffer
         .collect();
 
-    mock("GET", "/").with_body(&mock_body).create();
+    let _m = mock("GET", "/").with_body(&mock_body).create();
 
     let (_, _, body) = request("GET /", "");
     assert_eq!(mock_body, body);
@@ -417,8 +349,6 @@ fn test_display_mock_with_any_path() {
 
 #[test]
 fn test_assert_defaults_to_one_hit() {
-    reset();
-
     let mut mock = mock("GET", "/hello").create();
 
     request("GET /hello", "");
@@ -429,8 +359,6 @@ fn test_assert_defaults_to_one_hit() {
 #[test]
 #[should_panic(expected = "Expected 1 request(s) to GET /hello, but received 0")]
 fn test_assert_panics_if_no_request_was_performed() {
-    reset();
-
     let mut mock = mock("GET", "/hello").create();
 
     mock.assert();
@@ -438,8 +366,6 @@ fn test_assert_panics_if_no_request_was_performed() {
 
 #[test]
 fn test_expect() {
-    reset();
-
     let mut mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
@@ -452,8 +378,6 @@ fn test_expect() {
 #[test]
 #[should_panic(expected = "Expected 3 request(s) to GET /hello, but received 2")]
 fn test_assert_panics_with_too_few_requests() {
-    reset();
-
     let mut mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
@@ -465,8 +389,6 @@ fn test_assert_panics_with_too_few_requests() {
 #[test]
 #[should_panic(expected = "Expected 3 request(s) to GET /hello, but received 4")]
 fn test_assert_panics_with_too_many_requests() {
-    reset();
-
     let mut mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
