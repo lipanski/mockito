@@ -349,7 +349,7 @@ fn test_display_mock_with_any_path() {
 
 #[test]
 fn test_assert_defaults_to_one_hit() {
-    let mut mock = mock("GET", "/hello").create();
+    let mock = mock("GET", "/hello").create();
 
     request("GET /hello", "");
 
@@ -359,14 +359,14 @@ fn test_assert_defaults_to_one_hit() {
 #[test]
 #[should_panic(expected = "Expected 1 request(s) to GET /hello, but received 0")]
 fn test_assert_panics_if_no_request_was_performed() {
-    let mut mock = mock("GET", "/hello").create();
+    let mock = mock("GET", "/hello").create();
 
     mock.assert();
 }
 
 #[test]
 fn test_expect() {
-    let mut mock = mock("GET", "/hello").expect(3).create();
+    let mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");
@@ -378,7 +378,7 @@ fn test_expect() {
 #[test]
 #[should_panic(expected = "Expected 3 request(s) to GET /hello, but received 2")]
 fn test_assert_panics_with_too_few_requests() {
-    let mut mock = mock("GET", "/hello").expect(3).create();
+    let mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");
@@ -389,7 +389,7 @@ fn test_assert_panics_with_too_few_requests() {
 #[test]
 #[should_panic(expected = "Expected 3 request(s) to GET /hello, but received 4")]
 fn test_assert_panics_with_too_many_requests() {
-    let mut mock = mock("GET", "/hello").expect(3).create();
+    let mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");

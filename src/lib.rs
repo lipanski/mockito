@@ -97,7 +97,7 @@
 //! extern crate mockito;
 //! extern crate curl;
 //!
-//! let mut mock = mockito::mock("GET", "/hello").create();
+//! let mock = mockito::mock("GET", "/hello").create();
 //!
 //! let mut request = curl::easy::Easy::new();
 //! request.url(&[mockito::SERVER_URL, "/hello"].join("")).unwrap();
@@ -114,7 +114,7 @@
 //! extern crate mockito;
 //! extern crate curl;
 //!
-//! let mut mock = mockito::mock("GET", "/hello").expect(3).create();
+//! let mock = mockito::mock("GET", "/hello").expect(3).create();
 //!
 //! for _ in 0..3 {
 //!     let mut request = curl::easy::Easy::new();
@@ -239,7 +239,7 @@
 //!
 //! # Cleaning up
 //!
-//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations
+//! Even though **mocks are matched in reverse order** - the most recent one wins, in some situations
 //! it might be useful to clean up right after the test. There are multiple ways of doing this.
 //!
 //! By calling `reset()` to **remove all mocks**:
@@ -504,11 +504,11 @@ impl Mock {
     }
 
     ///
-    /// Asserts that the expected amount of requests (defaults to 1 request) where performed.
+    /// Asserts that the expected amount of requests (defaults to 1 request) were performed.
     ///
-    pub fn assert(&mut self) {
-        self.sync();
-        assert_eq!(self.expected_hits, self.hits, "Expected {} request(s) to {}, but received {}", self.expected_hits, self, self.hits);
+    pub fn assert(&self) {
+        let remote = self.remote().expect("The request to retrieve the remote mock failed.");
+        assert_eq!(self.expected_hits, remote.hits, "Expected {} request(s) to {}, but received {}", self.expected_hits, self, remote.hits);
     }
 
     ///
@@ -549,10 +549,10 @@ impl Mock {
     }
 
     ///
-    /// Syncs the current Mock with its copy on the server.
+    /// Retrieves the remote copy of the current mock.
     /// Mainly used to sync the hit count.
     ///
-    fn sync(&mut self) -> () {
+    fn remote(&self) -> Result<Self, ()> {
         server::try_start();
 
         let mut buffer = Vec::new();
@@ -571,9 +571,7 @@ impl Mock {
             transfer.perform().unwrap();
         }
 
-        if let Ok(mock) = serde_json::from_slice::<Mock>(&buffer) {
-            self.hits = mock.hits;
-        }
+        serde_json::from_slice(&buffer).map_err(|_| ())
     }
 }
 
