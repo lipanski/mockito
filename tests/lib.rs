@@ -4,6 +4,7 @@ extern crate mockito;
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
+use std::mem;
 use rand::Rng;
 use mockito::{SERVER_ADDRESS, mock, Matcher};
 
@@ -279,6 +280,19 @@ fn test_going_out_of_context_doesnt_remove_other_mocks() {
 
     let (long_status_line, _, _) = request("GET /long", "");
     assert_eq!("HTTP/1.1 200\r\n", long_status_line);
+}
+
+#[test]
+fn test_explicitly_calling_drop_removes_the_mock() {
+    let mock = mock("GET", "/").create();
+
+    let (status_line, _, _) = request("GET /", "");
+    assert_eq!("HTTP/1.1 200\r\n", status_line);
+
+    mem::drop(mock);
+
+    let (dropped_status_line, _, _) = request("GET /", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", dropped_status_line);
 }
 
 #[test]

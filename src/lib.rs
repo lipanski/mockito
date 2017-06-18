@@ -52,8 +52,8 @@
 //!
 //! # Lifetime
 //!
-//! Just like any Rust object, a mock is available only through its lifetime. That is why you'll want to assign
-//! the mocks to variables.
+//! Just like any Rust object, a mock is available only through its lifetime. You'll want to assign
+//! the mocks to variables in order to extend and control their lifetime.
 //!
 //! ## Example
 //!
@@ -237,20 +237,42 @@
 //!
 //! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.
 //!
+//! Note that **mocks are matched in reverse order** - the most recent one wins.
+//!
 //! # Cleaning up
 //!
-//! Even though **mocks are matched in reverse order** - the most recent one wins, in some situations
-//! it might be useful to clean up right after the test. There are multiple ways of doing this.
-//!
-//! By calling `reset()` to **remove all mocks**:
+//! As mentioned earlier, mocks are cleaned up at the end of their normal Rust lifetime. However,
+//! you can always use the `reset` method to clean up *all* the mocks registered so far.
 //!
 //! ## Example
 //!
 //! ```
-//! use mockito::reset;
+//! use mockito::{mock, reset};
+//!
+//! let _m1 = mock("GET", "/1").create();
+//! let _m2 = mock("GET", "/2").create();
+//! let _m3 = mock("GET", "/3").create();
 //!
 //! reset();
+//!
+//! // Nothing is mocked at this point
 //! ```
+//!
+//! Or you can use `std::mem::drop` to remove a single mock without having to wait for its scope to end:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::mock;
+//! use std::mem;
+//!
+//! let m = mock("GET", "/hello").create();
+//!
+//! // Requests to GET /hello are mocked
+//!
+//! mem::drop(m);
+//!
+//! // Still in the scope of `m`, but requests to GET /hello aren't mocked any more
 //!
 
 extern crate curl;
