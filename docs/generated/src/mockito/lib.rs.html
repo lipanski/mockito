@@ -677,65 +677,6 @@
 <span id="632">632</span>
 <span id="633">633</span>
 <span id="634">634</span>
-<span id="635">635</span>
-<span id="636">636</span>
-<span id="637">637</span>
-<span id="638">638</span>
-<span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
-<span id="642">642</span>
-<span id="643">643</span>
-<span id="644">644</span>
-<span id="645">645</span>
-<span id="646">646</span>
-<span id="647">647</span>
-<span id="648">648</span>
-<span id="649">649</span>
-<span id="650">650</span>
-<span id="651">651</span>
-<span id="652">652</span>
-<span id="653">653</span>
-<span id="654">654</span>
-<span id="655">655</span>
-<span id="656">656</span>
-<span id="657">657</span>
-<span id="658">658</span>
-<span id="659">659</span>
-<span id="660">660</span>
-<span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
-<span id="664">664</span>
-<span id="665">665</span>
-<span id="666">666</span>
-<span id="667">667</span>
-<span id="668">668</span>
-<span id="669">669</span>
-<span id="670">670</span>
-<span id="671">671</span>
-<span id="672">672</span>
-<span id="673">673</span>
-<span id="674">674</span>
-<span id="675">675</span>
-<span id="676">676</span>
-<span id="677">677</span>
-<span id="678">678</span>
-<span id="679">679</span>
-<span id="680">680</span>
-<span id="681">681</span>
-<span id="682">682</span>
-<span id="683">683</span>
-<span id="684">684</span>
-<span id="685">685</span>
-<span id="686">686</span>
-<span id="687">687</span>
-<span id="688">688</span>
-<span id="689">689</span>
-<span id="690">690</span>
-<span id="691">691</span>
-<span id="692">692</span>
-<span id="693">693</span>
 </pre><pre class="rust ">
 <span class="attribute">#<span class="op">!</span>[<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
 <span class="attribute">#<span class="op">!</span>[<span class="ident">doc</span>(<span class="ident">html_logo_url</span> <span class="op">=</span> <span class="string">&quot;http://lipanski.github.io/mockito/logo/logo-black.png&quot;</span>,
@@ -743,9 +684,9 @@
 
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.</span>
-<span class="doccomment">//! It runs an HTTP server on your local port 1234 and can register and remove mocks.</span>
+<span class="doccomment">//! It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! The server is run on a separate thread within the same process and will be cleaned up</span>
+<span class="doccomment">//! The server is run on a separate thread within the same process and will be removed</span>
 <span class="doccomment">//! at the end of the run.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Getting Started</span>
@@ -776,7 +717,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//!   #[test]</span>
 <span class="doccomment">//!   fn test_something() {</span>
-<span class="doccomment">//!     mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
+<span class="doccomment">//!     let _m = mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class="doccomment">//!       .with_status(201)</span>
 <span class="doccomment">//!       .with_header(&quot;content-type&quot;, &quot;text/plain&quot;)</span>
 <span class="doccomment">//!       .with_header(&quot;x-api-key&quot;, &quot;1234&quot;)</span>
@@ -788,6 +729,30 @@
 <span class="doccomment">//!   }</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Lifetime</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Just like any Rust object, a mock is available only through its lifetime. You&#39;ll want to assign</span>
+<span class="doccomment">//! the mocks to variables in order to extend and control their lifetime.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Example</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! use mockito::mock;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let _m1 = mock(&quot;GET&quot;, &quot;/long&quot;).with_body(&quot;hello&quot;).create();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! {</span>
+<span class="doccomment">//!     let _m2 = mock(&quot;GET&quot;, &quot;/short&quot;).with_body(&quot;hi&quot;).create();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//!     // Requests to GET /short will be mocked til here</span>
+<span class="doccomment">//! }</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! // Requests to GET /long will be mocked til here</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Note how I **didn&#39;t use the same variable name** for both mocks (e.g. `let _`), as it would have ended the</span>
+<span class="doccomment">//! lifetime of the first mock with the second assignment.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Run your tests</span>
 <span class="doccomment">//!</span>
@@ -801,12 +766,9 @@
 <span class="doccomment">//! RUST_TEST_THREADS=1 cargo test</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! In some situations, when you&#39;re *always* testing/mocking different routes and never need to reset</span>
-<span class="doccomment">//! or override the existing mocks, you might get away with running your tests on multiple threads.</span>
-<span class="doccomment">//!</span>
 <span class="doccomment">//! # Asserts</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! You can use the `Mock::assert` method to assert that a mock was called. By default, the method expects</span>
+<span class="doccomment">//! You can use the `Mock::assert` method to **assert that a mock was called**. By default, the method expects</span>
 <span class="doccomment">//! that only one request to your mock was triggered.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
@@ -815,8 +777,7 @@
 <span class="doccomment">//! extern crate mockito;</span>
 <span class="doccomment">//! extern crate curl;</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! let mut mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;);</span>
-<span class="doccomment">//! mock.create();</span>
+<span class="doccomment">//! let mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let mut request = curl::easy::Easy::new();</span>
 <span class="doccomment">//! request.url(&amp;[mockito::SERVER_URL, &quot;/hello&quot;].join(&quot;&quot;)).unwrap();</span>
@@ -833,8 +794,7 @@
 <span class="doccomment">//! extern crate mockito;</span>
 <span class="doccomment">//! extern crate curl;</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! let mut mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;);</span>
-<span class="doccomment">//! mock.expect(3).create();</span>
+<span class="doccomment">//! let mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;).expect(3).create();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! for _ in 0..3 {</span>
 <span class="doccomment">//!     let mut request = curl::easy::Easy::new();</span>
@@ -861,7 +821,7 @@
 <span class="doccomment">//! use mockito::mock;</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // Matched only calls to GET /hello</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
+<span class="doccomment">//! let _m = mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! You can also match the path partially, by using a regular expression:</span>
@@ -872,7 +832,7 @@
 <span class="doccomment">//! use mockito::{mock, Matcher};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // Will match calls to GET /hello/1 and GET /hello/2</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, Matcher::Regex(r&quot;^/hello/(1|2)$&quot;.to_string())).create();</span>
+<span class="doccomment">//! let _m = mock(&quot;GET&quot;, Matcher::Regex(r&quot;^/hello/(1|2)$&quot;.to_string())).create();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Or you can catch all requests, by using the `Matcher::Any` variant:</span>
@@ -883,7 +843,7 @@
 <span class="doccomment">//! use mockito::{mock, Matcher};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // Will match any GET request</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, Matcher::Any).create();</span>
+<span class="doccomment">//! let _m = mock(&quot;GET&quot;, Matcher::Any).create();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Matching by header</span>
@@ -895,12 +855,12 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use mockito::mock;</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
+<span class="doccomment">//! let _m1 = mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class="doccomment">//!   .match_header(&quot;content-type&quot;, &quot;application/json&quot;)</span>
 <span class="doccomment">//!   .with_body(&quot;{&#39;hello&#39;: &#39;world&#39;}&quot;)</span>
 <span class="doccomment">//!   .create();</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
+<span class="doccomment">//! let _m2 = mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class="doccomment">//!   .match_header(&quot;content-type&quot;, &quot;text/plain&quot;)</span>
 <span class="doccomment">//!   .with_body(&quot;world&quot;)</span>
 <span class="doccomment">//!   .create();</span>
@@ -916,7 +876,7 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use mockito::{mock, Matcher};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
+<span class="doccomment">//! let _m = mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class="doccomment">//!   .match_header(&quot;content-type&quot;, Matcher::Regex(r&quot;.*json.*&quot;.to_string()))</span>
 <span class="doccomment">//!   .with_body(&quot;{&#39;hello&#39;: &#39;world&#39;}&quot;)</span>
 <span class="doccomment">//!   .create();</span>
@@ -929,7 +889,7 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use mockito::{mock, Matcher};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
+<span class="doccomment">//! let _m = mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class="doccomment">//!  .match_header(&quot;content-type&quot;, Matcher::Any)</span>
 <span class="doccomment">//!  .with_body(&quot;something&quot;);</span>
 <span class="doccomment">//!</span>
@@ -945,7 +905,7 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use mockito::{mock, Matcher};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
+<span class="doccomment">//! let _m = mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
 <span class="doccomment">//!   .match_header(&quot;authorization&quot;, Matcher::Missing)</span>
 <span class="doccomment">//!   .with_body(&quot;no authorization header&quot;);</span>
 <span class="doccomment">//!</span>
@@ -957,50 +917,42 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! Note that **mocks are matched in reverse order** - the most recent one wins.</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! # Cleaning up</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Even though **mocks are matched in reverse order** (most recent one wins), in some situations</span>
-<span class="doccomment">//! it might be useful to clean up right after the test. There are multiple ways of doing this.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! By using a closure:</span>
+<span class="doccomment">//! As mentioned earlier, mocks are cleaned up at the end of their normal Rust lifetime. However,</span>
+<span class="doccomment">//! you can always use the `reset` method to clean up *all* the mocks registered so far.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! use mockito::mock;</span>
+<span class="doccomment">//! use mockito::{mock, reset};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! mock(&quot;GET&quot;, &quot;/hello&quot;)</span>
-<span class="doccomment">//!   .with_body(&quot;world&quot;)</span>
-<span class="doccomment">//!   .create_for(|| {</span>
-<span class="doccomment">//!     // mock only valid for the lifetime of this closure</span>
-<span class="doccomment">//!     // NOTE: it might still be accessible by separate threads</span>
-<span class="doccomment">//!   });</span>
-<span class="doccomment">//! ```</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! By calling `remove()` on the mock:</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ## Example</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ```</span>
-<span class="doccomment">//! use mockito::mock;</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! let mut mock = mock(&quot;GET&quot;, &quot;/hello&quot;);</span>
-<span class="doccomment">//! mock.with_body(&quot;world&quot;).create();</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! // do your thing</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! mock.remove();</span>
-<span class="doccomment">//! ```</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! By calling `reset()` to **remove all mocks**:</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ## Example</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ```</span>
-<span class="doccomment">//! use mockito::reset;</span>
+<span class="doccomment">//! let _m1 = mock(&quot;GET&quot;, &quot;/1&quot;).create();</span>
+<span class="doccomment">//! let _m2 = mock(&quot;GET&quot;, &quot;/2&quot;).create();</span>
+<span class="doccomment">//! let _m3 = mock(&quot;GET&quot;, &quot;/3&quot;).create();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! reset();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! // Nothing is mocked at this point</span>
 <span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Or you can use `std::mem::drop` to remove a single mock without having to wait for its scope to end:</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Example</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! use mockito::mock;</span>
+<span class="doccomment">//! use std::mem;</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let m = mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! // Requests to GET /hello are mocked</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! mem::drop(m);</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! // Still in the scope of `m`, but requests to GET /hello aren&#39;t mocked any more</span>
 <span class="doccomment">//!</span>
 
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">curl</span>;
@@ -1021,6 +973,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">Read</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">cmp</span>::<span class="ident">PartialEq</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::{<span class="ident">From</span>, <span class="ident">Into</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">Drop</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
 <span class="kw">use</span> <span class="ident">curl</span>::<span class="ident">easy</span>::<span class="ident">Easy</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">thread_rng</span>, <span class="ident">Rng</span>};
@@ -1042,14 +995,14 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// The mock is registered to the server only after the `create()` method has been called.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// # Example</span>
+<span class="doccomment">/// ## Example</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// use mockito::mock;</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;);</span>
-<span class="doccomment">/// mock(&quot;POST&quot;, &quot;/users&quot;);</span>
-<span class="doccomment">/// mock(&quot;DELETE&quot;, &quot;/users?id=1&quot;);</span>
+<span class="doccomment">/// let _m1 = mock(&quot;GET&quot;, &quot;/&quot;);</span>
+<span class="doccomment">/// let _m2 = mock(&quot;POST&quot;, &quot;/users&quot;);</span>
+<span class="doccomment">/// let _m3 = mock(&quot;DELETE&quot;, &quot;/users?id=1&quot;);</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">///</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mock</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Matcher</span><span class="op">&gt;&gt;</span>(<span class="ident">method</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">path</span>: <span class="ident">P</span>) <span class="op">-&gt;</span> <span class="ident">Mock</span> {
@@ -1141,27 +1094,27 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// When matching a request, the field letter case is ignored.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).match_header(&quot;content-type&quot;, &quot;application/json&quot;);</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;).match_header(&quot;content-type&quot;, &quot;application/json&quot;);</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Like most other `Mock` methods, it allows chanining:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;)</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;)</span>
     <span class="doccomment">///   .match_header(&quot;content-type&quot;, &quot;application/json&quot;)</span>
     <span class="doccomment">///   .match_header(&quot;authorization&quot;, &quot;password&quot;);</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">match_header</span><span class="op">&lt;</span><span class="ident">M</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Matcher</span><span class="op">&gt;&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">M</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">match_header</span><span class="op">&lt;</span><span class="ident">M</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Matcher</span><span class="op">&gt;&gt;</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="ident">M</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">headers</span>.<span class="ident">insert</span>(<span class="ident">field</span>.<span class="ident">to_owned</span>().<span class="ident">to_lowercase</span>(), <span class="ident">value</span>.<span class="ident">into</span>());
 
         <span class="self">self</span>
@@ -1170,15 +1123,15 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Sets the status code of the mock response. The default status code is 200.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).with_status(201);</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;).with_status(201);</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_status</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">status</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_status</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">status</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">response</span>.<span class="ident">status</span> <span class="op">=</span> <span class="ident">status</span>;
 
         <span class="self">self</span>
@@ -1187,15 +1140,15 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Sets a header of the mock response.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).with_header(&quot;content-type&quot;, &quot;application/json&quot;);</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;).with_header(&quot;content-type&quot;, &quot;application/json&quot;);</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_header</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_header</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">field</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">response</span>.<span class="ident">headers</span>.<span class="ident">push</span>((<span class="ident">field</span>.<span class="ident">to_owned</span>(), <span class="ident">value</span>.<span class="ident">to_owned</span>()));
 
         <span class="self">self</span>
@@ -1204,15 +1157,15 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// Sets the body of the mock response. Its `Content-Length` is handled automatically.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).with_body(&quot;hello world&quot;);</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;).with_body(&quot;hello world&quot;);</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_body</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">body</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_body</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">body</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">response</span>.<span class="ident">body</span> <span class="op">=</span> <span class="ident">body</span>.<span class="ident">to_owned</span>();
 
         <span class="self">self</span>
@@ -1222,15 +1175,15 @@
     <span class="doccomment">/// Sets the body of the mock response from the contents of a file stored under `path`.</span>
     <span class="doccomment">/// Its `Content-Length` is handled automatically.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).with_body_from_file(&quot;tests/files/simple.http&quot;);</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;).with_body_from_file(&quot;tests/files/simple.http&quot;);</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_body_from_file</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">with_body_from_file</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">path</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">open</span>(<span class="ident">path</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">new</span>();
 
@@ -1246,32 +1199,32 @@
     <span class="doccomment">/// This is only enforced when calling the `assert` method.</span>
     <span class="doccomment">/// Defaults to 1 request.</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">hits</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">expect</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">hits</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="self">self</span>.<span class="ident">expected_hits</span> <span class="op">=</span> <span class="ident">hits</span>;
 
         <span class="self">self</span>
     }
 
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Asserts that the expected amount of requests (defaults to 1 request) where performed.</span>
+    <span class="doccomment">/// Asserts that the expected amount of requests (defaults to 1 request) were performed.</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">sync</span>();
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>.<span class="ident">hits</span>, <span class="string">&quot;Expected {} request(s) to {}, but received {}&quot;</span>, <span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>, <span class="self">self</span>.<span class="ident">hits</span>);
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">let</span> <span class="ident">remote</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">remote</span>().<span class="ident">expect</span>(<span class="string">&quot;The request to retrieve the remote mock failed.&quot;</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="ident">remote</span>.<span class="ident">hits</span>, <span class="string">&quot;Expected {} request(s) to {}, but received {}&quot;</span>, <span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>, <span class="ident">remote</span>.<span class="ident">hits</span>);
     }
 
     <span class="doccomment">///</span>
     <span class="doccomment">/// Registers the mock to the server - your mock will be served only after calling this method.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// ## Example</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">/// use mockito::mock;</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).with_body(&quot;hello world&quot;).create();</span>
+    <span class="doccomment">/// let _m = mock(&quot;GET&quot;, &quot;/&quot;).with_body(&quot;hello world&quot;).create();</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="ident">server</span>::<span class="ident">try_start</span>();
 
         <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">unwrap</span>();
@@ -1286,50 +1239,10 @@
     }
 
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Registers the mock to the server, executes the passed closure and removes the mock afterwards.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// **NOTE:** During the closure lifetime, the mock might still be available to seperate threads.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use std::thread::{sleep};</span>
-    <span class="doccomment">/// use std::time::Duration;</span>
-    <span class="doccomment">/// use mockito::mock;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// mock(&quot;GET&quot;, &quot;/&quot;).with_body(&quot;hello world&quot;).create_for(|| {</span>
-    <span class="doccomment">///   // This mock will only be available for the next 1 second</span>
-    <span class="doccomment">///   sleep(Duration::new(1, 0));</span>
-    <span class="doccomment">/// });</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_for</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Fn</span>() <span class="op">-&gt;</span> ()<span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">environment</span>: <span class="ident">F</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">create</span>();
-        <span class="ident">environment</span>();
-        <span class="self">self</span>.<span class="ident">remove</span>();
-
-        <span class="self">self</span>
-    }
-
-    <span class="doccomment">///</span>
     <span class="doccomment">/// Removes the current mock from the server.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use mockito::mock;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// let mut mock = mock(&quot;GET&quot;, &quot;/&quot;);</span>
-    <span class="doccomment">/// mock.with_body(&quot;hello world&quot;).create();</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// // stuff</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// mock.remove();</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">///</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+    <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="ident">server</span>::<span class="ident">try_start</span>();
-
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
         <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mocks/&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">id</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
@@ -1337,45 +1250,11 @@
         <span class="ident">request</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">matches</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="kw-2">&amp;</span><span class="ident">Request</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">method_matches</span>(<span class="ident">request</span>)
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">path_matches</span>(<span class="ident">request</span>)
-            <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">headers_match</span>(<span class="ident">request</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">method_matches</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="kw-2">&amp;</span><span class="ident">Request</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">method</span> <span class="op">==</span> <span class="ident">request</span>.<span class="ident">method</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">path_matches</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="kw-2">&amp;</span><span class="ident">Request</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">path</span> <span class="op">==</span> <span class="ident">request</span>.<span class="ident">path</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">headers_match</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">request</span>: <span class="kw-2">&amp;</span><span class="ident">Request</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-        <span class="kw">for</span> (<span class="ident">field</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">headers</span>.<span class="ident">iter</span>() {
-            <span class="kw">match</span> <span class="ident">request</span>.<span class="ident">headers</span>.<span class="ident">get</span>(<span class="ident">field</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">request_header_value</span>) <span class="op">=&gt;</span> {
-                    <span class="kw">if</span> <span class="ident">value</span> <span class="op">==</span> <span class="ident">request_header_value</span> { <span class="kw">continue</span> }
-
-                    <span class="kw">return</span> <span class="bool-val">false</span>
-                },
-                <span class="prelude-val">None</span> <span class="op">=&gt;</span> {
-                    <span class="kw">if</span> <span class="ident">value</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">Matcher</span>::<span class="ident">Missing</span> { <span class="kw">continue</span> }
-
-                    <span class="kw">return</span> <span class="bool-val">false</span>
-                },
-            }
-        }
-
-        <span class="bool-val">true</span>
-    }
-
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Syncs the current Mock with its copy on the server.</span>
+    <span class="doccomment">/// Retrieves the remote copy of the current mock.</span>
     <span class="doccomment">/// Mainly used to sync the hit count.</span>
     <span class="doccomment">///</span>
-    <span class="kw">fn</span> <span class="ident">sync</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-&gt;</span> () {
+    <span class="kw">fn</span> <span class="ident">remote</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, ()<span class="op">&gt;</span> {
         <span class="ident">server</span>::<span class="ident">try_start</span>();
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
@@ -1394,9 +1273,13 @@
             <span class="ident">transfer</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
         }
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">mock</span>) <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_slice</span>::<span class="op">&lt;</span><span class="ident">Mock</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>) {
-            <span class="self">self</span>.<span class="ident">hits</span> <span class="op">=</span> <span class="ident">mock</span>.<span class="ident">hits</span>;
-        }
+        <span class="ident">serde_json</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>).<span class="ident">map_err</span>(<span class="op">|</span>_<span class="op">|</span> ())
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Mock</span> {
+    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">remove</span>();
     }
 }
 
@@ -1410,7 +1293,6 @@
         }
     }
 }
-
 
 <span class="kw">const</span> <span class="ident">DEFAULT_RESPONSE_STATUS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">200</span>;
 
