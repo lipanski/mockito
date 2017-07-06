@@ -12,6 +12,7 @@ struct RemoteMock {
     method: String,
     path: Matcher,
     headers: HashMap<String, Matcher>,
+    body: Matcher,
     response: MockResponse,
     hits: usize,
     expected_hits: usize,
@@ -44,6 +45,10 @@ impl RemoteMock {
 
         true
     }
+
+    fn body_matches(&self, request: &Request) -> bool {
+        self.body == String::from_utf8_lossy(&request.body).into_owned()
+    }
 }
 
 impl<'a> PartialEq<Request> for &'a mut RemoteMock {
@@ -51,6 +56,7 @@ impl<'a> PartialEq<Request> for &'a mut RemoteMock {
         self.method_matches(other)
             && self.path_matches(other)
             && self.headers_match(other)
+            && self.body_matches(other)
     }
 }
 
@@ -71,7 +77,9 @@ fn start() {
                     if request.is_ok() {
                         handle_request(&mut mocks, request, stream);
                     } else {
-                        stream.write("HTTP/1.1 422 Unprocessable Entity\r\n\r\n".as_bytes()).unwrap();
+                        let body = request.error().map_or("Could not parse the request.", |err| err.as_str());
+                        let response = format!("HTTP/1.1 422 Unprocessable Entity\r\ncontent-length: {}\r\n\r\n{}", body.len(), body);
+                        stream.write(response.as_bytes()).unwrap();
                     }
                 },
                 Err(_) => {},

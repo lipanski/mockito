@@ -106,7 +106,7 @@
 //! mock.assert();
 //! ```
 //!
-//! However, you can use the `Mock::expect` method to specify the exact amount of requests you are expecting:
+//! If you're expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amout of requests:
 //!
 //! ## Example
 //!
@@ -127,7 +127,7 @@
 //!
 //! # Matchers
 //!
-//! Mockito can match your request by method, path and headers.
+//! Mockito can match your request by method, path, headers or body.
 //!
 //! Various matchers are provided by the `Matcher` type: exact, partial (regular expressions), any or missing.
 //!
@@ -231,6 +231,33 @@
 //!
 //! // Requests without the authorization header will be matched.
 //! // Requests containing the authorization header will return `501 Not Implemented`.
+//! ```
+//!
+//! # Matching by body
+//!
+//! You can match a request by its body by using the `Mock#match_body` method.
+//! By default the request body is ignored, similar to passing the `Matcher::Any` argument to the `match_body` method.
+//!
+//! You can match a body by an exact value:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! // Will match requests to POST / whenever the request body is "hello"
+//! let _m = mock("POST", "/").match_body("hello").create();
+//! ```
+//!
+//! Or you can match the body by using a regular expression:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! // Will match requests to POST / whenever the request body *contains* the word "hello" (e.g. "hello world")
+//! let _m = mock("POST", "/").match_body(Matcher::Regex("hello".to_string())).create();
 //! ```
 //!
 //! # Non-matching calls
@@ -391,6 +418,7 @@ pub struct Mock {
     method: String,
     path: Matcher,
     headers: HashMap<String, Matcher>,
+    body: Matcher,
     response: MockResponse,
     hits: usize,
     expected_hits: usize,
@@ -403,6 +431,7 @@ impl Mock {
             method: method.to_owned().to_uppercase(),
             path: path.into(),
             headers: HashMap::new(),
+            body: Matcher::Any,
             response: MockResponse::new(),
             hits: 0,
             expected_hits: 1,
@@ -436,6 +465,27 @@ impl Mock {
     ///
     pub fn match_header<M: Into<Matcher>>(mut self, field: &str, value: M) -> Self {
         self.headers.insert(field.to_owned().to_lowercase(), value.into());
+
+        self
+    }
+
+    ///
+    /// Allows matching a particular request body when responding with a mock.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// let _m1 = mock("POST", "/").match_body("{'hello':'world'}").with_body("json").create();
+    /// let _m2 = mock("POST", "/").match_body("hello=world").with_body("form").create();
+    ///
+    /// // Requests passing "{'hello':'world'}" inside the body will be responded with "json".
+    /// // Requests passing "hello=world" inside the body will be responded with "form".
+    /// ```
+    ///
+    pub fn match_body<M: Into<Matcher>>(mut self, body: M) -> Self {
+        self.body = body.into();
 
         self
     }

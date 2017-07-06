@@ -29,6 +29,10 @@ impl Request {
         self.error.is_some()
     }
 
+    pub fn error(&self) -> Option<&String> {
+        self.error.as_ref()
+    }
+
     fn is_parsed(&self) -> bool {
         self.is_parsed
     }

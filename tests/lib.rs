@@ -8,9 +8,9 @@ use std::mem;
 use rand::Rng;
 use mockito::{SERVER_ADDRESS, mock, Matcher};
 
-fn request_stream(route: &str, headers: &str) -> TcpStream {
+fn request_stream(route: &str, headers: &str, body: &str) -> TcpStream {
     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
-    let message = [route, " HTTP/1.1\r\n", headers, "\r\n"].join("");
+    let message = [route, " HTTP/1.1\r\n", headers, "\r\n", body].join("");
     stream.write_all(message.as_bytes()).unwrap();
 
     stream
@@ -45,7 +45,12 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
 }
 
 fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
-    parse_stream(request_stream(route, headers))
+    parse_stream(request_stream(route, headers, ""))
+}
+
+fn request_with_body(route: &str, headers: &str, body: &str) -> (String, Vec<String>, String) {
+    let headers = format!("{}content-length: {}\r\n", headers, body.len());
+    parse_stream(request_stream(route, &headers, body))
 }
 
 #[test]
@@ -193,6 +198,54 @@ fn test_match_multiple_header_conditions_not_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "Hello: World\r\n");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+}
+
+#[test]
+fn test_match_any_body_by_default() {
+    let _m = mock("POST", "/").create();
+
+    let (status, _, _) = request_with_body("POST /", "", "hello");
+    assert_eq!("HTTP/1.1 200\r\n", status);
+}
+
+#[test]
+fn test_match_body() {
+    let _m = mock("POST", "/")
+        .match_body("hello")
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", "hello");
+    assert_eq!("HTTP/1.1 200\r\n", status);
+}
+
+#[test]
+fn test_match_body_not_matching() {
+    let _m = mock("POST", "/")
+        .match_body("hello")
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", "bye");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_regex() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::Regex("hello".to_string()))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", "test hello test");
+    assert_eq!("HTTP/1.1 200\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_regex_not_matching() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::Regex("hello".to_string()))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", "bye");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
