@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-634' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-684' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
 It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.</p>
 
@@ -139,7 +139,7 @@ that only one request to your mock was triggered.</p>
 
 <span class="ident">mock</span>.<span class="ident">assert</span>();</pre>
 
-<p>However, you can use the <code>Mock::expect</code> method to specify the exact amount of requests you are expecting:</p>
+<p>If you&#39;re expecting more than 1 request, you can use the <code>Mock::expect</code> method to specify the exact amout of requests:</p>
 
 <h2 id='example-4' class='section-header'><a href='#example-4'>Example</a></h2>
 <pre class="rust rust-example-rendered">
@@ -157,7 +157,7 @@ that only one request to your mock was triggered.</p>
 <span class="ident">mock</span>.<span class="ident">assert</span>();</pre>
 
 <h1 id='matchers' class='section-header'><a href='#matchers'>Matchers</a></h1>
-<p>Mockito can match your request by method, path and headers.</p>
+<p>Mockito can match your request by method, path, headers or body.</p>
 
 <p>Various matchers are provided by the <code>Matcher</code> type: exact, partial (regular expressions), any or missing.</p>
 
@@ -247,6 +247,28 @@ value to <code>Matcher::Missing</code>.</p>
 <span class="comment">// Requests without the authorization header will be matched.</span>
 <span class="comment">// Requests containing the authorization header will return `501 Not Implemented`.</span></pre>
 
+<h1 id='matching-by-body' class='section-header'><a href='#matching-by-body'>Matching by body</a></h1>
+<p>You can match a request by its body by using the <code>Mock#match_body</code> method.
+By default the request body is ignored, similar to passing the <code>Matcher::Any</code> argument to the <code>match_body</code> method.</p>
+
+<p>You can match a body by an exact value:</p>
+
+<h2 id='example-12' class='section-header'><a href='#example-12'>Example</a></h2>
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
+
+<span class="comment">// Will match requests to POST / whenever the request body is &quot;hello&quot;</span>
+<span class="kw">let</span> <span class="ident">_m</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;POST&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">match_body</span>(<span class="string">&quot;hello&quot;</span>).<span class="ident">create</span>();</pre>
+
+<p>Or you can match the body by using a regular expression:</p>
+
+<h2 id='example-13' class='section-header'><a href='#example-13'>Example</a></h2>
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">mockito</span>::{<span class="ident">mock</span>, <span class="ident">Matcher</span>};
+
+<span class="comment">// Will match requests to POST / whenever the request body *contains* the word &quot;hello&quot; (e.g. &quot;hello world&quot;)</span>
+<span class="kw">let</span> <span class="ident">_m</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;POST&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">match_body</span>(<span class="ident">Matcher</span>::<span class="ident">Regex</span>(<span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>())).<span class="ident">create</span>();</pre>
+
 <h1 id='non-matching-calls' class='section-header'><a href='#non-matching-calls'>Non-matching calls</a></h1>
 <p>Any calls to the Mockito server that are not matched will return <em>501 Not Implemented</em>.</p>
 
@@ -256,7 +278,7 @@ value to <code>Matcher::Missing</code>.</p>
 <p>As mentioned earlier, mocks are cleaned up at the end of their normal Rust lifetime. However,
 you can always use the <code>reset</code> method to clean up <em>all</em> the mocks registered so far.</p>
 
-<h2 id='example-12' class='section-header'><a href='#example-12'>Example</a></h2>
+<h2 id='example-14' class='section-header'><a href='#example-14'>Example</a></h2>
 <pre class="rust rust-example-rendered">
 <span class="kw">use</span> <span class="ident">mockito</span>::{<span class="ident">mock</span>, <span class="ident">reset</span>};
 
@@ -270,7 +292,7 @@ you can always use the <code>reset</code> method to clean up <em>all</em> the mo
 
 <p>Or you can use <code>std::mem::drop</code> to remove a single mock without having to wait for its scope to end:</p>
 
-<h2 id='example-13' class='section-header'><a href='#example-13'>Example</a></h2>
+<h2 id='example-15' class='section-header'><a href='#example-15'>Example</a></h2>
 <pre class="rust rust-example-rendered">
 <span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>;
