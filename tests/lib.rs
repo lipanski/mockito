@@ -394,24 +394,71 @@ fn test_large_utf8_body() {
 }
 
 #[test]
-fn test_display_mock_with_exact_path() {
+fn test_display_mock_matching_exact_path() {
     let mock = mock("GET", "/hello");
 
-    assert_eq!("GET /hello", format!("{}", mock));
+    assert_eq!("\r\nGET /hello\r\n", format!("{}", mock));
 }
 
 #[test]
-fn test_display_mock_with_regex_path() {
+fn test_display_mock_matching_regex_path() {
     let mock = mock("GET", Matcher::Regex(r"^/hello/\d+$".to_string()));
 
-    assert_eq!(r"GET ^/hello/\d+$", format!("{}", mock));
+    assert_eq!("\r\nGET ^/hello/\\d+$ (regex)\r\n", format!("{}", mock));
 }
 
 #[test]
-fn test_display_mock_with_any_path() {
+fn test_display_mock_matching_any_path() {
     let mock = mock("GET", Matcher::Any);
 
-    assert_eq!("GET *", format!("{}", mock));
+    assert_eq!("\r\nGET (any)\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_exact_header() {
+    let mock = mock("GET", "/").match_header("content-type", "text").create();
+
+    assert_eq!("\r\nGET /\r\ncontent-type: text\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_multiple_headers() {
+    let mock = mock("GET", "/")
+        .match_header("content-type", "text")
+        .match_header("content-length", Matcher::Regex(r"\d+".to_string()))
+        .match_header("authorization", Matcher::Any)
+        .match_header("x-request-id", Matcher::Missing)
+        .create();
+
+    assert_eq!("\r\nGET /\r\ncontent-type: text\r\ncontent-length: \\d+ (regex)\r\nauthorization: (any)\r\nx-request-id: (missing)\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_exact_body() {
+    let mock = mock("POST", "/").match_body("hello").create();
+
+    assert_eq!("\r\nPOST /\r\nhello\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_regex_body() {
+    let mock = mock("POST", "/").match_body(Matcher::Regex("hello".to_string())).create();
+
+    assert_eq!("\r\nPOST /\r\nhello\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_any_body() {
+    let mock = mock("POST", "/").match_body(Matcher::Any).create();
+
+    assert_eq!("\r\nPOST /\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_headers_and_body() {
+    let mock = mock("POST", "/").match_header("content-type", "text").match_body("hello").create();
+
+    assert_eq!("\r\nPOST /\r\ncontent-type: text\r\nhello\r\n", format!("{}", mock));
 }
 
 #[test]
@@ -424,7 +471,7 @@ fn test_assert_defaults_to_one_hit() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 1 request(s) to GET /hello, but received 0")]
+#[should_panic(expected = "Expected 1 request(s) to\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n")]
 fn test_assert_panics_if_no_request_was_performed() {
     let mock = mock("GET", "/hello").create();
 
@@ -443,7 +490,7 @@ fn test_expect() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 3 request(s) to GET /hello, but received 2")]
+#[should_panic(expected = "Expected 3 request(s) to\r\n\r\nGET /hello\r\n\r\n...but received 2\r\n")]
 fn test_assert_panics_with_too_few_requests() {
     let mock = mock("GET", "/hello").expect(3).create();
 
@@ -454,7 +501,7 @@ fn test_assert_panics_with_too_few_requests() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 3 request(s) to GET /hello, but received 4")]
+#[should_panic(expected = "Expected 3 request(s) to\r\n\r\nGET /hello\r\n\r\n...but received 4\r\n")]
 fn test_assert_panics_with_too_many_requests() {
     let mock = mock("GET", "/hello").expect(3).create();
 

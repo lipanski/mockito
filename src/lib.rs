@@ -579,7 +579,7 @@ impl Mock {
     ///
     pub fn assert(&self) {
         let remote = self.remote().expect("The request to retrieve the remote mock failed.");
-        assert_eq!(self.expected_hits, remote.hits, "Expected {} request(s) to {}, but received {}", self.expected_hits, self, remote.hits);
+        assert_eq!(self.expected_hits, remote.hits, "\r\nExpected {} request(s) to\r\n{}\r\n...but received {}\r\n", self.expected_hits, self, remote.hits);
     }
 
     ///
@@ -654,12 +654,67 @@ impl Drop for Mock {
 
 impl fmt::Display for Mock {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut formatted = String::new();
+
+        formatted.push_str("\r\n");
+        formatted.push_str(&self.method);
+        formatted.push_str(" ");
+
         match self.path {
-            Matcher::Exact(ref value) => write!(f, "{} {}", self.method, value),
-            Matcher::Regex(ref value) => write!(f, "{} {}", self.method, value),
-            Matcher::Any => write!(f, "{} *", self.method),
-            Matcher::Missing => write!(f, "{} -", self.method),
+            Matcher::Exact(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str("\r\n");
+            },
+            Matcher::Regex(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str(" (regex)\r\n")
+            },
+            Matcher::Any => formatted.push_str("(any)\r\n"),
+            Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
+
+        for &(ref key, ref value) in &self.headers {
+            match value {
+                &Matcher::Exact(ref value) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(value);
+                },
+                &Matcher::Regex(ref value) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(value);
+                    formatted.push_str(" (regex)")
+                },
+                &Matcher::Any => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str("(any)");
+                },
+                &Matcher::Missing => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str("(missing)");
+                },
+            }
+
+            formatted.push_str("\r\n");
+        }
+
+        match self.body {
+            Matcher::Exact(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str("\r\n");
+            },
+            Matcher::Regex(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str("\r\n");
+            },
+            Matcher::Missing => formatted.push_str("(missing)\r\n"),
+            _ => {},
+        }
+
+        write!(f, "{}", formatted)
     }
 }
 
