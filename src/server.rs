@@ -1,7 +1,6 @@
 use std::thread;
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
-use std::collections::HashMap;
 use serde_json;
 use regex::Regex;
 use {MockResponse, Matcher, SERVER_ADDRESS, Request};
@@ -11,7 +10,7 @@ struct RemoteMock {
     id: String,
     method: String,
     path: Matcher,
-    headers: HashMap<String, Matcher>,
+    headers: Vec<(String, Matcher)>,
     body: Matcher,
     response: MockResponse,
     hits: usize,
@@ -28,8 +27,8 @@ impl RemoteMock {
     }
 
     fn headers_match(&self, request: &Request) -> bool {
-        for (field, value) in self.headers.iter() {
-            match request.headers.get(field) {
+        for &(ref field, ref value) in &self.headers {
+            match request.find_header(field) {
                 Some(request_header_value) => {
                     if value == request_header_value { continue }
 

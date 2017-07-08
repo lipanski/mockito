@@ -4,7 +4,6 @@ use std::str;
 use std::convert::From;
 use std::default::Default;
 use std::net::TcpStream;
-use std::collections::HashMap;
 use http_muncher::{Parser, ParserHandler};
 
 #[derive(Debug)]
@@ -12,7 +11,7 @@ pub struct Request {
     version: (u16, u16),
     pub method: String,
     pub path: String,
-    pub headers: HashMap<String, String>,
+    pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
     error: Option<String>,
     is_parsed: bool,
@@ -33,6 +32,10 @@ impl Request {
         self.error.as_ref()
     }
 
+    pub fn find_header(&self, searched_field: &str) -> Option<&String> {
+        self.headers.iter().find(|&&(ref field, _)| field == searched_field).and_then(|&(_, ref value)| Some(value))
+    }
+
     fn is_parsed(&self) -> bool {
         self.is_parsed
     }
@@ -41,7 +44,7 @@ impl Request {
         if self.last_header_field.is_some() && self.last_header_value.is_some() {
             let last_header_field = mem::replace(&mut self.last_header_field, None).unwrap();
             let last_header_value = mem::replace(&mut self.last_header_value, None).unwrap();
-            self.headers.insert(last_header_field.to_lowercase(), last_header_value);
+            self.headers.push((last_header_field.to_lowercase(), last_header_value));
         }
     }
 }
@@ -52,7 +55,7 @@ impl Default for Request {
             version: (1, 1),
             method: String::new(),
             path: String::new(),
-            headers: HashMap::new(),
+            headers: Vec::new(),
             body: Vec::new(),
             error: None,
             is_parsed: false,

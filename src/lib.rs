@@ -315,7 +315,6 @@ mod server;
 mod request;
 type Request = request::Request;
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::cmp::PartialEq;
@@ -417,7 +416,7 @@ pub struct Mock {
     id: String,
     method: String,
     path: Matcher,
-    headers: HashMap<String, Matcher>,
+    headers: Vec<(String, Matcher)>,
     body: Matcher,
     response: MockResponse,
     hits: usize,
@@ -430,7 +429,7 @@ impl Mock {
             id: thread_rng().gen_ascii_chars().take(24).collect(),
             method: method.to_owned().to_uppercase(),
             path: path.into(),
-            headers: HashMap::new(),
+            headers: Vec::new(),
             body: Matcher::Any,
             response: MockResponse::new(),
             hits: 0,
@@ -464,7 +463,7 @@ impl Mock {
     /// ```
     ///
     pub fn match_header<M: Into<Matcher>>(mut self, field: &str, value: M) -> Self {
-        self.headers.insert(field.to_owned().to_lowercase(), value.into());
+        self.headers.push((field.to_owned().to_lowercase(), value.into()));
 
         self
     }
