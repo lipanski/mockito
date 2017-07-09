@@ -1,3 +1,8 @@
+* 90f2bec 2017-07-09 | Bump to 0.7.2
+
+test bench_create_simple_mock ... bench:     212,524 ns/iter (+/- 37,415)
+test bench_match_simple_mock  ... bench:      31,085 ns/iter (+/- 5,492)
+
 * ffed296 2017-05-21 | Small improvements to Request & curl call
 
 test bench_create_simple_mock ... bench:     351,812 ns/iter (+/- 179,845)

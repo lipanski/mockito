@@ -54,7 +54,7 @@ fn bench_create_simple_mock(b: &mut Bencher) {
     reset();
 
     b.iter(|| {
-        mock("GET", "/").with_body("test").create();
+        let _m = mock("GET", "/").with_body("test").create();
     })
 }
 
@@ -62,7 +62,7 @@ fn bench_create_simple_mock(b: &mut Bencher) {
 fn bench_match_simple_mock(b: &mut Bencher) {
     reset();
 
-    mock("GET", "/").with_body("test").create();
+    let _m = mock("GET", "/").with_body("test").create();
 
     b.iter(|| {
         let (status_line, _, _) = request("GET /", "");
