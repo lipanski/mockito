@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-684' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-797' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
 It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.</p>
 
@@ -123,8 +123,10 @@ RUST_TEST_THREADS=1 cargo test
 </code></pre>
 
 <h1 id='asserts' class='section-header'><a href='#asserts'>Asserts</a></h1>
-<p>You can use the <code>Mock::assert</code> method to <strong>assert that a mock was called</strong>. By default, the method expects
-that only one request to your mock was triggered.</p>
+<p>You can use the <code>Mock::assert</code> method to <strong>assert that a mock was called</strong>. In other words, the
+<code>Mock#assert</code> method can validate that your code perfomed the expected HTTP requests.</p>
+
+<p>By default, the method expects that only one request to your mock was triggered.</p>
 
 <h2 id='example-3' class='section-header'><a href='#example-3'>Example</a></h2>
 <pre class="rust rust-example-rendered">
@@ -155,6 +157,26 @@ that only one request to your mock was triggered.</p>
 }
 
 <span class="ident">mock</span>.<span class="ident">assert</span>();</pre>
+
+<p>The errors produced by the <code>assert</code> method contain information about the tested mock, but also about the
+<strong>last unmatched request</strong>, which can be very useful to track down an error in your implementation or
+a missing or incomplete mock.</p>
+
+<p>Here&#39;s an example of how a <code>Mock#assert</code> error looks like:</p>
+
+<pre><code class="language-text">Expected 1 request(s) to:
+
+POST /users
+bob
+
+...but received 0
+
+The last unmatched request was:
+
+POST /users
+content-length: 5
+alice
+</code></pre>
 
 <h1 id='matchers' class='section-header'><a href='#matchers'>Matchers</a></h1>
 <p>Mockito can match your request by method, path, headers or body.</p>
