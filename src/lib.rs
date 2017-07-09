@@ -88,8 +88,10 @@
 //!
 //! # Asserts
 //!
-//! You can use the `Mock::assert` method to **assert that a mock was called**. By default, the method expects
-//! that only one request to your mock was triggered.
+//! You can use the `Mock::assert` method to **assert that a mock was called**. In other words, the
+//! `Mock#assert` method can validate that your code perfomed the expected HTTP requests.
+//!
+//! By default, the method expects that only one request to your mock was triggered.
 //!
 //! ## Example
 //!
@@ -123,6 +125,27 @@
 //! }
 //!
 //! mock.assert();
+//! ```
+//!
+//! The errors produced by the `assert` method contain information about the tested mock, but also about the
+//! **last unmatched request**, which can be very useful to track down an error in your implementation or
+//! a missing or incomplete mock.
+//!
+//! Here's an example of how a `Mock#assert` error looks like:
+//!
+//! ```text
+//! Expected 1 request(s) to:
+//!
+//! POST /users
+//! bob
+//!
+//! ...but received 0
+//!
+//! The last unmatched request was:
+//!
+//! POST /users
+//! content-length: 5
+//! alice
 //! ```
 //!
 //! # Matchers
@@ -362,7 +385,7 @@ pub fn reset() {
     server::try_start();
 
     let mut request = Easy::new();
-    request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
+    request.url(&[SERVER_URL, "/mockito/mocks"].join("")).unwrap();
     request.custom_request("DELETE").unwrap();
     request.perform().unwrap();
 }
@@ -579,7 +602,14 @@ impl Mock {
     ///
     pub fn assert(&self) {
         let remote = self.remote().expect("The request to retrieve the remote mock failed.");
-        assert_eq!(self.expected_hits, remote.hits, "\r\nExpected {} request(s) to\r\n{}\r\n...but received {}\r\n", self.expected_hits, self, remote.hits);
+
+        let mut message = format!("\r\nExpected {} request(s) to:\r\n{}\r\n...but received {}\r\n\r\n", self.expected_hits, self, remote.hits);
+
+        if let Some(request) = Self::last_unmatched_request() {
+            message.push_str(&format!("The last unmatched request was:\r\n{}\r\n", request));
+        }
+
+        assert_eq!(self.expected_hits, remote.hits, "{}", message);
     }
 
     ///
@@ -599,7 +629,7 @@ impl Mock {
         let body = serde_json::to_string(&self).unwrap();
 
         let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mocks"].join("")).unwrap();
+        request.url(&[SERVER_URL, "/mockito/mocks"].join("")).unwrap();
         request.post(true).unwrap();
         request.post_fields_copy(body.as_bytes()).unwrap();
         request.perform().unwrap();
@@ -614,7 +644,7 @@ impl Mock {
         server::try_start();
 
         let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mocks/", &self.id].join("")).unwrap();
+        request.url(&[SERVER_URL, "/mockito/mocks/", &self.id].join("")).unwrap();
         request.custom_request("DELETE").unwrap();
         request.perform().unwrap();
     }
@@ -629,7 +659,7 @@ impl Mock {
         let mut buffer = Vec::new();
 
         let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mocks/", &self.id].join("")).unwrap();
+        request.url(&[SERVER_URL, "/mockito/mocks/", &self.id].join("")).unwrap();
 
         {
             let mut transfer = request.transfer();
@@ -643,6 +673,35 @@ impl Mock {
         }
 
         serde_json::from_slice(&buffer).map_err(|_| ())
+    }
+
+    ///
+    /// Produces a presentable version of the last unmatched request.
+    ///
+    fn last_unmatched_request() -> Option<String> {
+        server::try_start();
+
+        let mut buffer = Vec::new();
+
+        let mut request = Easy::new();
+        request.url(&[SERVER_URL, "/mockito/last_unmatched_request"].join("")).unwrap();
+
+        {
+            let mut transfer = request.transfer();
+
+            transfer.write_function(|data| {
+                buffer.extend_from_slice(data);
+                Ok(data.len())
+            }).unwrap();
+
+            transfer.perform().unwrap();
+        }
+
+        if buffer.len() > 0 {
+            Some(String::from_utf8_lossy(&buffer).to_string())
+        } else {
+            None
+        }
     }
 }
 

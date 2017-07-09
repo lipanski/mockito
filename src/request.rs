@@ -4,6 +4,7 @@ use std::str;
 use std::convert::From;
 use std::default::Default;
 use std::net::TcpStream;
+use std::fmt;
 use http_muncher::{Parser, ParserHandler};
 
 #[derive(Debug)]
@@ -69,6 +70,7 @@ impl<'a> From<&'a mut TcpStream> for Request {
     fn from(mut stream: &mut TcpStream) -> Self {
         let mut request = Request::default();
         let mut parser = Parser::request();
+        let mut first_read = true;
 
         loop {
             if request.is_parsed() { break; }
@@ -76,7 +78,12 @@ impl<'a> From<&'a mut TcpStream> for Request {
             let mut buffer = [0; 1024];
             let read_length = stream.read(&mut buffer).unwrap_or(0);
 
-            if read_length == 0 { break; }
+            if read_length == 0 {
+                if first_read { request.error = Some("Nothing to read.".to_string()); }
+                break;
+            }
+
+            first_read = false;
 
             let parse_length = parser.parse(&mut request, (&buffer).chunks(read_length).nth(0).unwrap());
             if parse_length == 0 || parser.has_error() { break; }
@@ -142,5 +149,31 @@ impl ParserHandler for Request {
         self.is_parsed = true;
 
         !parser.has_error()
+    }
+}
+
+impl fmt::Display for Request {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut formatted = String::new();
+
+        formatted.push_str("\r\n");
+        formatted.push_str(&self.method);
+        formatted.push_str(" ");
+        formatted.push_str(&self.path);
+        formatted.push_str("\r\n");
+
+        for &(ref key, ref value) in &self.headers {
+            formatted.push_str(key);
+            formatted.push_str(": ");
+            formatted.push_str(value);
+            formatted.push_str("\r\n");
+        }
+
+        if self.body.len() > 0 {
+            formatted.push_str(&String::from_utf8_lossy(&self.body));
+            formatted.push_str("\r\n");
+        }
+
+        write!(f, "{}", formatted)
     }
 }
