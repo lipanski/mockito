@@ -96,14 +96,19 @@
 //! ## Example
 //!
 //! ```
-//! extern crate mockito;
-//! extern crate curl;
+//! use std::net::TcpStream;
+//! use std::io::{Read, Write};
+//! use mockito::{mock, SERVER_ADDRESS};
 //!
-//! let mock = mockito::mock("GET", "/hello").create();
+//! let mock = mock("GET", "/hello").create();
 //!
-//! let mut request = curl::easy::Easy::new();
-//! request.url(&[mockito::SERVER_URL, "/hello"].join("")).unwrap();
-//! request.perform().unwrap();
+//! {
+//!     // Place a request
+//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+//!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response);
+//! }
 //!
 //! mock.assert();
 //! ```
@@ -113,15 +118,18 @@
 //! ## Example
 //!
 //! ```
-//! extern crate mockito;
-//! extern crate curl;
+//! use std::net::TcpStream;
+//! use std::io::{Read, Write};
+//! use mockito::{mock, SERVER_ADDRESS};
 //!
 //! let mock = mockito::mock("GET", "/hello").expect(3).create();
 //!
 //! for _ in 0..3 {
-//!     let mut request = curl::easy::Easy::new();
-//!     request.url(&[mockito::SERVER_URL, "/hello"].join("")).unwrap();
-//!     request.perform().unwrap();
+//!     // Place a request
+//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+//!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response);
 //! }
 //!
 //! mock.assert();
@@ -325,11 +333,7 @@
 //! // Still in the scope of `m`, but requests to GET /hello aren't mocked any more
 //!
 
-extern crate curl;
 extern crate http_muncher;
-extern crate serde;
-#[macro_use] extern crate serde_derive;
-extern crate serde_json;
 extern crate rand;
 extern crate regex;
 #[macro_use] extern crate lazy_static;
@@ -344,7 +348,6 @@ use std::cmp::PartialEq;
 use std::convert::{From, Into};
 use std::ops::Drop;
 use std::fmt;
-use curl::easy::Easy;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 
@@ -384,10 +387,9 @@ pub fn mock<P: Into<Matcher>>(method: &str, path: P) -> Mock {
 pub fn reset() {
     server::try_start();
 
-    let mut request = Easy::new();
-    request.url(&[SERVER_URL, "/mockito/mocks"].join("")).unwrap();
-    request.custom_request("DELETE").unwrap();
-    request.perform().unwrap();
+    let state_mutex = server::STATE.clone();
+    let mut state = state_mutex.lock().unwrap();
+    state.mocks.clear();
 }
 
 #[allow(missing_docs)]
@@ -401,7 +403,7 @@ pub fn start() {
 ///
 /// These matchers are used within the `mock` and `Mock::match_header` calls.
 ///
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Matcher {
     /// Matches the exact path or header value. There's also an implementation of `From<&str>`
     /// to keep things simple and backwards compatible.
@@ -434,7 +436,7 @@ impl PartialEq<String> for Matcher {
 ///
 /// Stores information about a mocked request. Should be initialized via `mockito::mock()`.
 ///
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Mock {
     id: String,
     method: String,
@@ -444,6 +446,7 @@ pub struct Mock {
     response: MockResponse,
     hits: usize,
     expected_hits: usize,
+    is_remote: bool,
 }
 
 impl Mock {
@@ -457,6 +460,7 @@ impl Mock {
             response: MockResponse::new(),
             hits: 0,
             expected_hits: 1,
+            is_remote: false,
         }
     }
 
@@ -601,15 +605,30 @@ impl Mock {
     /// Asserts that the expected amount of requests (defaults to 1 request) were performed.
     ///
     pub fn assert(&self) {
-        let remote = self.remote().expect("The request to retrieve the remote mock failed.");
+        let mut opt_hits = None;
+        let mut opt_message = None;
 
-        let mut message = format!("\r\nExpected {} request(s) to:\r\n{}\r\n...but received {}\r\n\r\n", self.expected_hits, self, remote.hits);
+        {
+            let state_mutex = server::STATE.clone();
+            let state = state_mutex.lock().unwrap();
 
-        if let Some(request) = Self::last_unmatched_request() {
-            message.push_str(&format!("The last unmatched request was:\r\n{}\r\n", request));
+            if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
+                opt_hits = Some(remote_mock.hits);
+
+                let mut message = format!("\r\nExpected {} request(s) to:\r\n{}\r\n...but received {}\r\n\r\n", self.expected_hits, self, remote_mock.hits);
+
+                if let Some(last_request) = state.unmatched_requests.last() {
+                    message.push_str(&format!("The last unmatched request was:\r\n{}\r\n", last_request));
+                }
+
+                opt_message = Some(message);
+            }
         }
 
-        assert_eq!(self.expected_hits, remote.hits, "{}", message);
+        match (opt_hits, opt_message) {
+            (Some(hits), Some(message)) => assert_eq!(self.expected_hits, hits, "{}", message),
+            _ => panic!("Could not retrieve enough information about the remote mock."),
+        }
     }
 
     ///
@@ -626,88 +645,31 @@ impl Mock {
     pub fn create(self) -> Self {
         server::try_start();
 
-        let body = serde_json::to_string(&self).unwrap();
+        let state_mutex = server::STATE.clone();
+        let mut state = state_mutex.lock().unwrap();
 
-        let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mockito/mocks"].join("")).unwrap();
-        request.post(true).unwrap();
-        request.post_fields_copy(body.as_bytes()).unwrap();
-        request.perform().unwrap();
+        let mut remote_mock = self.clone();
+        remote_mock.is_remote = true;
+        state.mocks.push(remote_mock);
 
         self
     }
 
-    ///
-    /// Removes the current mock from the server.
-    ///
-    fn remove(&self) {
-        server::try_start();
-
-        let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mockito/mocks/", &self.id].join("")).unwrap();
-        request.custom_request("DELETE").unwrap();
-        request.perform().unwrap();
-    }
-
-    ///
-    /// Retrieves the remote copy of the current mock.
-    /// Mainly used to sync the hit count.
-    ///
-    fn remote(&self) -> Result<Self, ()> {
-        server::try_start();
-
-        let mut buffer = Vec::new();
-
-        let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mockito/mocks/", &self.id].join("")).unwrap();
-
-        {
-            let mut transfer = request.transfer();
-
-            transfer.write_function(|data| {
-                buffer.extend_from_slice(data);
-                Ok(data.len())
-            }).unwrap();
-
-            transfer.perform().unwrap();
-        }
-
-        serde_json::from_slice(&buffer).map_err(|_| ())
-    }
-
-    ///
-    /// Produces a presentable version of the last unmatched request.
-    ///
-    fn last_unmatched_request() -> Option<String> {
-        server::try_start();
-
-        let mut buffer = Vec::new();
-
-        let mut request = Easy::new();
-        request.url(&[SERVER_URL, "/mockito/last_unmatched_request"].join("")).unwrap();
-
-        {
-            let mut transfer = request.transfer();
-
-            transfer.write_function(|data| {
-                buffer.extend_from_slice(data);
-                Ok(data.len())
-            }).unwrap();
-
-            transfer.perform().unwrap();
-        }
-
-        if buffer.len() > 0 {
-            Some(String::from_utf8_lossy(&buffer).to_string())
-        } else {
-            None
-        }
+    fn is_local(&self) -> bool {
+        !self.is_remote
     }
 }
 
 impl Drop for Mock {
     fn drop(&mut self) {
-        self.remove();
+        if self.is_local() {
+            let state_mutex = server::STATE.clone();
+            let mut state = state_mutex.lock().unwrap();
+
+            if let Some(pos) = state.mocks.iter().position(|mock| mock.id == self.id) {
+                state.mocks.remove(pos);
+            }
+        }
     }
 }
 
@@ -779,7 +741,7 @@ impl fmt::Display for Mock {
 
 const DEFAULT_RESPONSE_STATUS: usize = 200;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 struct MockResponse {
     status: usize,
     headers: Vec<(String, String)>,

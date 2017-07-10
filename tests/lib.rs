@@ -471,20 +471,20 @@ fn test_assert_defaults_to_one_hit() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 1 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n")]
-fn test_assert_panics_if_no_request_was_performed() {
-    let mock = mock("GET", "/hello").create();
-
-    mock.assert();
-}
-
-#[test]
 fn test_expect() {
     let mock = mock("GET", "/hello").expect(3).create();
 
     request("GET /hello", "");
     request("GET /hello", "");
     request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+#[should_panic(expected = "Expected 1 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n")]
+fn test_assert_panics_if_no_request_was_performed() {
+    let mock = mock("GET", "/hello").create();
 
     mock.assert();
 }
