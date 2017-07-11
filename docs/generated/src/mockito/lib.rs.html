@@ -802,44 +802,6 @@
 <span id="757">757</span>
 <span id="758">758</span>
 <span id="759">759</span>
-<span id="760">760</span>
-<span id="761">761</span>
-<span id="762">762</span>
-<span id="763">763</span>
-<span id="764">764</span>
-<span id="765">765</span>
-<span id="766">766</span>
-<span id="767">767</span>
-<span id="768">768</span>
-<span id="769">769</span>
-<span id="770">770</span>
-<span id="771">771</span>
-<span id="772">772</span>
-<span id="773">773</span>
-<span id="774">774</span>
-<span id="775">775</span>
-<span id="776">776</span>
-<span id="777">777</span>
-<span id="778">778</span>
-<span id="779">779</span>
-<span id="780">780</span>
-<span id="781">781</span>
-<span id="782">782</span>
-<span id="783">783</span>
-<span id="784">784</span>
-<span id="785">785</span>
-<span id="786">786</span>
-<span id="787">787</span>
-<span id="788">788</span>
-<span id="789">789</span>
-<span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
-<span id="795">795</span>
-<span id="796">796</span>
-<span id="797">797</span>
 </pre><pre class="rust ">
 <span class="attribute">#<span class="op">!</span>[<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
 <span class="attribute">#<span class="op">!</span>[<span class="ident">doc</span>(<span class="ident">html_logo_url</span> <span class="op">=</span> <span class="string">&quot;http://lipanski.github.io/mockito/logo/logo-black.png&quot;</span>,
@@ -939,14 +901,19 @@
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! extern crate mockito;</span>
-<span class="doccomment">//! extern crate curl;</span>
+<span class="doccomment">//! use std::net::TcpStream;</span>
+<span class="doccomment">//! use std::io::{Read, Write};</span>
+<span class="doccomment">//! use mockito::{mock, SERVER_ADDRESS};</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! let mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
+<span class="doccomment">//! let mock = mock(&quot;GET&quot;, &quot;/hello&quot;).create();</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! let mut request = curl::easy::Easy::new();</span>
-<span class="doccomment">//! request.url(&amp;[mockito::SERVER_URL, &quot;/hello&quot;].join(&quot;&quot;)).unwrap();</span>
-<span class="doccomment">//! request.perform().unwrap();</span>
+<span class="doccomment">//! {</span>
+<span class="doccomment">//!     // Place a request</span>
+<span class="doccomment">//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();</span>
+<span class="doccomment">//!     stream.write_all(&quot;GET /hello HTTP/1.1\r\n\r\n&quot;.as_bytes()).unwrap();</span>
+<span class="doccomment">//!     let mut response = String::new();</span>
+<span class="doccomment">//!     stream.read_to_string(&amp;mut response);</span>
+<span class="doccomment">//! }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! mock.assert();</span>
 <span class="doccomment">//! ```</span>
@@ -956,15 +923,18 @@
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
-<span class="doccomment">//! extern crate mockito;</span>
-<span class="doccomment">//! extern crate curl;</span>
+<span class="doccomment">//! use std::net::TcpStream;</span>
+<span class="doccomment">//! use std::io::{Read, Write};</span>
+<span class="doccomment">//! use mockito::{mock, SERVER_ADDRESS};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let mock = mockito::mock(&quot;GET&quot;, &quot;/hello&quot;).expect(3).create();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! for _ in 0..3 {</span>
-<span class="doccomment">//!     let mut request = curl::easy::Easy::new();</span>
-<span class="doccomment">//!     request.url(&amp;[mockito::SERVER_URL, &quot;/hello&quot;].join(&quot;&quot;)).unwrap();</span>
-<span class="doccomment">//!     request.perform().unwrap();</span>
+<span class="doccomment">//!     // Place a request</span>
+<span class="doccomment">//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();</span>
+<span class="doccomment">//!     stream.write_all(&quot;GET /hello HTTP/1.1\r\n\r\n&quot;.as_bytes()).unwrap();</span>
+<span class="doccomment">//!     let mut response = String::new();</span>
+<span class="doccomment">//!     stream.read_to_string(&amp;mut response);</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! mock.assert();</span>
@@ -1168,11 +1138,7 @@
 <span class="doccomment">//! // Still in the scope of `m`, but requests to GET /hello aren&#39;t mocked any more</span>
 <span class="doccomment">//!</span>
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">curl</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">http_muncher</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde</span>;
-<span class="attribute">#[<span class="ident">macro_use</span>]</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde_derive</span>;
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde_json</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">rand</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">regex</span>;
 <span class="attribute">#[<span class="ident">macro_use</span>]</span> <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lazy_static</span>;
@@ -1187,7 +1153,6 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::{<span class="ident">From</span>, <span class="ident">Into</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ops</span>::<span class="ident">Drop</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
-<span class="kw">use</span> <span class="ident">curl</span>::<span class="ident">easy</span>::<span class="ident">Easy</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">thread_rng</span>, <span class="ident">Rng</span>};
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 
@@ -1227,10 +1192,9 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reset</span>() {
     <span class="ident">server</span>::<span class="ident">try_start</span>();
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
-    <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mockito/mocks&quot;</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
-    <span class="ident">request</span>.<span class="ident">custom_request</span>(<span class="string">&quot;DELETE&quot;</span>).<span class="ident">unwrap</span>();
-    <span class="ident">request</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">state_mutex</span> <span class="op">=</span> <span class="ident">server</span>::<span class="ident">STATE</span>.<span class="ident">clone</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state_mutex</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
+    <span class="ident">state</span>.<span class="ident">mocks</span>.<span class="ident">clear</span>();
 }
 
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
@@ -1244,7 +1208,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// These matchers are used within the `mock` and `Mock::match_header` calls.</span>
 <span class="doccomment">///</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Matcher</span> {
     <span class="doccomment">/// Matches the exact path or header value. There&#39;s also an implementation of `From&lt;&amp;str&gt;`</span>
     <span class="doccomment">/// to keep things simple and backwards compatible.</span>
@@ -1277,7 +1241,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Stores information about a mocked request. Should be initialized via `mockito::mock()`.</span>
 <span class="doccomment">///</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mock</span> {
     <span class="ident">id</span>: <span class="ident">String</span>,
     <span class="ident">method</span>: <span class="ident">String</span>,
@@ -1287,6 +1251,7 @@
     <span class="ident">response</span>: <span class="ident">MockResponse</span>,
     <span class="ident">hits</span>: <span class="ident">usize</span>,
     <span class="ident">expected_hits</span>: <span class="ident">usize</span>,
+    <span class="ident">is_remote</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Mock</span> {
@@ -1300,6 +1265,7 @@
             <span class="ident">response</span>: <span class="ident">MockResponse</span>::<span class="ident">new</span>(),
             <span class="ident">hits</span>: <span class="number">0</span>,
             <span class="ident">expected_hits</span>: <span class="number">1</span>,
+            <span class="ident">is_remote</span>: <span class="bool-val">false</span>,
         }
     }
 
@@ -1444,15 +1410,30 @@
     <span class="doccomment">/// Asserts that the expected amount of requests (defaults to 1 request) were performed.</span>
     <span class="doccomment">///</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">remote</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">remote</span>().<span class="ident">expect</span>(<span class="string">&quot;The request to retrieve the remote mock failed.&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">opt_hits</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">opt_message</span> <span class="op">=</span> <span class="prelude-val">None</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;\r\nExpected {} request(s) to:\r\n{}\r\n...but received {}\r\n\r\n&quot;</span>, <span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>, <span class="ident">remote</span>.<span class="ident">hits</span>);
+        {
+            <span class="kw">let</span> <span class="ident">state_mutex</span> <span class="op">=</span> <span class="ident">server</span>::<span class="ident">STATE</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state_mutex</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">request</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">last_unmatched_request</span>() {
-            <span class="ident">message</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;The last unmatched request was:\r\n{}\r\n&quot;</span>, <span class="ident">request</span>));
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">remote_mock</span>) <span class="op">=</span> <span class="ident">state</span>.<span class="ident">mocks</span>.<span class="ident">iter</span>().<span class="ident">find</span>(<span class="op">|</span><span class="ident">mock</span><span class="op">|</span> <span class="ident">mock</span>.<span class="ident">id</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">id</span>) {
+                <span class="ident">opt_hits</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">remote_mock</span>.<span class="ident">hits</span>);
+
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;\r\nExpected {} request(s) to:\r\n{}\r\n...but received {}\r\n\r\n&quot;</span>, <span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="self">self</span>, <span class="ident">remote_mock</span>.<span class="ident">hits</span>);
+
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">last_request</span>) <span class="op">=</span> <span class="ident">state</span>.<span class="ident">unmatched_requests</span>.<span class="ident">last</span>() {
+                    <span class="ident">message</span>.<span class="ident">push_str</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;The last unmatched request was:\r\n{}\r\n&quot;</span>, <span class="ident">last_request</span>));
+                }
+
+                <span class="ident">opt_message</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">message</span>);
+            }
         }
 
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="ident">remote</span>.<span class="ident">hits</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">message</span>);
+        <span class="kw">match</span> (<span class="ident">opt_hits</span>, <span class="ident">opt_message</span>) {
+            (<span class="prelude-val">Some</span>(<span class="ident">hits</span>), <span class="prelude-val">Some</span>(<span class="ident">message</span>)) <span class="op">=&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">expected_hits</span>, <span class="ident">hits</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">message</span>),
+            _ <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Could not retrieve enough information about the remote mock.&quot;</span>),
+        }
     }
 
     <span class="doccomment">///</span>
@@ -1469,88 +1450,31 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="self">Self</span> {
         <span class="ident">server</span>::<span class="ident">try_start</span>();
 
-        <span class="kw">let</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">state_mutex</span> <span class="op">=</span> <span class="ident">server</span>::<span class="ident">STATE</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state_mutex</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
-        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mockito/mocks&quot;</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
-        <span class="ident">request</span>.<span class="ident">post</span>(<span class="bool-val">true</span>).<span class="ident">unwrap</span>();
-        <span class="ident">request</span>.<span class="ident">post_fields_copy</span>(<span class="ident">body</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>();
-        <span class="ident">request</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">remote_mock</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">clone</span>();
+        <span class="ident">remote_mock</span>.<span class="ident">is_remote</span> <span class="op">=</span> <span class="bool-val">true</span>;
+        <span class="ident">state</span>.<span class="ident">mocks</span>.<span class="ident">push</span>(<span class="ident">remote_mock</span>);
 
         <span class="self">self</span>
     }
 
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Removes the current mock from the server.</span>
-    <span class="doccomment">///</span>
-    <span class="kw">fn</span> <span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="ident">server</span>::<span class="ident">try_start</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
-        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mockito/mocks/&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">id</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
-        <span class="ident">request</span>.<span class="ident">custom_request</span>(<span class="string">&quot;DELETE&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="ident">request</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
-    }
-
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Retrieves the remote copy of the current mock.</span>
-    <span class="doccomment">/// Mainly used to sync the hit count.</span>
-    <span class="doccomment">///</span>
-    <span class="kw">fn</span> <span class="ident">remote</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, ()<span class="op">&gt;</span> {
-        <span class="ident">server</span>::<span class="ident">try_start</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
-        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mockito/mocks/&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">id</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
-
-        {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transfer</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">transfer</span>();
-
-            <span class="ident">transfer</span>.<span class="ident">write_function</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> {
-                <span class="ident">buffer</span>.<span class="ident">extend_from_slice</span>(<span class="ident">data</span>);
-                <span class="prelude-val">Ok</span>(<span class="ident">data</span>.<span class="ident">len</span>())
-            }).<span class="ident">unwrap</span>();
-
-            <span class="ident">transfer</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
-        }
-
-        <span class="ident">serde_json</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>).<span class="ident">map_err</span>(<span class="op">|</span>_<span class="op">|</span> ())
-    }
-
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Produces a presentable version of the last unmatched request.</span>
-    <span class="doccomment">///</span>
-    <span class="kw">fn</span> <span class="ident">last_unmatched_request</span>() <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
-        <span class="ident">server</span>::<span class="ident">try_start</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">Easy</span>::<span class="ident">new</span>();
-        <span class="ident">request</span>.<span class="ident">url</span>(<span class="kw-2">&amp;</span>[<span class="ident">SERVER_URL</span>, <span class="string">&quot;/mockito/last_unmatched_request&quot;</span>].<span class="ident">join</span>(<span class="string">&quot;&quot;</span>)).<span class="ident">unwrap</span>();
-
-        {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transfer</span> <span class="op">=</span> <span class="ident">request</span>.<span class="ident">transfer</span>();
-
-            <span class="ident">transfer</span>.<span class="ident">write_function</span>(<span class="op">|</span><span class="ident">data</span><span class="op">|</span> {
-                <span class="ident">buffer</span>.<span class="ident">extend_from_slice</span>(<span class="ident">data</span>);
-                <span class="prelude-val">Ok</span>(<span class="ident">data</span>.<span class="ident">len</span>())
-            }).<span class="ident">unwrap</span>();
-
-            <span class="ident">transfer</span>.<span class="ident">perform</span>().<span class="ident">unwrap</span>();
-        }
-
-        <span class="kw">if</span> <span class="ident">buffer</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">0</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">String</span>::<span class="ident">from_utf8_lossy</span>(<span class="kw-2">&amp;</span><span class="ident">buffer</span>).<span class="ident">to_string</span>())
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
+    <span class="kw">fn</span> <span class="ident">is_local</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
+        <span class="op">!</span><span class="self">self</span>.<span class="ident">is_remote</span>
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Mock</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">remove</span>();
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_local</span>() {
+            <span class="kw">let</span> <span class="ident">state_mutex</span> <span class="op">=</span> <span class="ident">server</span>::<span class="ident">STATE</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state_mutex</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
+
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pos</span>) <span class="op">=</span> <span class="ident">state</span>.<span class="ident">mocks</span>.<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">mock</span><span class="op">|</span> <span class="ident">mock</span>.<span class="ident">id</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">id</span>) {
+                <span class="ident">state</span>.<span class="ident">mocks</span>.<span class="ident">remove</span>(<span class="ident">pos</span>);
+            }
+        }
     }
 }
 
@@ -1622,7 +1546,7 @@
 
 <span class="kw">const</span> <span class="ident">DEFAULT_RESPONSE_STATUS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">200</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">struct</span> <span class="ident">MockResponse</span> {
     <span class="ident">status</span>: <span class="ident">usize</span>,
     <span class="ident">headers</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span>,
