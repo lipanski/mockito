@@ -1,3 +1,8 @@
+* cb89093 2017-07-11 | Bump to 0.8.0
+
+test bench_create_simple_mock ... bench:      17,110 ns/iter (+/- 6,187)
+test bench_match_simple_mock  ... bench:      30,774 ns/iter (+/- 4,092)
+
 * 90f2bec 2017-07-09 | Bump to 0.7.2
 
 test bench_create_simple_mock ... bench:     212,524 ns/iter (+/- 37,415)
