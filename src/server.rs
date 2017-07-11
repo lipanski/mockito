@@ -80,9 +80,8 @@ fn start() {
                     if request.is_ok() {
                         handle_request(request, stream);
                     } else {
-                        let body = request.error().map_or("Could not parse the request.", |err| err.as_str());
-                        let response = format!("HTTP/1.1 422 Unprocessable Entity\r\ncontent-length: {}\r\n\r\n{}", body.len(), body);
-                        stream.write(response.as_bytes()).unwrap();
+                        let message = request.error().map_or("Could not parse the request.", |err| err.as_str());
+                        respond_with_error(stream, message);
                     }
                 },
                 Err(_) => {},
@@ -101,7 +100,7 @@ fn handle_request(request: Request, stream: TcpStream) {
     handle_match_mock(request, stream);
 }
 
-fn handle_match_mock(request: Request, mut stream: TcpStream) {
+fn handle_match_mock(request: Request, stream: TcpStream) {
     let found;
 
     let state_mutex = STATE.clone();
@@ -113,24 +112,50 @@ fn handle_match_mock(request: Request, mut stream: TcpStream) {
 
             mock.hits = mock.hits + 1;
 
-            let mut headers = String::new();
-            for &(ref key, ref value) in &mock.response.headers {
-                headers.push_str(key);
-                headers.push_str(": ");
-                headers.push_str(value);
-                headers.push_str("\r\n");
-            }
-
-            let ref body = mock.response.body;
-
-            let response = format!("HTTP/1.1 {}\r\ncontent-length: {}\r\n{}\r\n{}", mock.response.status, body.len(), headers, body);
-            stream.write(response.as_bytes()).unwrap();
+            respond_with_mock(stream, &mock)
         },
         None => {
             found = false;
-            stream.write("HTTP/1.1 501 Not Implemented\r\n\r\n".as_bytes()).unwrap();
+
+            respond_with_mock_not_found(stream);
         }
     }
 
     if !found { state.unmatched_requests.push(request); }
+}
+
+fn respond(mut stream: TcpStream, status: &str, headers: Option<&str>, body: Option<&str>) {
+    let mut response = format!("HTTP/1.1 {}\r\n", status);
+
+    if let Some(headers) = headers {
+        response.push_str(headers);
+    }
+
+    if let Some(body) = body {
+        response.push_str(&format!("content-length: {}\r\n\r\n{}", body.len(), body));
+    } else {
+        response.push_str("\r\n");
+    }
+
+    let _ = stream.write(response.as_bytes());
+}
+
+fn respond_with_mock(stream: TcpStream, mock: &Mock) {
+    let mut headers = String::new();
+    for &(ref key, ref value) in &mock.response.headers {
+        headers.push_str(key);
+        headers.push_str(": ");
+        headers.push_str(value);
+        headers.push_str("\r\n");
+    }
+
+    respond(stream, &mock.response.status.to_string(), Some(&headers), Some(&mock.response.body));
+}
+
+fn respond_with_mock_not_found(stream: TcpStream) {
+    respond(stream, "501 Not Implemented", None, None);
+}
+
+fn respond_with_error(stream: TcpStream, message: &str) {
+    respond(stream, "422 Unprocessable Entity", None, Some(message));
 }
