@@ -242,7 +242,8 @@
 //!
 //! let _m = mock("GET", "/hello")
 //!  .match_header("content-type", Matcher::Any)
-//!  .with_body("something");
+//!  .with_body("something")
+//!  .create();
 //!
 //! // Requests containing any content-type header value will be mocked.
 //! // Requests not containing this header will return `501 Not Implemented`.
@@ -258,7 +259,8 @@
 //!
 //! let _m = mock("GET", "/hello")
 //!   .match_header("authorization", Matcher::Missing)
-//!   .with_body("no authorization header");
+//!   .with_body("no authorization header")
+//!   .create();
 //!
 //! // Requests without the authorization header will be matched.
 //! // Requests containing the authorization header will return `501 Not Implemented`.
