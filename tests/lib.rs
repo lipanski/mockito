@@ -261,6 +261,17 @@ fn test_mock_with_status() {
 }
 
 #[test]
+fn test_mock_with_custom_status() {
+    let _m = mock("GET", "/")
+        .with_status(333)
+        .with_body("")
+        .create();
+
+    let (status_line, _, _) = request("GET /", "");
+    assert_eq!("HTTP/1.1 333 Custom\r\n", status_line);
+}
+
+#[test]
 fn test_mock_with_header() {
     let _m = mock("GET", "/")
         .with_header("content-type", "application/json")
