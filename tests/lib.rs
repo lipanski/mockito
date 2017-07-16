@@ -66,7 +66,7 @@ fn test_simple_route_mock() {
     let _m = mock("GET", "/hello").with_body("world").create();
 
     let (status_line, _, body) = request("GET /hello", "");
-    assert_eq!("HTTP/1.1 200\r\n", status_line);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
     assert_eq!("world", body);
 }
 
@@ -114,10 +114,10 @@ fn test_match_header_is_case_insensitive_on_the_field_name() {
     let _m = mock("GET", "/").match_header("content-type", "text/plain").create();
 
     let (uppercase_status_line, _, _) = request("GET /", "Content-Type: text/plain\r\n");
-    assert_eq!("HTTP/1.1 200\r\n", uppercase_status_line);
+    assert_eq!("HTTP/1.1 200 OK\r\n", uppercase_status_line);
 
     let (lowercase_status_line, _, _) = request("GET /", "content-type: text/plain\r\n");
-    assert_eq!("HTTP/1.1 200\r\n", lowercase_status_line);
+    assert_eq!("HTTP/1.1 200 OK\r\n", lowercase_status_line);
 }
 
 #[test]
@@ -164,7 +164,7 @@ fn test_match_header_missing_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 200\r\n", status);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
@@ -186,7 +186,7 @@ fn test_match_multiple_header_conditions_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "Hello: World\r\nContent-Type: something\r\n");
-    assert_eq!("HTTP/1.1 200\r\n", status);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
@@ -206,7 +206,7 @@ fn test_match_any_body_by_default() {
     let _m = mock("POST", "/").create();
 
     let (status, _, _) = request_with_body("POST /", "", "hello");
-    assert_eq!("HTTP/1.1 200\r\n", status);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
@@ -216,7 +216,7 @@ fn test_match_body() {
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", "hello");
-    assert_eq!("HTTP/1.1 200\r\n", status);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
@@ -236,7 +236,7 @@ fn test_match_body_with_regex() {
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", "test hello test");
-    assert_eq!("HTTP/1.1 200\r\n", status);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
@@ -257,7 +257,7 @@ fn test_mock_with_status() {
         .create();
 
     let (status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 204\r\n", status_line);
+    assert_eq!("HTTP/1.1 204 No Content\r\n", status_line);
 }
 
 #[test]
@@ -313,7 +313,7 @@ fn test_going_out_of_context_removes_mock() {
         let _m = mock("GET", "/reset").create();
 
         let (working_status_line, _, _) = request("GET /reset", "");
-        assert_eq!("HTTP/1.1 200\r\n", working_status_line);
+        assert_eq!("HTTP/1.1 200 OK\r\n", working_status_line);
     }
 
     let (reset_status_line, _, _) = request("GET /reset", "");
@@ -328,11 +328,11 @@ fn test_going_out_of_context_doesnt_remove_other_mocks() {
         let _m2 = mock("GET", "/short").create();
 
         let (short_status_line, _, _) = request("GET /short", "");
-        assert_eq!("HTTP/1.1 200\r\n", short_status_line);
+        assert_eq!("HTTP/1.1 200 OK\r\n", short_status_line);
     }
 
     let (long_status_line, _, _) = request("GET /long", "");
-    assert_eq!("HTTP/1.1 200\r\n", long_status_line);
+    assert_eq!("HTTP/1.1 200 OK\r\n", long_status_line);
 }
 
 #[test]
@@ -340,7 +340,7 @@ fn test_explicitly_calling_drop_removes_the_mock() {
     let mock = mock("GET", "/").create();
 
     let (status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 200\r\n", status_line);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
     mem::drop(mock);
 

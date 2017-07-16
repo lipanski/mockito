@@ -342,7 +342,10 @@ extern crate regex;
 
 mod server;
 mod request;
+mod response;
+
 type Request = request::Request;
+type Response = response::Response;
 
 use std::fs::File;
 use std::io::Read;
@@ -445,7 +448,7 @@ pub struct Mock {
     path: Matcher,
     headers: Vec<(String, Matcher)>,
     body: Matcher,
-    response: MockResponse,
+    response: Response,
     hits: usize,
     expected_hits: usize,
     is_remote: bool,
@@ -459,7 +462,7 @@ impl Mock {
             path: path.into(),
             headers: Vec::new(),
             body: Matcher::Any,
-            response: MockResponse::new(),
+            response: Response::default(),
             hits: 0,
             expected_hits: 1,
             is_remote: false,
@@ -530,7 +533,7 @@ impl Mock {
     /// ```
     ///
     pub fn with_status(mut self, status: usize) -> Self {
-        self.response.status = status;
+        self.response.status = status.into();
 
         self
     }
@@ -738,24 +741,5 @@ impl fmt::Display for Mock {
         }
 
         write!(f, "{}", formatted)
-    }
-}
-
-const DEFAULT_RESPONSE_STATUS: usize = 200;
-
-#[derive(Clone, Debug, PartialEq)]
-struct MockResponse {
-    status: usize,
-    headers: Vec<(String, String)>,
-    body: String,
-}
-
-impl MockResponse {
-    pub fn new() -> Self {
-        MockResponse {
-            status: DEFAULT_RESPONSE_STATUS,
-            headers: Vec::new(),
-            body: String::new(),
-        }
     }
 }

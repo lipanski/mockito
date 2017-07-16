@@ -1,5 +1,6 @@
 use std::thread;
 use std::io::Write;
+use std::fmt::Display;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use {Matcher, SERVER_ADDRESS, Request, Mock};
@@ -124,7 +125,7 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
     if !found { state.unmatched_requests.push(request); }
 }
 
-fn respond(mut stream: TcpStream, status: &str, headers: Option<&str>, body: Option<&str>) {
+fn respond<S: Display>(mut stream: TcpStream, status: S, headers: Option<&str>, body: Option<&str>) {
     let mut response = format!("HTTP/1.1 {}\r\n", status);
 
     if let Some(headers) = headers {
@@ -149,7 +150,7 @@ fn respond_with_mock(stream: TcpStream, mock: &Mock) {
         headers.push_str("\r\n");
     }
 
-    respond(stream, &mock.response.status.to_string(), Some(&headers), Some(&mock.response.body));
+    respond(stream, &mock.response.status, Some(&headers), Some(&mock.response.body));
 }
 
 fn respond_with_mock_not_found(stream: TcpStream) {
