@@ -74,13 +74,10 @@ pub fn try_start() {
 }
 
 fn start() {
-
     let state_mutex = STATE.clone();
     let mut state = state_mutex.lock().unwrap();
 
-    if state.is_listening {
-        return
-    }
+    if state.is_listening { return }
 
     thread::spawn(move || {
         let listener = TcpListener::bind(SERVER_ADDRESS).unwrap();
@@ -101,6 +98,7 @@ fn start() {
     });
 
     while !is_listening() {}
+
     state.is_listening = true;
 }
 
