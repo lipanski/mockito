@@ -48,6 +48,7 @@ impl<'a> PartialEq<Request> for &'a mut Mock {
 }
 
 pub struct State {
+    pub is_listening: bool,
     pub mocks: Vec<Mock>,
     pub unmatched_requests: Vec<Request>,
 }
@@ -55,6 +56,7 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         State {
+            is_listening: is_listening(),
             mocks: Vec::new(),
             unmatched_requests: Vec::new(),
         }
@@ -72,6 +74,14 @@ pub fn try_start() {
 }
 
 fn start() {
+
+    let state_mutex = STATE.clone();
+    let mut state = state_mutex.lock().unwrap();
+
+    if state.is_listening {
+        return
+    }
+
     thread::spawn(move || {
         let listener = TcpListener::bind(SERVER_ADDRESS).unwrap();
         for stream in listener.incoming() {
@@ -91,6 +101,7 @@ fn start() {
     });
 
     while !is_listening() {}
+    state.is_listening = true;
 }
 
 fn is_listening() -> bool {
