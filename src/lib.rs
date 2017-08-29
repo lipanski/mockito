@@ -293,6 +293,22 @@
 //! let _m = mock("POST", "/").match_body(Matcher::Regex("hello".to_string())).create();
 //! ```
 //!
+//! Or you can match the body using a JSON object:
+//!
+//! ## Example
+//!
+//! ```
+//! # extern crate mockito;
+//! #[macro_use]
+//! extern crate serde_json;
+//! use mockito::{mock, Matcher};
+//!
+//! # fn main() {
+//! // Will match requests to POST / whenever the request body matches the json object
+//! let _m = mock("POST", "/").match_body(Matcher::JSON(json!({"hello":"world"}))).create();
+//! # }
+//! ```
+//!
 //! # Non-matching calls
 //!
 //! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.
@@ -339,6 +355,7 @@ extern crate http_muncher;
 extern crate rand;
 extern crate regex;
 #[macro_use] extern crate lazy_static;
+extern crate serde_json;
 
 mod server;
 mod request;
@@ -415,6 +432,8 @@ pub enum Matcher {
     Exact(String),
     /// Matches a path or header value by a regular expression.
     Regex(String),
+    /// Matches a specified JSON body
+    JSON(serde_json::Value),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -432,6 +451,10 @@ impl PartialEq<String> for Matcher {
         match self {
             &Matcher::Exact(ref value) => { value == other },
             &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
+            &Matcher::JSON(ref json_obj) => {
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                *json_obj == other
+            },
             &Matcher::Any => true,
             &Matcher::Missing => false,
         }
@@ -695,6 +718,10 @@ impl fmt::Display for Mock {
                 formatted.push_str(value);
                 formatted.push_str(" (regex)\r\n")
             },
+            Matcher::JSON(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str(" (json)\r\n")
+            }
             Matcher::Any => formatted.push_str("(any)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
@@ -711,6 +738,12 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (regex)")
+                },
+                &Matcher::JSON(ref json_obj) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(&json_obj.to_string());
+                    formatted.push_str(" (json)")
                 },
                 &Matcher::Any => {
                     formatted.push_str(key);
@@ -736,6 +769,10 @@ impl fmt::Display for Mock {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");
             },
+            Matcher::JSON(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str("\r\n")
+            }
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
             _ => {},
         }

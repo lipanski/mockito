@@ -1,5 +1,7 @@
 extern crate rand;
 extern crate mockito;
+#[macro_use]
+extern crate serde_json;
 
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
@@ -247,6 +249,16 @@ fn test_match_body_with_regex_not_matching() {
 
     let (status, _, _) = request_with_body("POST /", "", "bye");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_json() {
+   let _m = mock("POST", "/")
+       .match_body(Matcher::JSON(json!({"hello":"world", "foo": "bar"})))
+       .create();
+  
+   let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+   assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
