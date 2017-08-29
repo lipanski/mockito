@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-759' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-782' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
 It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.</p>
 
@@ -258,7 +258,8 @@ alice
 
 <span class="kw">let</span> <span class="ident">_m</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/hello&quot;</span>)
  .<span class="ident">match_header</span>(<span class="string">&quot;content-type&quot;</span>, <span class="ident">Matcher</span>::<span class="ident">Any</span>)
- .<span class="ident">with_body</span>(<span class="string">&quot;something&quot;</span>);
+ .<span class="ident">with_body</span>(<span class="string">&quot;something&quot;</span>)
+ .<span class="ident">create</span>();
 
 <span class="comment">// Requests containing any content-type header value will be mocked.</span>
 <span class="comment">// Requests not containing this header will return `501 Not Implemented`.</span></pre>
@@ -272,7 +273,8 @@ value to <code>Matcher::Missing</code>.</p>
 
 <span class="kw">let</span> <span class="ident">_m</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;/hello&quot;</span>)
   .<span class="ident">match_header</span>(<span class="string">&quot;authorization&quot;</span>, <span class="ident">Matcher</span>::<span class="ident">Missing</span>)
-  .<span class="ident">with_body</span>(<span class="string">&quot;no authorization header&quot;</span>);
+  .<span class="ident">with_body</span>(<span class="string">&quot;no authorization header&quot;</span>)
+  .<span class="ident">create</span>();
 
 <span class="comment">// Requests without the authorization header will be matched.</span>
 <span class="comment">// Requests containing the authorization header will return `501 Not Implemented`.</span></pre>
@@ -299,6 +301,17 @@ By default the request body is ignored, similar to passing the <code>Matcher::An
 <span class="comment">// Will match requests to POST / whenever the request body *contains* the word &quot;hello&quot; (e.g. &quot;hello world&quot;)</span>
 <span class="kw">let</span> <span class="ident">_m</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;POST&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">match_body</span>(<span class="ident">Matcher</span>::<span class="ident">Regex</span>(<span class="string">&quot;hello&quot;</span>.<span class="ident">to_string</span>())).<span class="ident">create</span>();</pre>
 
+<p>Or you can match the body using a JSON object:</p>
+
+<h2 id='example-14' class='section-header'><a href='#example-14'>Example</a></h2>
+<pre class="rust rust-example-rendered">
+<span class="attribute">#[<span class="ident">macro_use</span>]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde_json</span>;
+<span class="kw">use</span> <span class="ident">mockito</span>::{<span class="ident">mock</span>, <span class="ident">Matcher</span>};
+
+<span class="comment">// Will match requests to POST / whenever the request body matches the json object</span>
+<span class="kw">let</span> <span class="ident">_m</span> <span class="op">=</span> <span class="ident">mock</span>(<span class="string">&quot;POST&quot;</span>, <span class="string">&quot;/&quot;</span>).<span class="ident">match_body</span>(<span class="ident">Matcher</span>::<span class="ident">JSON</span>(<span class="macro">json</span><span class="macro">!</span>({<span class="string">&quot;hello&quot;</span>:<span class="string">&quot;world&quot;</span>}))).<span class="ident">create</span>();</pre>
+
 <h1 id='non-matching-calls' class='section-header'><a href='#non-matching-calls'>Non-matching calls</a></h1>
 <p>Any calls to the Mockito server that are not matched will return <em>501 Not Implemented</em>.</p>
 
@@ -308,7 +321,7 @@ By default the request body is ignored, similar to passing the <code>Matcher::An
 <p>As mentioned earlier, mocks are cleaned up at the end of their normal Rust lifetime. However,
 you can always use the <code>reset</code> method to clean up <em>all</em> the mocks registered so far.</p>
 
-<h2 id='example-14' class='section-header'><a href='#example-14'>Example</a></h2>
+<h2 id='example-15' class='section-header'><a href='#example-15'>Example</a></h2>
 <pre class="rust rust-example-rendered">
 <span class="kw">use</span> <span class="ident">mockito</span>::{<span class="ident">mock</span>, <span class="ident">reset</span>};
 
@@ -322,7 +335,7 @@ you can always use the <code>reset</code> method to clean up <em>all</em> the mo
 
 <p>Or you can use <code>std::mem::drop</code> to remove a single mock without having to wait for its scope to end:</p>
 
-<h2 id='example-15' class='section-header'><a href='#example-15'>Example</a></h2>
+<h2 id='example-16' class='section-header'><a href='#example-16'>Example</a></h2>
 <pre class="rust rust-example-rendered">
 <span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>;
