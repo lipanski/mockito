@@ -7,6 +7,7 @@ use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
 use std::mem;
+use std::thread;
 use rand::Rng;
 use mockito::{SERVER_ADDRESS, mock, Matcher};
 
@@ -256,7 +257,7 @@ fn test_match_body_with_json() {
    let _m = mock("POST", "/")
        .match_body(Matcher::JSON(json!({"hello":"world", "foo": "bar"})))
        .create();
-  
+
    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
@@ -562,6 +563,19 @@ fn test_assert_with_last_unmatched_request_and_body() {
     let mock = mock("GET", "/hello").create();
 
     request_with_body("POST /bye", "", "hello");
+
+    mock.assert();
+}
+
+#[test]
+fn test_request_from_thread() {
+    let mock = mock("GET", "/").create();
+
+    let process = thread::spawn(move || {
+        request("GET /", "");
+    });
+
+    process.join().unwrap();
 
     mock.assert();
 }
