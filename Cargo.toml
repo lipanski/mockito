@@ -10,6 +10,7 @@ description = "HTTP mocking for Rust"
 
 [[bin]]
 name = "mockito-server"
+path = "src/main.rs"
 doc = false
 
 [dependencies]
