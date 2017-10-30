@@ -55,6 +55,10 @@
 //! Just like any Rust object, a mock is available only through its lifetime. You'll want to assign
 //! the mocks to variables in order to extend and control their lifetime.
 //!
+//! Avoid assigning the mock to a variable named `_` (underscore). It will end its lifetime immediately.
+//! Rust treats variables named `_` in this special way. You can still use the underscore to prefix the variable
+//! name, but don't limit it to just this one character.
+//!
 //! ## Example
 //!
 //! ```
@@ -71,7 +75,7 @@
 //! // Requests to GET /long will be mocked til here
 //! ```
 //!
-//! Note how I **didn't use the same variable name** for both mocks (e.g. `let _`), as it would have ended the
+//! Note how I **didn't use the same variable name** for both mocks (e.g. `let _m`), as it would have ended the
 //! lifetime of the first mock with the second assignment.
 //!
 //! # Run your tests
@@ -89,7 +93,7 @@
 //! # Asserts
 //!
 //! You can use the `Mock::assert` method to **assert that a mock was called**. In other words, the
-//! `Mock#assert` method can validate that your code perfomed the expected HTTP requests.
+//! `Mock#assert` method can validate that your code performed the expected HTTP requests.
 //!
 //! By default, the method expects that only one request to your mock was triggered.
 //!
@@ -113,7 +117,7 @@
 //! mock.assert();
 //! ```
 //!
-//! If you're expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amout of requests:
+//! If you're expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amount of requests:
 //!
 //! ## Example
 //!
