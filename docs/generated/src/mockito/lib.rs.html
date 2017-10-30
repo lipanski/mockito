@@ -825,6 +825,10 @@
 <span id="780">780</span>
 <span id="781">781</span>
 <span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
 </pre><pre class="rust ">
 <span class="attribute">#<span class="op">!</span>[<span class="ident">warn</span>(<span class="ident">missing_docs</span>)]</span>
 <span class="attribute">#<span class="op">!</span>[<span class="ident">doc</span>(<span class="ident">html_logo_url</span> <span class="op">=</span> <span class="string">&quot;http://lipanski.github.io/mockito/logo/logo-black.png&quot;</span>,
@@ -883,6 +887,10 @@
 <span class="doccomment">//! Just like any Rust object, a mock is available only through its lifetime. You&#39;ll want to assign</span>
 <span class="doccomment">//! the mocks to variables in order to extend and control their lifetime.</span>
 <span class="doccomment">//!</span>
+<span class="doccomment">//! Avoid assigning the mock to a variable named `_` (underscore). It will end its lifetime immediately.</span>
+<span class="doccomment">//! Rust treats variables named `_` in this special way. You can still use the underscore to prefix the variable</span>
+<span class="doccomment">//! name, but don&#39;t limit it to just this one character.</span>
+<span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
@@ -899,7 +907,7 @@
 <span class="doccomment">//! // Requests to GET /long will be mocked til here</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! Note how I **didn&#39;t use the same variable name** for both mocks (e.g. `let _`), as it would have ended the</span>
+<span class="doccomment">//! Note how I **didn&#39;t use the same variable name** for both mocks (e.g. `let _m`), as it would have ended the</span>
 <span class="doccomment">//! lifetime of the first mock with the second assignment.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! # Run your tests</span>
@@ -917,7 +925,7 @@
 <span class="doccomment">//! # Asserts</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! You can use the `Mock::assert` method to **assert that a mock was called**. In other words, the</span>
-<span class="doccomment">//! `Mock#assert` method can validate that your code perfomed the expected HTTP requests.</span>
+<span class="doccomment">//! `Mock#assert` method can validate that your code performed the expected HTTP requests.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! By default, the method expects that only one request to your mock was triggered.</span>
 <span class="doccomment">//!</span>
@@ -941,7 +949,7 @@
 <span class="doccomment">//! mock.assert();</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! If you&#39;re expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amout of requests:</span>
+<span class="doccomment">//! If you&#39;re expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amount of requests:</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ## Example</span>
 <span class="doccomment">//!</span>
@@ -1666,7 +1674,6 @@
         window.rootPath = "../../";
         window.currentCrate = "mockito";
     </script>
-    <script src="../../jquery.js"></script>
     <script src="../../main.js"></script>
     <script defer src="../../search-index.js"></script>
 </body>

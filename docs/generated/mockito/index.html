@@ -29,7 +29,7 @@
 
     <nav class="sidebar">
         <a href='../mockito/index.html'><img src='http://lipanski.github.io/mockito/logo/logo-black.png' alt='logo' width='100'></a>
-        <p class='location'></p><script>window.sidebarCurrent = {name: 'mockito', ty: 'mod', relpath: '../'};</script>
+        <p class='location'>Crate mockito</p><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#constants">Constants</a></li><li><a href="#functions">Functions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'mockito', ty: 'mod', relpath: '../'};</script>
     </nav>
 
     <nav class="sub">
@@ -48,7 +48,7 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-782' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/mockito/lib.rs.html#1-786' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
 It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.</p>
 
@@ -95,6 +95,10 @@ at the end of the run.</p>
 <p>Just like any Rust object, a mock is available only through its lifetime. You&#39;ll want to assign
 the mocks to variables in order to extend and control their lifetime.</p>
 
+<p>Avoid assigning the mock to a variable named <code>_</code> (underscore). It will end its lifetime immediately.
+Rust treats variables named <code>_</code> in this special way. You can still use the underscore to prefix the variable
+name, but don&#39;t limit it to just this one character.</p>
+
 <h2 id='example-2' class='section-header'><a href='#example-2'>Example</a></h2>
 <pre class="rust rust-example-rendered">
 <span class="kw">use</span> <span class="ident">mockito</span>::<span class="ident">mock</span>;
@@ -109,7 +113,7 @@ the mocks to variables in order to extend and control their lifetime.</p>
 
 <span class="comment">// Requests to GET /long will be mocked til here</span></pre>
 
-<p>Note how I <strong>didn&#39;t use the same variable name</strong> for both mocks (e.g. <code>let _</code>), as it would have ended the
+<p>Note how I <strong>didn&#39;t use the same variable name</strong> for both mocks (e.g. <code>let _m</code>), as it would have ended the
 lifetime of the first mock with the second assignment.</p>
 
 <h1 id='run-your-tests' class='section-header'><a href='#run-your-tests'>Run your tests</a></h1>
@@ -124,7 +128,7 @@ RUST_TEST_THREADS=1 cargo test
 
 <h1 id='asserts' class='section-header'><a href='#asserts'>Asserts</a></h1>
 <p>You can use the <code>Mock::assert</code> method to <strong>assert that a mock was called</strong>. In other words, the
-<code>Mock#assert</code> method can validate that your code perfomed the expected HTTP requests.</p>
+<code>Mock#assert</code> method can validate that your code performed the expected HTTP requests.</p>
 
 <p>By default, the method expects that only one request to your mock was triggered.</p>
 
@@ -146,7 +150,7 @@ RUST_TEST_THREADS=1 cargo test
 
 <span class="ident">mock</span>.<span class="ident">assert</span>();</pre>
 
-<p>If you&#39;re expecting more than 1 request, you can use the <code>Mock::expect</code> method to specify the exact amout of requests:</p>
+<p>If you&#39;re expecting more than 1 request, you can use the <code>Mock::expect</code> method to specify the exact amount of requests:</p>
 
 <h2 id='example-4' class='section-header'><a href='#example-4'>Example</a></h2>
 <pre class="rust rust-example-rendered">
@@ -459,7 +463,6 @@ Can be used with <code>std::net::TcpStream</code>.</p>
         window.rootPath = "../";
         window.currentCrate = "mockito";
     </script>
-    <script src="../jquery.js"></script>
     <script src="../main.js"></script>
     <script defer src="../search-index.js"></script>
 </body>
