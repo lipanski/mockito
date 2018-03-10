@@ -117,7 +117,7 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
     let mut state = state_mutex.lock().unwrap();
 
     match state.mocks.iter_mut().rev().find(|mock| mock == &request) {
-        Some(mut mock) => {
+        Some(mock) => {
             found = true;
 
             mock.hits = mock.hits + 1;
