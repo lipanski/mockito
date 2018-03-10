@@ -67,7 +67,7 @@ impl Default for Request {
 }
 
 impl<'a> From<&'a mut TcpStream> for Request {
-    fn from(mut stream: &mut TcpStream) -> Self {
+    fn from(stream: &mut TcpStream) -> Self {
         let mut request = Request::default();
         let mut parser = Parser::request();
         let mut first_read = true;
