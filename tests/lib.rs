@@ -263,6 +263,16 @@ fn test_match_body_with_json() {
 }
 
 #[test]
+fn test_match_body_with_json_order() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::JSON(json!({"foo": "bar", "hello": "world"})))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
 fn test_mock_with_status() {
     let _m = mock("GET", "/")
         .with_status(204)
