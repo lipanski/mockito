@@ -78,6 +78,10 @@
 //! Note how I **didn't use the same variable name** for both mocks (e.g. `let _m`), as it would have ended the
 //! lifetime of the first mock with the second assignment.
 //!
+//! # Doctests
+//!
+//! If you intend to use mocks in doctests, please check <https://github.com/lipanski/mockito/issues/36>.
+//!
 //! # Asserts
 //!
 //! You can use the `Mock::assert` method to **assert that a mock was called**. In other words, the
