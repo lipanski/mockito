@@ -26,7 +26,7 @@ Before upgrading, make sure to check out the [changelog](https://github.com/lipa
 Run tests:
 
 ```
-cargo test --no-fail-fast -- --test-threads=1
+cargo test --no-fail-fast
 ```
 
 Generate docs:

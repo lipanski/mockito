@@ -2,7 +2,10 @@ language: rust
 rust:
   - stable
   - nightly
-script: cargo test --no-fail-fast -- --test-threads=1
+script:
+  - cargo test --tests --no-fail-fast
+  # TODO: doctests are still flickering without --test-threads=1
+  - cargo test --doc --no-fail-fast -- --test-threads=1
 notifications:
   email:
     on_success: never
