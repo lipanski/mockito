@@ -374,6 +374,7 @@ use std::cmp::PartialEq;
 use std::convert::{From, Into};
 use std::ops::Drop;
 use std::fmt;
+use std::sync::Mutex;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 
@@ -421,6 +422,51 @@ pub fn reset() {
 #[allow(missing_docs)]
 pub fn start() {
     server::try_start();
+}
+
+lazy_static! {
+    #[allow(missing_docs)]
+    pub static ref SINGLE_THREAD_MUTEX: Mutex<()> = Mutex::new(());
+}
+
+///
+/// Ensures that any (test) function defined within this macro will be executed sequentially
+/// in regards to the other functions contained here. This is based on a simple Mutex lock.
+///
+/// See https://github.com/rust-lang/rust/issues/43155 for more details.
+///
+/// ## Example
+///
+/// ```
+/// #[macro_use] extern crate mockito;
+///
+/// # fn main() {
+/// single_thread!(
+///   #[test]
+///   fn test_one() {
+///
+///   }
+///
+///   #[test]
+///   fn test_two() {
+///
+///   }
+/// );
+/// # }
+/// ```
+///
+#[macro_export] macro_rules! single_thread {
+    ($($(#[$flag:meta])* fn $name:ident() $body:block)*) => {
+        $(
+            $(
+                #[$flag]
+            )*
+            fn $name() {
+                let _guard = $crate::SINGLE_THREAD_MUTEX.lock();
+                $body
+            }
+        )*
+    };
 }
 
 ///
