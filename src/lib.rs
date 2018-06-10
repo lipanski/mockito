@@ -78,18 +78,6 @@
 //! Note how I **didn't use the same variable name** for both mocks (e.g. `let _m`), as it would have ended the
 //! lifetime of the first mock with the second assignment.
 //!
-//! # Run your tests
-//!
-//! Due to the nature of this library (all your mocks are recorded on the same server running in background),
-//! it is highly recommended that you **run your tests on a single thread**:
-//!
-//! ```sh
-//! cargo test -- --test-threads=1
-//!
-//! # Same, but using an environment variable
-//! RUST_TEST_THREADS=1 cargo test
-//! ```
-//!
 //! # Asserts
 //!
 //! You can use the `Mock::assert` method to **assert that a mock was called**. In other words, the
@@ -111,7 +99,7 @@
 //!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
-//!     stream.read_to_string(&mut response);
+//!     stream.read_to_string(&mut response).unwrap();
 //! }
 //!
 //! mock.assert();
@@ -133,7 +121,7 @@
 //!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
-//!     stream.read_to_string(&mut response);
+//!     stream.read_to_string(&mut response).unwrap();
 //! }
 //!
 //! mock.assert();
@@ -353,6 +341,17 @@
 //! mem::drop(m);
 //!
 //! // Still in the scope of `m`, but requests to GET /hello aren't mocked any more
+//! ```
+//!
+//! # Threads
+//!
+//! Mockito records all your mocks on the same server running in the background. For this
+//! reason, Mockito tests are run sequentially. This is handled internally via a thread-local
+//! mutex lock acquired **whenever you create a mock**. Tests that don't create mocks will
+//! still be run in parallel.
+//!
+//! Special precautions should be taken when creating mocks from within threads.
+//!
 //!
 
 extern crate http_muncher;
@@ -376,6 +375,19 @@ use std::ops::Drop;
 use std::fmt;
 use rand::{thread_rng, Rng};
 use regex::Regex;
+use std::sync::{Mutex, LockResult, MutexGuard};
+use std::thread;
+use std::cell::RefCell;
+
+lazy_static! {
+    // A global lock that ensure all Mockito tests are run on a single thread.
+    static ref TEST_MUTEX: Mutex<()> = Mutex::new(());
+}
+
+thread_local!(
+    // A thread-local reference to the global lock. This is acquired within `Mock#create()`.
+    static LOCAL_TEST_MUTEX: RefCell<LockResult<MutexGuard<'static, ()>>> = RefCell::new(TEST_MUTEX.lock());
+);
 
 ///
 /// Points to the address the mock server is running at.
@@ -676,6 +688,14 @@ impl Mock {
     ///
     pub fn create(self) -> Self {
         server::try_start();
+
+        let current_thread = thread::current();
+        let current_thread_name = current_thread.name().unwrap_or("");
+        // Make sure we don't lock in sub-threads.
+        if current_thread_name.starts_with("test_") {
+            // Ensures Mockito tests are run sequentially.
+            LOCAL_TEST_MUTEX.with(|_| {});
+        }
 
         let state_mutex = server::STATE.clone();
         let mut state = state_mutex.lock().unwrap();

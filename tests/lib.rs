@@ -589,3 +589,18 @@ fn test_request_from_thread() {
 
     mock.assert();
 }
+
+#[test]
+fn test_mock_from_inside_thread_does_not_lock_forever() {
+    let _mock_outside_thread = mock("GET", "/").with_body("outside").create();
+
+    let process = thread::spawn(move || {
+        let _mock_inside_thread = mock("GET", "/").with_body("inside").create();
+    });
+
+    process.join().unwrap();
+
+    let (_, _, body) = request("GET /", "");
+
+    assert_eq!("outside", body);
+}
