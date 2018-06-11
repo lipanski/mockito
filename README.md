@@ -1,5 +1,5 @@
 <p>
-  <p align="center"><img src="http://lipanski.github.io/mockito/logo/logo-black.png"></p>
+  <p align="center"><img src="https://raw.githubusercontent.com/lipanski/mockito/master/docs/logo-black.png"></p>
   <p align="center">
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/v/mockito.svg"></a>
     <a href="https://docs.rs/mockito"><img src="https://docs.rs/mockito/badge.svg"></a>
