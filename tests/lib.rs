@@ -536,7 +536,7 @@ fn test_expect() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 1 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n")]
 fn test_assert_panics_if_no_request_was_performed() {
     let mock = mock("GET", "/hello").create();
 
@@ -544,7 +544,7 @@ fn test_assert_panics_if_no_request_was_performed() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 3 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 2\r\n")]
+#[should_panic(expected = "\n> Expected 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 2\n")]
 fn test_assert_panics_with_too_few_requests() {
     let mock = mock("GET", "/hello").expect(3).create();
 
@@ -555,7 +555,7 @@ fn test_assert_panics_with_too_few_requests() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 3 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 4\r\n")]
+#[should_panic(expected = "\n> Expected 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 4\n")]
 fn test_assert_panics_with_too_many_requests() {
     let mock = mock("GET", "/hello").expect(3).create();
 
@@ -568,7 +568,7 @@ fn test_assert_panics_with_too_many_requests() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 1 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n\r\nThe last unmatched request was:\r\n\r\nGET /bye\r\n\r\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n")]
 fn test_assert_with_last_unmatched_request() {
     let mock = mock("GET", "/hello").create();
 
@@ -578,7 +578,7 @@ fn test_assert_with_last_unmatched_request() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 1 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n\r\nThe last unmatched request was:\r\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\r\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n")]
 fn test_assert_with_last_unmatched_request_and_headers() {
     let mock = mock("GET", "/hello").create();
 
@@ -588,7 +588,7 @@ fn test_assert_with_last_unmatched_request_and_headers() {
 }
 
 #[test]
-#[should_panic(expected = "Expected 1 request(s) to:\r\n\r\nGET /hello\r\n\r\n...but received 0\r\n\r\nThe last unmatched request was:\r\n\r\nPOST /bye\r\ncontent-length: 5\r\nhello\r\n\r\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nPOST /bye\r\ncontent-length: 5\r\nhello\r\n\n")]
 fn test_assert_with_last_unmatched_request_and_body() {
     let mock = mock("GET", "/hello").create();
 
