@@ -134,23 +134,28 @@
 //!
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
-//! a missing or incomplete mock.
+//! a missing or incomplete mock. A coloured diff is also displayed.
 //!
 //! Here's an example of how a `Mock#assert` error looks like:
 //!
 //! ```text
-//! Expected 1 request(s) to:
+//! > Expected 1 request(s) to:
 //!
 //! POST /users
 //! bob
 //!
 //! ...but received 0
 //!
-//! The last unmatched request was:
+//! > The last unmatched request was:
 //!
 //! POST /users
 //! content-length: 5
 //! alice
+//!
+//! > Difference:
+//!
+//! # A coloured diff
+//!
 //! ```
 //!
 //! # Matchers
@@ -378,11 +383,14 @@ extern crate rand;
 extern crate regex;
 #[macro_use] extern crate lazy_static;
 extern crate serde_json;
+extern crate difference;
+extern crate colored;
 
 #[macro_use] mod logger;
 mod server;
 mod request;
 mod response;
+mod diff;
 
 type Request = request::Request;
 type Response = response::Response;
@@ -693,10 +701,13 @@ impl Mock {
             if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
                 opt_hits = Some(remote_mock.hits);
 
-                let mut message = format!("\r\nExpected {} request(s) to:\r\n{}\r\n...but received {}\r\n\r\n", self.expected_hits, self, remote_mock.hits);
+                let mut message = format!("\n> Expected {} request(s) to:\n{}\n...but received {}\n\n", self.expected_hits, self, remote_mock.hits);
 
                 if let Some(last_request) = state.unmatched_requests.last() {
-                    message.push_str(&format!("The last unmatched request was:\r\n{}\r\n", last_request));
+                    message.push_str(&format!("> The last unmatched request was:\n{}\n", last_request));
+
+                    let difference = diff::compare(&self.to_string(), &last_request.to_string());
+                    message.push_str(&format!("> Difference:\n{}\n", difference));
                 }
 
                 opt_message = Some(message);
