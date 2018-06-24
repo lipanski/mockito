@@ -302,8 +302,22 @@
 //!
 //! # fn main() {
 //! // Will match requests to POST / whenever the request body matches the json object
-//! let _m = mock("POST", "/").match_body(Matcher::JSON(json!({"hello":"world"}))).create();
+//! let _m = mock("POST", "/").match_body(Matcher::Json(json!({"hello":"world"}))).create();
 //! # }
+//! ```
+//!
+//! If `serde_json::json!` is not exposed, you can use `Matcher::JsonString` the same way,
+//! but by passing a `String` to the matcher:
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! // Will match requests to POST / whenever the request body matches the json object
+//! let _m = mock("POST", "/")
+//!     .match_body(
+//!        Matcher::JsonString("{\"hello\":\"world\"}".to_string())
+//!     )
+//!     .create();
 //! ```
 //!
 //! # Non-matching calls
@@ -455,7 +469,12 @@ pub enum Matcher {
     /// Matches a path or header value by a regular expression.
     Regex(String),
     /// Matches a specified JSON body
+    #[deprecated(since="0.11.1", note="Please use `Matcher::Json` instead")]
     JSON(serde_json::Value),
+    /// Matches a specified JSON body from a `serde_json::Value`
+    Json(serde_json::Value),
+    /// Matches a specified JSON body from a `String`
+    JsonString(String),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -476,6 +495,15 @@ impl PartialEq<String> for Matcher {
             &Matcher::JSON(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 *json_obj == other
+            },
+            &Matcher::Json(ref json_obj) => {
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                *json_obj == other
+            },
+            &Matcher::JsonString(ref value) => {
+                let value: serde_json::Value = serde_json::from_str(value).unwrap();
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                value == other
             },
             &Matcher::Any => true,
             &Matcher::Missing => false,
@@ -755,7 +783,15 @@ impl fmt::Display for Mock {
             Matcher::JSON(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
                 formatted.push_str(" (json)\r\n")
-            }
+            },
+            Matcher::Json(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str(" (json)\r\n")
+            },
+            Matcher::JsonString(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str(" (json)\r\n")
+            },
             Matcher::Any => formatted.push_str("(any)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
@@ -777,6 +813,18 @@ impl fmt::Display for Mock {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(&json_obj.to_string());
+                    formatted.push_str(" (json)")
+                },
+                &Matcher::Json(ref json_obj) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(&json_obj.to_string());
+                    formatted.push_str(" (json)")
+                },
+                &Matcher::JsonString(ref value) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(value);
                     formatted.push_str(" (json)")
                 },
                 &Matcher::Any => {
@@ -806,7 +854,15 @@ impl fmt::Display for Mock {
             Matcher::JSON(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
                 formatted.push_str("\r\n")
-            }
+            },
+            Matcher::Json(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str("\r\n")
+            },
+            Matcher::JsonString(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str("\r\n")
+            },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
             _ => {},
         }

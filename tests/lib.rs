@@ -254,7 +254,7 @@ fn test_match_body_with_regex_not_matching() {
 #[test]
 fn test_match_body_with_json() {
    let _m = mock("POST", "/")
-       .match_body(Matcher::JSON(json!({"hello":"world", "foo": "bar"})))
+       .match_body(Matcher::Json(json!({"hello":"world", "foo": "bar"})))
        .create();
 
    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
@@ -264,12 +264,33 @@ fn test_match_body_with_json() {
 #[test]
 fn test_match_body_with_json_order() {
     let _m = mock("POST", "/")
-        .match_body(Matcher::JSON(json!({"foo": "bar", "hello": "world"})))
+        .match_body(Matcher::Json(json!({"foo": "bar", "hello": "world"})))
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
+
+#[test]
+fn test_match_body_with_json_string() {
+   let _m = mock("POST", "/")
+       .match_body(Matcher::JsonString("{\"hello\":\"world\", \"foo\": \"bar\"}".to_string()))
+       .create();
+
+   let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+   assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_json_string_order() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::JsonString("{\"foo\": \"bar\", \"hello\": \"world\"}".to_string()))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
 
 #[test]
 fn test_mock_with_status() {
