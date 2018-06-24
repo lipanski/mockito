@@ -1,12 +1,18 @@
 [package]
 name = "mockito"
-version = "0.11.0"
+version = "0.11.1"
 authors = ["Florin Lipan <florinlipan@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/lipanski/mockito"
 repository = "https://github.com/lipanski/mockito"
 documentation = "https://docs.rs/mockito"
-description = "HTTP mocking for Rust"
+description = "HTTP mocking for Rust."
+keywords = ["mock", "mocks", "http", "webmock", "webmocks"]
+categories = ["development-tools::testing", "web-programming"]
+
+[badges]
+travis-ci = { repository = "lipanski/mockito", branch = "master" }
+appveyor = { repository = "lipanski/mockito", branch = "master", service = "github" }
 
 [[bin]]
 name = "mockito-server"
