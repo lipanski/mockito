@@ -148,6 +148,7 @@ fn respond<S: Display>(mut stream: TcpStream, status: S, headers: Option<&str>, 
     }
 
     let _ = stream.write(response.as_bytes());
+    let _ = stream.flush();
 }
 
 fn respond_with_mock(stream: TcpStream, mock: &Mock) {

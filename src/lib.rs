@@ -103,6 +103,7 @@
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
 //!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
 //! }
 //!
 //! mock.assert();
@@ -125,6 +126,7 @@
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
 //!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
 //! }
 //!
 //! mock.assert();
