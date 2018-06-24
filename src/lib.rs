@@ -365,6 +365,7 @@ extern crate regex;
 #[macro_use] extern crate lazy_static;
 extern crate serde_json;
 
+#[macro_use] mod logger;
 mod server;
 mod request;
 mod response;
@@ -709,6 +710,8 @@ impl Mock {
         remote_mock.is_remote = true;
         state.mocks.push(remote_mock);
 
+        debug!("Mock::create() called for {}", self);
+
         self
     }
 
@@ -726,6 +729,8 @@ impl Drop for Mock {
             if let Some(pos) = state.mocks.iter().position(|mock| mock.id == self.id) {
                 state.mocks.remove(pos);
             }
+
+            debug!("Mock::drop() called for {}", self);
         }
     }
 }

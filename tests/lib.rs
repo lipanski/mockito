@@ -1,7 +1,6 @@
 extern crate rand;
 extern crate mockito;
-#[macro_use]
-extern crate serde_json;
+#[macro_use] extern crate serde_json;
 
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};

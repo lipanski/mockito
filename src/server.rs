@@ -81,18 +81,23 @@ fn start() {
 
     thread::spawn(move || {
         let listener = TcpListener::bind(SERVER_ADDRESS).unwrap();
+        debug!("Server is listening");
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
                     let request = Request::from(&mut stream);
+                    debug!("Request received: {}", request);
                     if request.is_ok() {
                         handle_request(request, stream);
                     } else {
                         let message = request.error().map_or("Could not parse the request.", |err| err.as_str());
+                        debug!("Could not parse request because: {}", message);
                         respond_with_error(stream, message);
                     }
                 },
-                Err(_) => {},
+                Err(_) => {
+                    debug!("Could not read from stream");
+                },
             }
         }
     });
@@ -118,15 +123,14 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
 
     match state.mocks.iter_mut().rev().find(|mock| mock == &request) {
         Some(mock) => {
+            debug!("Mock found");
             found = true;
-
             mock.hits = mock.hits + 1;
-
-            respond_with_mock(stream, &mock)
+            respond_with_mock(stream, &mock);
         },
         None => {
+            debug!("Mock not found");
             found = false;
-
             respond_with_mock_not_found(stream);
         }
     }
