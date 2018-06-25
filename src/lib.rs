@@ -77,7 +77,10 @@
 //! Note how I **didn't use the same variable name** for both mocks (e.g. `let _m`), as it would have ended the
 //! lifetime of the first mock with the second assignment.
 //!
-//! # Doctests
+//! # Limitations
+//!
+//! Creating mocks from threads is currently not possible. Please use the main (test) thread for that.
+//! See the note on threads at the end for more details.
 //!
 //! If you intend to use mocks in doctests, please check <https://github.com/lipanski/mockito/issues/36>.
 //!
@@ -374,9 +377,6 @@
 //! mutex lock acquired **whenever you create a mock**. Tests that don't create mocks will
 //! still be run in parallel.
 //!
-//! Special precautions should be taken when creating mocks from within threads.
-//!
-//!
 
 extern crate http_muncher;
 extern crate rand;
@@ -404,7 +404,6 @@ use std::fmt;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::sync::{Mutex, LockResult, MutexGuard};
-use std::thread;
 use std::cell::RefCell;
 
 lazy_static! {
@@ -734,13 +733,8 @@ impl Mock {
     pub fn create(self) -> Self {
         server::try_start();
 
-        let current_thread = thread::current();
-        let current_thread_name = current_thread.name().unwrap_or("");
-        // Make sure we don't lock in sub-threads.
-        if current_thread_name.starts_with("test_") {
-            // Ensures Mockito tests are run sequentially.
-            LOCAL_TEST_MUTEX.with(|_| {});
-        }
+        // Ensures Mockito tests are run sequentially.
+        LOCAL_TEST_MUTEX.with(|_| {});
 
         let state_mutex = server::STATE.clone();
         let mut state = state_mutex.lock().unwrap();
