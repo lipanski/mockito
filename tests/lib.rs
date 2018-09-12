@@ -457,6 +457,25 @@ fn test_or_match_header() {
 }
 
 #[test]
+fn test_or_miss_match_header() {
+    let _m = mock("GET", "/")
+        .match_header("Via", Matcher::Or(
+            Box::new(Matcher::Exact("one".into())),
+            Box::new(Matcher::Missing)))
+        .with_body("{}")
+        .create();
+
+    let (_, _, body_json) = request("GET /", "Via: one\r\n");
+    assert_eq!("{}", body_json);
+
+    let (_, _, body_json) = request("GET /", "NotVia: two\r\n");
+    assert_eq!("{}", body_json);
+
+    let (status_line, _, _) = request("GET /", "Via: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+}
+
+#[test]
 fn test_large_utf8_body() {
     let mock_body: String = rand::thread_rng()
         .gen_iter::<char>()

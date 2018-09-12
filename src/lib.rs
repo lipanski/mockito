@@ -499,28 +499,50 @@ impl<'a> From<&'a str> for Matcher {
 
 impl PartialEq<String> for Matcher {
     fn eq(&self, other: &String) -> bool {
-        #[allow(deprecated)]
-        match self {
-            &Matcher::Exact(ref value) => { value == other },
-            &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
-            &Matcher::JSON(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                *json_obj == other
-            },
-            &Matcher::Json(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                *json_obj == other
-            },
-            &Matcher::JsonString(ref value) => {
-                let value: serde_json::Value = serde_json::from_str(value).unwrap();
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                value == other
-            },
-            &Matcher::Any => true,
-            &Matcher::Or(ref a, ref b) => {
-                **a == *other || **b == *other
-            },
-            &Matcher::Missing => false,
+        self.eq(&Some(other.as_str()))
+    }
+}
+
+impl<'a> PartialEq<Option<&'a String>> for Matcher {
+    fn eq(&self, other: &Option<&'a String>) -> bool {
+        self.eq(&other.map(|s| s.as_str()))
+    }
+}
+
+impl<'a> PartialEq<Option<&'a str>> for Matcher {
+    #[allow(deprecated)]
+    fn eq(&self, other_opt: &Option<&'a str>) -> bool {
+        if let &Some(other) = other_opt {
+            match self {
+                &Matcher::Exact(ref value) => { value == other },
+                &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
+                &Matcher::JSON(ref json_obj) => {
+                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                    *json_obj == other
+                },
+                &Matcher::Json(ref json_obj) => {
+                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                    *json_obj == other
+                },
+                &Matcher::JsonString(ref value) => {
+                    let value: serde_json::Value = serde_json::from_str(value).unwrap();
+                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                    value == other
+                },
+                &Matcher::Any => true,
+                &Matcher::Or(ref a, ref b) => {
+                    &**a == other_opt || &**b == other_opt
+                },
+                &Matcher::Missing => false,
+            }
+        } else {
+            match self {
+                &Matcher::Missing => true,
+                &Matcher::Or(ref a, ref b) => {
+                    &**a == other_opt || &**b == other_opt
+                },
+                _ => false,
+            }
         }
     }
 }

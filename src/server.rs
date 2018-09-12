@@ -3,7 +3,7 @@ use std::io::Write;
 use std::fmt::Display;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use {Matcher, SERVER_ADDRESS, Request, Mock};
+use {SERVER_ADDRESS, Request, Mock};
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -15,22 +15,10 @@ impl Mock {
     }
 
     fn headers_match(&self, request: &Request) -> bool {
-        for &(ref field, ref value) in &self.headers {
-            match request.find_header(field) {
-                Some(request_header_value) => {
-                    if value == request_header_value { continue }
-
-                    return false
-                },
-                None => {
-                    if value == &Matcher::Missing { continue }
-
-                    return false
-                },
-            }
-        }
-
-        true
+        self.headers.iter().all(|&(ref field, ref expected)| {
+            let value = request.find_header(field);
+            *expected == value
+        })
     }
 
     fn body_matches(&self, request: &Request) -> bool {
