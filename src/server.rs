@@ -138,20 +138,26 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
     if !found { state.unmatched_requests.push(request); }
 }
 
-fn respond<S: Display>(mut stream: TcpStream, status: S, headers: Option<&str>, body: Option<&str>) {
-    let mut response = format!("HTTP/1.1 {}\r\n", status);
+fn respond<S: Display>(stream: TcpStream, status: S, headers: Option<&str>, body: Option<&str>) {
+    respond_bytes(stream, status, headers, body.map(|s| s.as_bytes()))
+}
+
+fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&str>, body: Option<&[u8]>) {
+    let mut response = Vec::from(format!("HTTP/1.1 {}\r\n", status));
 
     if let Some(headers) = headers {
-        response.push_str(headers);
+        response.extend(headers.as_bytes());
     }
 
     if let Some(body) = body {
-        response.push_str(&format!("content-length: {}\r\n\r\n{}", body.len(), body));
+        let body = body.as_ref();
+        response.extend(format!("content-length: {}\r\n\r\n", body.len()).as_bytes());
+        response.extend(body);
     } else {
-        response.push_str("\r\n");
+        response.extend(b"\r\n");
     }
 
-    let _ = stream.write(response.as_bytes());
+    let _ = stream.write(&response);
     let _ = stream.flush();
 }
 
@@ -164,7 +170,7 @@ fn respond_with_mock(stream: TcpStream, mock: &Mock) {
         headers.push_str("\r\n");
     }
 
-    respond(stream, &mock.response.status, Some(&headers), Some(&mock.response.body));
+    respond_bytes(stream, &mock.response.status, Some(&headers), Some(&mock.response.body));
 }
 
 fn respond_with_mock_not_found(stream: TcpStream) {

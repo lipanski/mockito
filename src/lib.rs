@@ -646,8 +646,8 @@ impl Mock {
     /// let _m = mock("GET", "/").with_body("hello world");
     /// ```
     ///
-    pub fn with_body(mut self, body: &str) -> Self {
-        self.response.body = body.to_owned();
+    pub fn with_body<StrOrBytes: AsRef<[u8]>>(mut self, body: StrOrBytes) -> Self {
+        self.response.body = body.as_ref().to_owned();
 
         self
     }
@@ -666,9 +666,9 @@ impl Mock {
     ///
     pub fn with_body_from_file(mut self, path: &str) -> Self {
         let mut file = File::open(path).unwrap();
-        let mut body = String::new();
+        let mut body = Vec::new();
 
-        file.read_to_string(&mut body).unwrap();
+        file.read_to_end(&mut body).unwrap();
 
         self.response.body = body;
 
