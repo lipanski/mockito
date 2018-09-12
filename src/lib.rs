@@ -483,6 +483,8 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
+    /// Either one may match
+    Or(Box<Matcher>, Box<Matcher>),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -515,6 +517,9 @@ impl PartialEq<String> for Matcher {
                 value == other
             },
             &Matcher::Any => true,
+            &Matcher::Or(ref a, ref b) => {
+                **a == *other || **b == *other
+            },
             &Matcher::Missing => false,
         }
     }
@@ -801,6 +806,7 @@ impl fmt::Display for Mock {
                 formatted.push_str(" (json)\r\n")
             },
             Matcher::Any => formatted.push_str("(any)\r\n"),
+            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
 
@@ -845,6 +851,11 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str("(missing)");
                 },
+                &Matcher::Or(..) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str("(or)");
+                },
             }
 
             formatted.push_str("\r\n");
@@ -872,9 +883,10 @@ impl fmt::Display for Mock {
                 formatted.push_str("\r\n")
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
+            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
             Matcher::Any => {}
         }
 
-        write!(f, "{}", formatted)
+        f.write_str(&formatted)
     }
 }
