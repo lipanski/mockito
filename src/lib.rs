@@ -469,6 +469,7 @@ pub fn start() {
 /// These matchers are used within the `mock` and `Mock::match_header` calls.
 ///
 #[derive(Clone, PartialEq, Debug)]
+#[allow(deprecated)] // Rust bug #38832
 pub enum Matcher {
     /// Matches the exact path or header value. There's also an implementation of `From<&str>`
     /// to keep things simple and backwards compatible.
@@ -496,6 +497,7 @@ impl<'a> From<&'a str> for Matcher {
 
 impl PartialEq<String> for Matcher {
     fn eq(&self, other: &String) -> bool {
+        #[allow(deprecated)]
         match self {
             &Matcher::Exact(ref value) => { value == other },
             &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
@@ -769,6 +771,7 @@ impl Drop for Mock {
 }
 
 impl fmt::Display for Mock {
+    #[allow(deprecated)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted = String::new();
 
@@ -869,7 +872,7 @@ impl fmt::Display for Mock {
                 formatted.push_str("\r\n")
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
-            _ => {},
+            Matcher::Any => {}
         }
 
         write!(f, "{}", formatted)
