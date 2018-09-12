@@ -89,7 +89,7 @@ fn test_no_match_returns_501() {
     let _m = mock("GET", "/").with_body("matched").create();
 
     let (status_line, _, _) = request("GET /nope", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn test_match_multiple_headers() {
     assert_eq!("matched", body_matching);
 
     let (status_not_matching, _, _) = request("GET /", "content-type: text/plain\r\nauthorization: meh\r\n");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_not_matching);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_not_matching);
 }
 
 #[test]
@@ -156,7 +156,7 @@ fn test_match_header_any_not_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn test_match_header_missing_not_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "Authorization: something\r\n");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
 }
 
 #[test]
@@ -200,7 +200,7 @@ fn test_match_multiple_header_conditions_not_matching() {
         .create();
 
     let (status, _, _) = request("GET /", "Hello: World\r\n");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn test_match_body_not_matching() {
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", "bye");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
 }
 
 #[test]
@@ -248,7 +248,7 @@ fn test_match_body_with_regex_not_matching() {
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", "bye");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
 }
 
 #[test]
@@ -371,7 +371,7 @@ fn test_going_out_of_context_removes_mock() {
     }
 
     let (reset_status_line, _, _) = request("GET /reset", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", reset_status_line);
 }
 
 #[test]
@@ -399,7 +399,7 @@ fn test_explicitly_calling_drop_removes_the_mock() {
     mem::drop(mock);
 
     let (dropped_status_line, _, _) = request("GET /", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", dropped_status_line);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", dropped_status_line);
 }
 
 #[test]
@@ -414,10 +414,10 @@ fn test_regex_match_path() {
     assert_eq!("bbb", body_b);
 
     let (status_line, _, _) = request("GET /a/11", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
 
     let (status_line, _, _) = request("GET /c/2", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
 }
 
 #[test]
@@ -431,7 +431,7 @@ fn test_regex_match_header() {
     assert_eq!("{}", body_json);
 
     let (status_line, _, _) = request("GET /", "authorization: Beare none\r\n");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
 }
 
 #[test]
