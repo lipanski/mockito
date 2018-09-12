@@ -5,7 +5,7 @@ use std::fmt;
 pub struct Response {
     pub status: Status,
     pub headers: Vec<(String, String)>,
-    pub body: String,
+    pub body: Vec<u8>,
 }
 
 impl Default for Response {
@@ -13,7 +13,7 @@ impl Default for Response {
         Response {
             status: Status::Ok,
             headers: Vec::new(),
-            body: String::new(),
+            body: Vec::new(),
         }
     }
 }
