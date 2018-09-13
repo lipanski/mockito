@@ -19,8 +19,7 @@ Before upgrading, make sure to check out the [changelog](https://github.com/lipa
 
 1. Check the existing issues and pull requests.
 2. One commit is one feature - consider squashing.
-3. I'll handle versioning and generating docs, after the pull request gets merged.
-4. :shipit:
+3. :shipit:
 
 ## Development
 
@@ -31,12 +30,6 @@ cargo test --tests
 
 # See https://github.com/lipanski/mockito/issues/36
 cargo test --doc -- --test-threads=1
-```
-
-Generate docs:
-
-```
-rm -r target/doc/* && cargo doc --no-deps && rm -r docs/generated/* && cp -R target/doc/* docs/generated
 ```
 
 Release:
