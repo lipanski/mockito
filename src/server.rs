@@ -11,18 +11,17 @@ impl Mock {
     }
 
     fn path_matches(&self, request: &Request) -> bool {
-        self.path == request.path
+        self.path.matches_value(&request.path)
     }
 
     fn headers_match(&self, request: &Request) -> bool {
         self.headers.iter().all(|&(ref field, ref expected)| {
-            let value = request.find_header(field);
-            *expected == value
+            expected.matches_values(&request.find_header_values(field))
         })
     }
 
     fn body_matches(&self, request: &Request) -> bool {
-        self.body == String::from_utf8_lossy(&request.body).into_owned()
+        self.body.matches_value(&String::from_utf8_lossy(&request.body))
     }
 }
 

@@ -33,8 +33,10 @@ impl Request {
         self.error.as_ref()
     }
 
-    pub fn find_header(&self, searched_field: &str) -> Option<&String> {
-        self.headers.iter().find(|&&(ref field, _)| field == searched_field).and_then(|&(_, ref value)| Some(value))
+    pub fn find_header_values(&self, searched_field: &str) -> Vec<&str> {
+        self.headers.iter().filter(|&&(ref field, _)| field == searched_field)
+            .map(|&(_, ref value)| value.as_str())
+            .collect()
     }
 
     fn is_parsed(&self) -> bool {
