@@ -469,6 +469,7 @@ pub fn start() {
 /// These matchers are used within the `mock` and `Mock::match_header` calls.
 ///
 #[derive(Clone, PartialEq, Debug)]
+#[allow(deprecated)] // Rust bug #38832
 pub enum Matcher {
     /// Matches the exact path or header value. There's also an implementation of `From<&str>`
     /// to keep things simple and backwards compatible.
@@ -482,6 +483,8 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
+    /// Either one may match
+    Or(Box<Matcher>, Box<Matcher>),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -496,24 +499,50 @@ impl<'a> From<&'a str> for Matcher {
 
 impl PartialEq<String> for Matcher {
     fn eq(&self, other: &String) -> bool {
-        match self {
-            &Matcher::Exact(ref value) => { value == other },
-            &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
-            &Matcher::JSON(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                *json_obj == other
-            },
-            &Matcher::Json(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                *json_obj == other
-            },
-            &Matcher::JsonString(ref value) => {
-                let value: serde_json::Value = serde_json::from_str(value).unwrap();
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                value == other
-            },
-            &Matcher::Any => true,
-            &Matcher::Missing => false,
+        self.eq(&Some(other.as_str()))
+    }
+}
+
+impl<'a> PartialEq<Option<&'a String>> for Matcher {
+    fn eq(&self, other: &Option<&'a String>) -> bool {
+        self.eq(&other.map(|s| s.as_str()))
+    }
+}
+
+impl<'a> PartialEq<Option<&'a str>> for Matcher {
+    #[allow(deprecated)]
+    fn eq(&self, other_opt: &Option<&'a str>) -> bool {
+        if let &Some(other) = other_opt {
+            match self {
+                &Matcher::Exact(ref value) => { value == other },
+                &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
+                &Matcher::JSON(ref json_obj) => {
+                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                    *json_obj == other
+                },
+                &Matcher::Json(ref json_obj) => {
+                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                    *json_obj == other
+                },
+                &Matcher::JsonString(ref value) => {
+                    let value: serde_json::Value = serde_json::from_str(value).unwrap();
+                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                    value == other
+                },
+                &Matcher::Any => true,
+                &Matcher::Or(ref a, ref b) => {
+                    &**a == other_opt || &**b == other_opt
+                },
+                &Matcher::Missing => false,
+            }
+        } else {
+            match self {
+                &Matcher::Missing => true,
+                &Matcher::Or(ref a, ref b) => {
+                    &**a == other_opt || &**b == other_opt
+                },
+                _ => false,
+            }
         }
     }
 }
@@ -769,6 +798,7 @@ impl Drop for Mock {
 }
 
 impl fmt::Display for Mock {
+    #[allow(deprecated)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut formatted = String::new();
 
@@ -798,6 +828,7 @@ impl fmt::Display for Mock {
                 formatted.push_str(" (json)\r\n")
             },
             Matcher::Any => formatted.push_str("(any)\r\n"),
+            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
 
@@ -842,6 +873,11 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str("(missing)");
                 },
+                &Matcher::Or(..) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str("(or)");
+                },
             }
 
             formatted.push_str("\r\n");
@@ -869,9 +905,10 @@ impl fmt::Display for Mock {
                 formatted.push_str("\r\n")
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
-            _ => {},
+            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
+            Matcher::Any => {}
         }
 
-        write!(f, "{}", formatted)
+        f.write_str(&formatted)
     }
 }
