@@ -330,20 +330,20 @@
 //!
 //! # The `Or` matcher
 //!
-//! The `Matcher::Or` construct takes two ordinary matchers as arguments and will be enabled
+//! The `Matcher::Or` construct takes two boxed matchers as arguments and will be enabled
 //! if at least one of the provided arguments match the request.
 //!
 //! ## Example
 //!
 //! ```
-//! use mockito::mock;
+//! use mockito::{mock, Matcher};
 //!
 //! // Will match requests to POST / whenever the request body is either `hello=world` or `{"hello":"world"}`
 //! let _m = mock("POST", "/")
 //!     .match_body(
 //!         Matcher::Or(
-//!             Matcher::Exact("hello=world"),
-//!             Matcher::JsonString("{\"hello\":\"world\"}".to_string()
+//!             Box::new(Matcher::Exact("hello=world".to_string())),
+//!             Box::new(Matcher::JsonString("{\"hello\":\"world\"}".to_string())),
 //!         )
 //!      )
 //!     .create();
