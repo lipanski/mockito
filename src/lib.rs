@@ -54,9 +54,9 @@
 //! Just like any Rust object, a mock is available only through its lifetime. You'll want to assign
 //! the mocks to variables in order to extend and control their lifetime.
 //!
-//! Avoid assigning the mock to a variable named `_` (underscore). It will end its lifetime immediately.
-//! Rust treats variables named `_` in this special way. You can still use the underscore to prefix the variable
-//! name, but don't limit it to just this one character.
+//! Avoid using the underscore matcher when creating your mocks, as in `let _ = mock("GET", "/")`.
+//! This will end your mock's lifetime immediately. You can still use the underscore to prefix your variable
+//! names in an assignment, but don't limit it to just this one character.
 //!
 //! ## Example
 //!
