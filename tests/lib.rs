@@ -437,9 +437,9 @@ fn test_regex_match_header() {
 #[test]
 fn test_or_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::Or(
-            Box::new(Matcher::Exact("one".into())),
-            Box::new(Matcher::Exact("two".into()))))
+        .match_header("Via", Matcher::AnyOf(vec![
+            Matcher::Exact("one".into()),
+            Matcher::Exact("two".into())]))
         .with_body("{}")
         .create();
 
@@ -462,9 +462,9 @@ fn test_or_match_header() {
 #[test]
 fn test_or_miss_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::Or(
-            Box::new(Matcher::Exact("one".into())),
-            Box::new(Matcher::Missing)))
+        .match_header("Via", Matcher::AnyOf(vec![
+            Matcher::Exact("one".into()),
+            Matcher::Missing]))
         .with_body("{}")
         .create();
 

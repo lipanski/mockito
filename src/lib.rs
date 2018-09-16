@@ -328,10 +328,10 @@
 //!     .create();
 //! ```
 //!
-//! # The `Or` matcher
+//! # The `AnyOf` matcher
 //!
-//! The `Matcher::Or` construct takes two boxed matchers as arguments and will be enabled
-//! if at least one of the provided arguments match the request.
+//! The `Matcher::AnyOf` construct takes a vector of matchers as arguments and will be enabled
+//! if at least one of the provided matchers matches the request.
 //!
 //! ## Example
 //!
@@ -341,10 +341,10 @@
 //! // Will match requests to POST / whenever the request body is either `hello=world` or `{"hello":"world"}`
 //! let _m = mock("POST", "/")
 //!     .match_body(
-//!         Matcher::Or(
-//!             Box::new(Matcher::Exact("hello=world".to_string())),
-//!             Box::new(Matcher::JsonString("{\"hello\":\"world\"}".to_string())),
-//!         )
+//!         Matcher::AnyOf(vec![
+//!             Matcher::Exact("hello=world".to_string()),
+//!             Matcher::JsonString("{\"hello\":\"world\"}".to_string()),
+//!         ])
 //!      )
 //!     .create();
 //!```
@@ -503,8 +503,8 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
-    /// Either one may match
-    Or(Box<Matcher>, Box<Matcher>),
+    /// At least one must match
+    AnyOf(Vec<Matcher>),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -521,12 +521,12 @@ impl Matcher {
     fn matches_values(&self, header_values: &[&str]) -> bool {
         match self {
             &Matcher::Missing => header_values.is_empty(),
-            // Or(…Missing…) is handled here, but
-            // Or(Something, Something) is handled in the last block.
+            // AnyOf([…Missing…]) is handled here, but
+            // AnyOf([Something]) is handled in the last block.
             // That's because Missing matches against all values at once,
             // but other matchers match against individual values.
-            &Matcher::Or(ref a, ref b) if header_values.is_empty() => {
-                a.matches_values(header_values) || b.matches_values(header_values)
+            &Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
+                matchers.iter().any(|m| m.matches_values(header_values))
             },
             _ => !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val)),
         }
@@ -551,8 +551,8 @@ impl Matcher {
                 value == other
             },
             &Matcher::Any => true,
-            &Matcher::Or(ref a, ref b) => {
-                a.matches_value(other) || b.matches_value(other)
+            &Matcher::AnyOf(ref matchers) => {
+                matchers.iter().any(|m| m.matches_value(other))
             },
             &Matcher::Missing => false,
         }
@@ -840,7 +840,7 @@ impl fmt::Display for Mock {
                 formatted.push_str(" (json)\r\n")
             },
             Matcher::Any => formatted.push_str("(any)\r\n"),
-            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
+            Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
 
@@ -885,10 +885,10 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str("(missing)");
                 },
-                &Matcher::Or(..) => {
+                &Matcher::AnyOf(..) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
-                    formatted.push_str("(or)");
+                    formatted.push_str("(any of)");
                 },
             }
 
@@ -917,7 +917,7 @@ impl fmt::Display for Mock {
                 formatted.push_str("\r\n")
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
-            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
+            Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
             Matcher::Any => {}
         }
 
