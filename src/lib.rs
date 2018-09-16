@@ -251,7 +251,7 @@
 //!  .create();
 //!
 //! // Requests containing any content-type header value will be mocked.
-//! // Requests not containing this header will return `501 Not Implemented`.
+//! // Requests not containing this header will return `501 Mock Not Found`.
 //! ```
 //!
 //! You can mock requests that should be *missing a particular header field*, by setting the `Mock::match_header`
@@ -268,7 +268,7 @@
 //!   .create();
 //!
 //! // Requests without the authorization header will be matched.
-//! // Requests containing the authorization header will return `501 Not Implemented`.
+//! // Requests containing the authorization header will return `501 Mock Not Found`.
 //! ```
 //!
 //! # Matching by body
@@ -351,7 +351,7 @@
 //!
 //! # Non-matching calls
 //!
-//! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.
+//! Any calls to the Mockito server that are not matched will return *501 Mock Not Found*.
 //!
 //! Note that **mocks are matched in reverse order** - the most recent one wins.
 //!

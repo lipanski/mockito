@@ -162,9 +162,9 @@ fn respond_with_mock(stream: TcpStream, mock: &Mock) {
 }
 
 fn respond_with_mock_not_found(stream: TcpStream) {
-    respond(stream, "501 Not Implemented", None, None);
+    respond(stream, "501 Mock Not Found", None, None);
 }
 
 fn respond_with_error(stream: TcpStream, message: &str) {
-    respond(stream, "422 Unprocessable Entity", None, Some(message));
+    respond(stream, "422 Mock Error", None, Some(message));
 }
