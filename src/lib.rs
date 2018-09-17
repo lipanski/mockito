@@ -328,10 +328,10 @@
 //!     .create();
 //! ```
 //!
-//! # The `Or` matcher
+//! # The `AnyOf` matcher
 //!
-//! The `Matcher::Or` construct takes two boxed matchers as arguments and will be enabled
-//! if at least one of the provided arguments match the request.
+//! The `Matcher::AnyOf` construct takes a vector of matchers as arguments and will be enabled
+//! if at least one of the provided matchers matches the request.
 //!
 //! ## Example
 //!
@@ -341,10 +341,10 @@
 //! // Will match requests to POST / whenever the request body is either `hello=world` or `{"hello":"world"}`
 //! let _m = mock("POST", "/")
 //!     .match_body(
-//!         Matcher::Or(
-//!             Box::new(Matcher::Exact("hello=world".to_string())),
-//!             Box::new(Matcher::JsonString("{\"hello\":\"world\"}".to_string())),
-//!         )
+//!         Matcher::AnyOf(vec![
+//!             Matcher::Exact("hello=world".to_string()),
+//!             Matcher::JsonString("{\"hello\":\"world\"}".to_string()),
+//!         ])
 //!      )
 //!     .create();
 //!```
@@ -418,7 +418,6 @@ type Response = response::Response;
 
 use std::fs::File;
 use std::io::Read;
-use std::cmp::PartialEq;
 use std::convert::{From, Into};
 use std::ops::Drop;
 use std::fmt;
@@ -504,8 +503,8 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
-    /// Either one may match
-    Or(Box<Matcher>, Box<Matcher>),
+    /// At least one must match
+    AnyOf(Vec<Matcher>),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -518,52 +517,44 @@ impl<'a> From<&'a str> for Matcher {
     }
 }
 
-impl PartialEq<String> for Matcher {
-    fn eq(&self, other: &String) -> bool {
-        self.eq(&Some(other.as_str()))
+impl Matcher {
+    fn matches_values(&self, header_values: &[&str]) -> bool {
+        match self {
+            &Matcher::Missing => header_values.is_empty(),
+            // AnyOf([…Missing…]) is handled here, but
+            // AnyOf([Something]) is handled in the last block.
+            // That's because Missing matches against all values at once,
+            // but other matchers match against individual values.
+            &Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
+                matchers.iter().any(|m| m.matches_values(header_values))
+            },
+            _ => !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val)),
+        }
     }
-}
 
-impl<'a> PartialEq<Option<&'a String>> for Matcher {
-    fn eq(&self, other: &Option<&'a String>) -> bool {
-        self.eq(&other.map(|s| s.as_str()))
-    }
-}
-
-impl<'a> PartialEq<Option<&'a str>> for Matcher {
     #[allow(deprecated)]
-    fn eq(&self, other_opt: &Option<&'a str>) -> bool {
-        if let &Some(other) = other_opt {
-            match self {
-                &Matcher::Exact(ref value) => { value == other },
-                &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
-                &Matcher::JSON(ref json_obj) => {
-                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                    *json_obj == other
-                },
-                &Matcher::Json(ref json_obj) => {
-                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                    *json_obj == other
-                },
-                &Matcher::JsonString(ref value) => {
-                    let value: serde_json::Value = serde_json::from_str(value).unwrap();
-                    let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                    value == other
-                },
-                &Matcher::Any => true,
-                &Matcher::Or(ref a, ref b) => {
-                    &**a == other_opt || &**b == other_opt
-                },
-                &Matcher::Missing => false,
-            }
-        } else {
-            match self {
-                &Matcher::Missing => true,
-                &Matcher::Or(ref a, ref b) => {
-                    &**a == other_opt || &**b == other_opt
-                },
-                _ => false,
-            }
+    fn matches_value(&self, other: &str) -> bool {
+        match self {
+            &Matcher::Exact(ref value) => { value == other },
+            &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
+            &Matcher::JSON(ref json_obj) => {
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                *json_obj == other
+            },
+            &Matcher::Json(ref json_obj) => {
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                *json_obj == other
+            },
+            &Matcher::JsonString(ref value) => {
+                let value: serde_json::Value = serde_json::from_str(value).unwrap();
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                value == other
+            },
+            &Matcher::Any => true,
+            &Matcher::AnyOf(ref matchers) => {
+                matchers.iter().any(|m| m.matches_value(other))
+            },
+            &Matcher::Missing => false,
         }
     }
 }
@@ -849,7 +840,7 @@ impl fmt::Display for Mock {
                 formatted.push_str(" (json)\r\n")
             },
             Matcher::Any => formatted.push_str("(any)\r\n"),
-            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
+            Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
 
@@ -894,10 +885,10 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str("(missing)");
                 },
-                &Matcher::Or(..) => {
+                &Matcher::AnyOf(..) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
-                    formatted.push_str("(or)");
+                    formatted.push_str("(any of)");
                 },
             }
 
@@ -926,7 +917,7 @@ impl fmt::Display for Mock {
                 formatted.push_str("\r\n")
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
-            Matcher::Or(..) => formatted.push_str("(or)\r\n"),
+            Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
             Matcher::Any => {}
         }
 

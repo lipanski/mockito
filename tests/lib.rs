@@ -437,9 +437,9 @@ fn test_regex_match_header() {
 #[test]
 fn test_or_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::Or(
-            Box::new(Matcher::Exact("one".into())),
-            Box::new(Matcher::Exact("two".into()))))
+        .match_header("Via", Matcher::AnyOf(vec![
+            Matcher::Exact("one".into()),
+            Matcher::Exact("two".into())]))
         .with_body("{}")
         .create();
 
@@ -452,6 +452,9 @@ fn test_or_match_header() {
     let (_, _, body_json) = request("GET /", "Via: one\r\nVia: two\r\n");
     assert_eq!("{}", body_json);
 
+    let (status_line, _, _) = request("GET /", "Via: one\r\nVia: two\r\nVia: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
     let (status_line, _, _) = request("GET /", "Via: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
@@ -459,19 +462,28 @@ fn test_or_match_header() {
 #[test]
 fn test_or_miss_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::Or(
-            Box::new(Matcher::Exact("one".into())),
-            Box::new(Matcher::Missing)))
+        .match_header("Via", Matcher::AnyOf(vec![
+            Matcher::Exact("one".into()),
+            Matcher::Missing]))
         .with_body("{}")
         .create();
 
     let (_, _, body_json) = request("GET /", "Via: one\r\n");
     assert_eq!("{}", body_json);
 
-    let (_, _, body_json) = request("GET /", "NotVia: two\r\n");
+    let (_, _, body_json) = request("GET /", "Via: one\r\nVia: one\r\nVia: one\r\n");
+    assert_eq!("{}", body_json);
+
+    let (_, _, body_json) = request("GET /", "NotVia: one\r\n");
     assert_eq!("{}", body_json);
 
     let (status_line, _, _) = request("GET /", "Via: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: wrong\r\nVia: one\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: one\r\nVia: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
