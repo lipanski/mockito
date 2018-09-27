@@ -7,6 +7,7 @@ use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
 use std::mem;
 use std::thread;
+use rand::distributions::Alphanumeric;
 use rand::Rng;
 use mockito::{SERVER_ADDRESS, mock, Matcher};
 
@@ -490,7 +491,7 @@ fn test_or_miss_match_header() {
 #[test]
 fn test_large_utf8_body() {
     let mock_body: String = rand::thread_rng()
-        .gen_iter::<char>()
+        .sample_iter(&Alphanumeric)
         .take(3 * 1024) // Must be larger than the request read buffer
         .collect();
 
