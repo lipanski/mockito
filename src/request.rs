@@ -95,7 +95,7 @@ impl<'a> From<&'a mut TcpStream> for Request {
             request.error = Some(parser.error().to_string());
         } else {
             request.version = parser.http_version();
-            request.method = parser.http_method().to_string();
+            request.method = parser.http_method().to_string().to_uppercase();
         }
 
         request
