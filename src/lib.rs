@@ -421,6 +421,7 @@ use std::io::Read;
 use std::convert::{From, Into};
 use std::ops::Drop;
 use std::fmt;
+use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::sync::{Mutex, LockResult, MutexGuard};
@@ -578,7 +579,7 @@ pub struct Mock {
 impl Mock {
     fn new<P: Into<Matcher>>(method: &str, path: P) -> Self {
         Mock {
-            id: thread_rng().gen_ascii_chars().take(24).collect(),
+            id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
             method: method.to_owned().to_uppercase(),
             path: path.into(),
             headers: Vec::new(),
