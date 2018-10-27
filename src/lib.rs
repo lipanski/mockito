@@ -19,10 +19,10 @@
 //! use mockito;
 //!
 //! #[cfg(not(test))]
-//! const URL: &'static str = "https://api.twitter.com";
+//! const URL: &str = "https://api.twitter.com";
 //!
 //! #[cfg(test)]
-//! const URL: &'static str = mockito::SERVER_URL;
+//! const URL: &str = mockito::SERVER_URL;
 //! ```
 //!
 //! Then start mocking:
@@ -441,12 +441,12 @@ thread_local!(
 /// Points to the address the mock server is running at.
 /// Can be used with `std::net::TcpStream`.
 ///
-pub const SERVER_ADDRESS: &'static str = "127.0.0.1:1234";
+pub const SERVER_ADDRESS: &str = "127.0.0.1:1234";
 
 ///
 /// Points to the URL the mock server is running at.
 ///
-pub const SERVER_URL: &'static str = "http://127.0.0.1:1234";
+pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
