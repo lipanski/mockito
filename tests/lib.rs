@@ -502,6 +502,16 @@ fn test_large_utf8_body() {
 }
 
 #[test]
+fn test_body_from_file() {
+    let _m = mock("GET", "/")
+        .with_body_from_file("tests/files/simple.http")
+        .create();
+    let (status_line, _, body) = request("GET /", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+    assert_eq!("test body\n", body);
+}
+
+#[test]
 fn test_display_mock_matching_exact_path() {
     let mock = mock("GET", "/hello");
 
