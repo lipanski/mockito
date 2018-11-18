@@ -25,22 +25,19 @@ Before upgrading, make sure to check out the [changelog](https://github.com/lipa
 
 Run tests:
 
-```
-cargo test --tests
-
-# See https://github.com/lipanski/mockito/issues/36
-cargo test --doc -- --test-threads=1
+```sh
+cargo test
 ```
 
 Release:
 
-```
+```sh
 cargo package && cargo publish
 ```
 
 Run benchmarks:
 
-```
+```sh
 rustup install nightly
 rustup run nightly cargo bench
 ```
