@@ -93,7 +93,7 @@
 //!
 //! ## Example
 //!
-//! ```
+//! ```no_run
 //! use std::net::TcpStream;
 //! use std::io::{Read, Write};
 //! use mockito::{mock, SERVER_ADDRESS};
@@ -116,7 +116,7 @@
 //!
 //! ## Example
 //!
-//! ```
+//! ```no_run
 //! use std::net::TcpStream;
 //! use std::io::{Read, Write};
 //! use mockito::{mock, SERVER_ADDRESS};
@@ -399,7 +399,7 @@
 //! still be run in parallel.
 //!
 
-extern crate http_muncher;
+extern crate httparse;
 extern crate rand;
 extern crate regex;
 #[macro_use] extern crate lazy_static;
