@@ -18,4 +18,4 @@ install:
   - cargo -vV
 build: false
 test_script:
-  - cargo test -- --test-threads=1
+  - cargo test

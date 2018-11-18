@@ -82,8 +82,6 @@
 //! Creating mocks from threads is currently not possible. Please use the main (test) thread for that.
 //! See the note on threads at the end for more details.
 //!
-//! If you intend to use mocks in doctests, please check <https://github.com/lipanski/mockito/issues/36>.
-//!
 //! # Asserts
 //!
 //! You can use the `Mock::assert` method to **assert that a mock was called**. In other words, the
