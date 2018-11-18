@@ -1,3 +1,8 @@
+* fcf39f3 2018-11-18 | Bump to 0.14.0
+
+test bench_create_simple_mock ... bench:      30,823 ns/iter (+/- 756,564)
+test bench_match_simple_mock  ... bench:      58,462 ns/iter (+/- 14,462)
+
 * cb89093 2017-07-11 | Bump to 0.8.0
 
 test bench_create_simple_mock ... bench:      17,110 ns/iter (+/- 6,187)
