@@ -495,9 +495,6 @@ pub enum Matcher {
     Exact(String),
     /// Matches a path or header value by a regular expression.
     Regex(String),
-    /// Matches a specified JSON body
-    #[deprecated(since="0.11.1", note="Please use `Matcher::Json` instead")]
-    JSON(serde_json::Value),
     /// Matches a specified JSON body from a `serde_json::Value`
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
@@ -536,10 +533,6 @@ impl Matcher {
         match self {
             &Matcher::Exact(ref value) => { value == other },
             &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
-            &Matcher::JSON(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                *json_obj == other
-            },
             &Matcher::Json(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 *json_obj == other
@@ -826,10 +819,6 @@ impl fmt::Display for Mock {
                 formatted.push_str(value);
                 formatted.push_str(" (regex)\r\n")
             },
-            Matcher::JSON(ref json_obj) => {
-                formatted.push_str(&json_obj.to_string());
-                formatted.push_str(" (json)\r\n")
-            },
             Matcher::Json(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
                 formatted.push_str(" (json)\r\n")
@@ -855,12 +844,6 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (regex)")
-                },
-                &Matcher::JSON(ref json_obj) => {
-                    formatted.push_str(key);
-                    formatted.push_str(": ");
-                    formatted.push_str(&json_obj.to_string());
-                    formatted.push_str(" (json)")
                 },
                 &Matcher::Json(ref json_obj) => {
                     formatted.push_str(key);
@@ -902,10 +885,6 @@ impl fmt::Display for Mock {
             Matcher::Regex(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");
-            },
-            Matcher::JSON(ref json_obj) => {
-                formatted.push_str(&json_obj.to_string());
-                formatted.push_str("\r\n")
             },
             Matcher::Json(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
