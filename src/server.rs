@@ -42,7 +42,7 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
-        State {
+        Self {
             is_listening: is_listening(),
             mocks: Vec::new(),
             unmatched_requests: Vec::new(),
@@ -70,21 +70,18 @@ fn start() {
         let listener = TcpListener::bind(SERVER_ADDRESS).unwrap();
         debug!("Server is listening");
         for stream in listener.incoming() {
-            match stream {
-                Ok(mut stream) => {
-                    let request = Request::from(&mut stream);
-                    debug!("Request received: {}", request);
-                    if request.is_ok() {
-                        handle_request(request, stream);
-                    } else {
-                        let message = request.error().map_or("Could not parse the request.", |err| err.as_str());
-                        debug!("Could not parse request because: {}", message);
-                        respond_with_error(stream, message);
-                    }
-                },
-                Err(_) => {
-                    debug!("Could not read from stream");
-                },
+            if let Ok(mut stream) = stream{
+                let request = Request::from(&mut stream);
+                debug!("Request received: {}", request);
+                if request.is_ok() {
+                    handle_request(request, stream);
+                } else {
+                    let message = request.error().map_or("Could not parse the request.", |err| err.as_str());
+                    debug!("Could not parse request because: {}", message);
+                    respond_with_error(stream, message);
+                }
+            } else {
+                debug!("Could not read from stream");
             }
         }
     });
@@ -108,18 +105,15 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
     let state_mutex = STATE.clone();
     let mut state = state_mutex.lock().unwrap();
 
-    match state.mocks.iter_mut().rev().find(|mock| mock == &request) {
-        Some(mock) => {
-            debug!("Mock found");
-            found = true;
-            mock.hits = mock.hits + 1;
-            respond_with_mock(stream, &mock);
-        },
-        None => {
-            debug!("Mock not found");
-            found = false;
-            respond_with_mock_not_found(stream);
-        }
+    if let Some(mock) = state.mocks.iter_mut().rev().find(|mock| mock == &request) {
+        debug!("Mock found");
+        found = true;
+        mock.hits += 1;
+        respond_with_mock(stream, mock);
+    } else {
+        debug!("Mock not found");
+        found = false;
+        respond_with_mock_not_found(stream);
     }
 
     if !found { state.unmatched_requests.push(request); }
@@ -137,7 +131,6 @@ fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&
     }
 
     if let Some(body) = body {
-        let body = body.as_ref();
         response.extend(format!("content-length: {}\r\n\r\n", body.len()).as_bytes());
         response.extend(body);
     } else {
