@@ -29,6 +29,13 @@ Run tests:
 cargo test
 ```
 
+Run [clippy](https://github.com/rust-lang/rust-clippy)
+```sh
+rustup component add clippy-preview
+touch src/lib.rs  # Touch the file to force cargo to rerun clippy on the project
+cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
+```
+
 Release:
 
 ```sh

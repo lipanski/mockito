@@ -33,9 +33,13 @@ impl Request {
     }
 
     pub fn find_header_values(&self, searched_field: &str) -> Vec<&str> {
-        self.headers.iter().filter(|&&(ref field, _)| field == searched_field)
-            .map(|&(_, ref value)| value.as_str())
-            .collect()
+        self.headers.iter().filter_map(|(field, value)| {
+            if field == searched_field {
+                Some(value.as_str())
+            } else {
+                None
+            }
+        }).collect()
     }
 
     fn record_last_header(&mut self) {
@@ -49,7 +53,7 @@ impl Request {
 
 impl Default for Request {
     fn default() -> Self {
-        Request {
+        Self {
             version: (1, 1),
             method: String::new(),
             path: String::new(),
@@ -65,7 +69,7 @@ impl Default for Request {
 
 impl<'a> From<&'a mut TcpStream> for Request {
     fn from(stream: &mut TcpStream) -> Self {
-        let mut request = Request::default();
+        let mut request = Self::default();
         let mut buf = [0; 1024];
 
         let rlen = match stream.read(&mut buf) {
@@ -105,13 +109,13 @@ impl fmt::Display for Request {
         write!(f, "\r\n{} {}\r\n", &self.method, &self.path)?;
 
         for &(ref key, ref value) in &self.headers {
-            write!(f, "{}: {}\r\n", key, value)?;
+            writeln!(f, "{}: {}\r", key, value)?;
         }
 
-        if !self.body.is_empty() {
-            write!(f, "{}\r\n", &String::from_utf8_lossy(&self.body))
-        } else {
+        if self.body.is_empty() {
             write!(f, "")
+        } else {
+            writeln!(f, "{}\r", &String::from_utf8_lossy(&self.body))
         }
     }
 }

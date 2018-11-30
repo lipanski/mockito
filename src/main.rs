@@ -1,7 +1,11 @@
 extern crate mockito;
 
+use std::time::Duration;
+
 fn main() {
     mockito::start();
 
-    loop {}
+    loop {
+        std::thread::sleep(Duration::from_secs(1))
+    }
 }

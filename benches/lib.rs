@@ -32,7 +32,7 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
         if header_line == "\r\n" { break }
 
         if header_line.starts_with("content-length:") {
-            let mut parts = header_line.split(":");
+            let mut parts = header_line.split(':');
             content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
         }
 

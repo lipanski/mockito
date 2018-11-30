@@ -508,7 +508,7 @@ pub enum Matcher {
 }
 
 impl<'a> From<&'a str> for Matcher {
-    fn from(value: &str) -> Matcher {
+    fn from(value: &str) -> Self {
         Matcher::Exact(value.to_string())
     }
 }
@@ -516,12 +516,12 @@ impl<'a> From<&'a str> for Matcher {
 impl Matcher {
     fn matches_values(&self, header_values: &[&str]) -> bool {
         match self {
-            &Matcher::Missing => header_values.is_empty(),
+            Matcher::Missing => header_values.is_empty(),
             // AnyOf([…Missing…]) is handled here, but
             // AnyOf([Something]) is handled in the last block.
             // That's because Missing matches against all values at once,
             // but other matchers match against individual values.
-            &Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
+            Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
                 matchers.iter().any(|m| m.matches_values(header_values))
             },
             _ => !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val)),
@@ -531,22 +531,22 @@ impl Matcher {
     #[allow(deprecated)]
     fn matches_value(&self, other: &str) -> bool {
         match self {
-            &Matcher::Exact(ref value) => { value == other },
-            &Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
-            &Matcher::Json(ref json_obj) => {
+            Matcher::Exact(ref value) => { value == other },
+            Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
+            Matcher::Json(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 *json_obj == other
             },
-            &Matcher::JsonString(ref value) => {
+            Matcher::JsonString(ref value) => {
                 let value: serde_json::Value = serde_json::from_str(value).unwrap();
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 value == other
             },
-            &Matcher::Any => true,
-            &Matcher::AnyOf(ref matchers) => {
+            Matcher::Any => true,
+            Matcher::AnyOf(ref matchers) => {
                 matchers.iter().any(|m| m.matches_value(other))
             },
-            &Matcher::Missing => false,
+            Matcher::Missing => false,
         }
     }
 }
@@ -569,7 +569,7 @@ pub struct Mock {
 
 impl Mock {
     fn new<P: Into<Matcher>>(method: &str, path: P) -> Self {
-        Mock {
+        Self {
             id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
             method: method.to_owned().to_uppercase(),
             path: path.into(),
@@ -834,40 +834,40 @@ impl fmt::Display for Mock {
 
         for &(ref key, ref value) in &self.headers {
             match value {
-                &Matcher::Exact(ref value) => {
+                Matcher::Exact(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
                 },
-                &Matcher::Regex(ref value) => {
+                Matcher::Regex(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (regex)")
                 },
-                &Matcher::Json(ref json_obj) => {
+                Matcher::Json(ref json_obj) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(&json_obj.to_string());
                     formatted.push_str(" (json)")
                 },
-                &Matcher::JsonString(ref value) => {
+                Matcher::JsonString(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (json)")
                 },
-                &Matcher::Any => {
+                Matcher::Any => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(any)");
                 },
-                &Matcher::Missing => {
+                Matcher::Missing => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(missing)");
                 },
-                &Matcher::AnyOf(..) => {
+                Matcher::AnyOf(..) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(any of)");
@@ -878,20 +878,12 @@ impl fmt::Display for Mock {
         }
 
         match self.body {
-            Matcher::Exact(ref value) => {
-                formatted.push_str(value);
-                formatted.push_str("\r\n");
-            },
-            Matcher::Regex(ref value) => {
+            Matcher::Exact(ref value) | Matcher::JsonString(ref value) | Matcher::Regex(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");
             },
             Matcher::Json(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
-                formatted.push_str("\r\n")
-            },
-            Matcher::JsonString(ref value) => {
-                formatted.push_str(value);
                 formatted.push_str("\r\n")
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
