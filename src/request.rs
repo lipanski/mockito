@@ -6,6 +6,8 @@ use std::default::Default;
 use std::net::TcpStream;
 use std::fmt;
 
+use httparse;
+
 #[derive(Debug)]
 pub struct Request {
     version: (u8, u8),
