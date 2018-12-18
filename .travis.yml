@@ -1,18 +1,35 @@
 language: rust
 rust:
+  - 1.31.0  # pinned toolchain for clippy
+  - 1.29.0  # minimum supported toolchain
   - stable
+  - beta
   - nightly
+
+matrix:
+  allow_failures:
+    - rust: nightly
+
 branches:
   only:
     - master
-install:
-  - rustup component add clippy-preview
+
+env:
+  global:
+    - CLIPPY_RUST_VERSION=1.31.0
+
+before_script:
+  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "$CLIPPY_RUST_VERSION" ]]; then
+      rustup component add clippy;
+    fi'
+
 script:
   - cargo test
-  # Run clippy on codebase
-  - touch src/lib.rs  # Touch is needed to force clippy to check the code
   # Running clippy on lib and tests only as bench uses features not available on stable toolchain
-  - cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
+  - bash -c 'if [[ "$TRAVIS_RUST_VERSION" == "$CLIPPY_RUST_VERSION" ]]; then
+      cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery;
+    fi'
+
 notifications:
   email:
     on_success: never
