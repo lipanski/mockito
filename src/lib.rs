@@ -3,7 +3,7 @@
 
 //!
 //! Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
-//! It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.
+//! It runs an HTTP server on a local port which delivers, creates and remove the mocks.
 //!
 //! The server is run on a separate thread within the same process and will be removed
 //! at the end of the run.
@@ -439,12 +439,18 @@ thread_local!(
 /// Points to the address the mock server is running at.
 /// Can be used with `std::net::TcpStream`.
 ///
-pub const SERVER_ADDRESS: &str = "127.0.0.1:1234";
+#[deprecated(note="Call server_address() instead")]
+pub const SERVER_ADDRESS: &str = SERVER_ADDRESS_INTERNAL;
+const SERVER_ADDRESS_INTERNAL: &str = "127.0.0.1:1234";
 
 ///
 /// Points to the URL the mock server is running at.
 ///
+#[deprecated(note="Call server_url() instead")]
 pub const SERVER_URL: &str = "http://127.0.0.1:1234";
+
+pub use server::server_address;
+pub use server::server_url;
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
