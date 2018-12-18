@@ -401,11 +401,11 @@ extern crate httparse;
 extern crate rand;
 extern crate regex;
 #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate log;
 extern crate serde_json;
 extern crate difference;
 extern crate colored;
 
-#[macro_use] mod logger;
 mod server;
 mod request;
 mod response;

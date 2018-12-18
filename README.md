@@ -49,6 +49,24 @@ rustup install nightly
 rustup run nightly cargo bench
 ```
 
+## Debug output from tests
+
+In your project, add [`env_logger`](https://crates.rs/crates/env_logger) crate, and init it before each test:
+
+```rust
+#[test]
+fn example_test() {
+    let _ = env_logger::try_init();
+    /* … */
+}
+```
+
+and run tests with:
+
+```sh
+RUST_LOG=mockito=debug cargo test
+```
+
 ---
 
 Logo courtesy to [http://niastudio.net](http://niastudio.net) :ok_hand:
