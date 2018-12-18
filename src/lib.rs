@@ -471,8 +471,7 @@ pub fn mock<P: Into<Matcher>>(method: &str, path: P) -> Mock {
 pub fn reset() {
     server::try_start();
 
-    let state_mutex = server::STATE.clone();
-    let mut state = state_mutex.lock().unwrap();
+    let mut state = server::STATE.lock().unwrap();
     state.mocks.clear();
 }
 
@@ -727,8 +726,7 @@ impl Mock {
         let mut opt_message = None;
 
         {
-            let state_mutex = server::STATE.clone();
-            let state = state_mutex.lock().unwrap();
+            let state = server::STATE.lock().unwrap();
 
             if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
                 opt_hits = Some(remote_mock.hits);
@@ -769,8 +767,7 @@ impl Mock {
         // Ensures Mockito tests are run sequentially.
         LOCAL_TEST_MUTEX.with(|_| {});
 
-        let state_mutex = server::STATE.clone();
-        let mut state = state_mutex.lock().unwrap();
+        let mut state = server::STATE.lock().unwrap();
 
         let mut remote_mock = self.clone();
         remote_mock.is_remote = true;
@@ -789,8 +786,7 @@ impl Mock {
 impl Drop for Mock {
     fn drop(&mut self) {
         if self.is_local() {
-            let state_mutex = server::STATE.clone();
-            let mut state = state_mutex.lock().unwrap();
+            let mut state = server::STATE.lock().unwrap();
 
             if let Some(pos) = state.mocks.iter().position(|mock| mock.id == self.id) {
                 state.mocks.remove(pos);

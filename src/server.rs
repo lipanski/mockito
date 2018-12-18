@@ -2,7 +2,7 @@ use std::thread;
 use std::io::Write;
 use std::fmt::Display;
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use {SERVER_ADDRESS, Request, Mock};
 
 impl Mock {
@@ -51,7 +51,7 @@ impl Default for State {
 }
 
 lazy_static! {
-    pub static ref STATE: Arc<Mutex<State>> = Arc::new(Mutex::new(State::default()));
+    pub static ref STATE: Mutex<State> = Mutex::new(State::default());
 }
 
 pub fn try_start() {
@@ -61,8 +61,7 @@ pub fn try_start() {
 }
 
 fn start() {
-    let state_mutex = STATE.clone();
-    let mut state = state_mutex.lock().unwrap();
+    let mut state = STATE.lock().unwrap();
 
     if state.is_listening { return }
 
@@ -102,8 +101,7 @@ fn handle_request(request: Request, stream: TcpStream) {
 fn handle_match_mock(request: Request, stream: TcpStream) {
     let found;
 
-    let state_mutex = STATE.clone();
-    let mut state = state_mutex.lock().unwrap();
+    let mut state = STATE.lock().unwrap();
 
     if let Some(mock) = state.mocks.iter_mut().rev().find(|mock| mock == &request) {
         debug!("Mock found");
