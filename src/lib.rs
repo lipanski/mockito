@@ -10,7 +10,7 @@
 //!
 //! # Getting Started
 //!
-//! Using compiler flags, set the URL of your web client to `mockito::SERVER_URL` or `mockito::SERVER_ADDRESS`.
+//! Using compiler flags, set the URL of your web client to address returned by `mockito::server_url()` or `mockito::server_address()`.
 //!
 //! ## Example
 //!
@@ -19,10 +19,10 @@
 //! use mockito;
 //!
 //! #[cfg(not(test))]
-//! const URL: &str = "https://api.twitter.com";
+//! let url = "https://api.twitter.com";
 //!
 //! #[cfg(test)]
-//! const URL: &str = mockito::SERVER_URL;
+//! let url = &mockito::server_url();
 //! ```
 //!
 //! Then start mocking:
@@ -94,13 +94,13 @@
 //! ```no_run
 //! use std::net::TcpStream;
 //! use std::io::{Read, Write};
-//! use mockito::{mock, SERVER_ADDRESS};
+//! use mockito::{mock, server_address};
 //!
 //! let mock = mock("GET", "/hello").create();
 //!
 //! {
 //!     // Place a request
-//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
 //!     stream.read_to_string(&mut response).unwrap();
@@ -117,13 +117,13 @@
 //! ```no_run
 //! use std::net::TcpStream;
 //! use std::io::{Read, Write};
-//! use mockito::{mock, SERVER_ADDRESS};
+//! use mockito::{mock, server_address};
 //!
 //! let mock = mockito::mock("GET", "/hello").expect(3).create();
 //!
 //! for _ in 0..3 {
 //!     // Place a request
-//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
 //!     stream.read_to_string(&mut response).unwrap();

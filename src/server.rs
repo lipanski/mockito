@@ -83,19 +83,25 @@ pub fn try_start() {
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
-        let listener = match TcpListener::bind(SERVER_ADDRESS_INTERNAL) {
+        let res = TcpListener::bind(SERVER_ADDRESS_INTERNAL)
+        .or_else(|err| {
+            warn!("{}", err);
+            TcpListener::bind("127.0.0.1:0")
+        });
+        let (listener, addr) = match res {
             Ok(listener) => {
-                tx.send(listener.local_addr().ok()).unwrap();
-                listener
+                let addr = listener.local_addr().unwrap();
+                tx.send(Some(addr)).unwrap();
+                (listener, addr)
             },
             Err(err) => {
-                debug!("{}", err);
+                error!("{}", err);
                 tx.send(None).unwrap();
                 return;
             },
         };
 
-        debug!("Server is listening");
+        debug!("Server is listening at {}", addr);
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream{
                 let request = Request::from(&mut stream);
