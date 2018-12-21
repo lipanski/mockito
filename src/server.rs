@@ -2,8 +2,9 @@ use std::thread;
 use std::io::Write;
 use std::fmt::Display;
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use {SERVER_ADDRESS, Request, Mock};
+use std::sync::mpsc;
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -40,10 +41,10 @@ pub struct State {
     pub unmatched_requests: Vec<Request>,
 }
 
-impl Default for State {
-    fn default() -> Self {
+impl State {
+    fn new() -> Self {
         Self {
-            is_listening: is_listening(),
+            is_listening: false,
             mocks: Vec::new(),
             unmatched_requests: Vec::new(),
         }
@@ -51,23 +52,28 @@ impl Default for State {
 }
 
 lazy_static! {
-    pub static ref STATE: Arc<Mutex<State>> = Arc::new(Mutex::new(State::default()));
+    pub static ref STATE: Mutex<State> = Mutex::new(State::new());
 }
 
 pub fn try_start() {
-    if is_listening() { return }
-
-    start()
-}
-
-fn start() {
-    let state_mutex = STATE.clone();
-    let mut state = state_mutex.lock().unwrap();
+    let mut state = STATE.lock().unwrap();
 
     if state.is_listening { return }
+    let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
-        let listener = TcpListener::bind(SERVER_ADDRESS).unwrap();
+        let listener = match TcpListener::bind(SERVER_ADDRESS) {
+            Ok(listener) => {
+                tx.send(true).unwrap();
+                listener
+            },
+            Err(err) => {
+                debug!("{}", err);
+                tx.send(false).unwrap();
+                return;
+            },
+        };
+
         debug!("Server is listening");
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream{
@@ -86,13 +92,7 @@ fn start() {
         }
     });
 
-    while !is_listening() {}
-
-    state.is_listening = true;
-}
-
-fn is_listening() -> bool {
-    TcpStream::connect(SERVER_ADDRESS).is_ok()
+    state.is_listening = rx.recv() == Ok(true);
 }
 
 fn handle_request(request: Request, stream: TcpStream) {
@@ -102,8 +102,7 @@ fn handle_request(request: Request, stream: TcpStream) {
 fn handle_match_mock(request: Request, stream: TcpStream) {
     let found;
 
-    let state_mutex = STATE.clone();
-    let mut state = state_mutex.lock().unwrap();
+    let mut state = STATE.lock().unwrap();
 
     if let Some(mock) = state.mocks.iter_mut().rev().find(|mock| mock == &request) {
         debug!("Mock found");
