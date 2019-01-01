@@ -7,10 +7,10 @@ use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
 use test::Bencher;
-use mockito::{SERVER_ADDRESS, mock, reset};
+use mockito::{server_address, mock, reset};
 
 fn request_stream(route: &str, headers: &str) -> TcpStream {
-    let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+    let mut stream = TcpStream::connect(server_address()).unwrap();
     let message = [route, " HTTP/1.1\r\n", headers, "\r\n"].join("");
     stream.write_all(message.as_bytes()).unwrap();
 

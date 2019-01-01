@@ -3,14 +3,14 @@
 
 //!
 //! Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
-//! It runs an HTTP server on your local port 1234 which delivers, creates and remove the mocks.
+//! It runs an HTTP server on a local port which delivers, creates and remove the mocks.
 //!
 //! The server is run on a separate thread within the same process and will be removed
 //! at the end of the run.
 //!
 //! # Getting Started
 //!
-//! Using compiler flags, set the URL of your web client to `mockito::SERVER_URL` or `mockito::SERVER_ADDRESS`.
+//! Using compiler flags, set the URL of your web client to address returned by `mockito::server_url()` or `mockito::server_address()`.
 //!
 //! ## Example
 //!
@@ -19,10 +19,10 @@
 //! use mockito;
 //!
 //! #[cfg(not(test))]
-//! const URL: &str = "https://api.twitter.com";
+//! let url = "https://api.twitter.com";
 //!
 //! #[cfg(test)]
-//! const URL: &str = mockito::SERVER_URL;
+//! let url = &mockito::server_url();
 //! ```
 //!
 //! Then start mocking:
@@ -94,13 +94,13 @@
 //! ```no_run
 //! use std::net::TcpStream;
 //! use std::io::{Read, Write};
-//! use mockito::{mock, SERVER_ADDRESS};
+//! use mockito::{mock, server_address};
 //!
 //! let mock = mock("GET", "/hello").create();
 //!
 //! {
 //!     // Place a request
-//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
 //!     stream.read_to_string(&mut response).unwrap();
@@ -117,13 +117,13 @@
 //! ```no_run
 //! use std::net::TcpStream;
 //! use std::io::{Read, Write};
-//! use mockito::{mock, SERVER_ADDRESS};
+//! use mockito::{mock, server_address};
 //!
 //! let mock = mockito::mock("GET", "/hello").expect(3).create();
 //!
 //! for _ in 0..3 {
 //!     // Place a request
-//!     let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
 //!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
 //!     let mut response = String::new();
 //!     stream.read_to_string(&mut response).unwrap();
@@ -439,12 +439,18 @@ thread_local!(
 /// Points to the address the mock server is running at.
 /// Can be used with `std::net::TcpStream`.
 ///
-pub const SERVER_ADDRESS: &str = "127.0.0.1:1234";
+#[deprecated(note="Call server_address() instead")]
+pub const SERVER_ADDRESS: &str = SERVER_ADDRESS_INTERNAL;
+const SERVER_ADDRESS_INTERNAL: &str = "127.0.0.1:1234";
 
 ///
 /// Points to the URL the mock server is running at.
 ///
+#[deprecated(note="Call server_url() instead")]
 pub const SERVER_URL: &str = "http://127.0.0.1:1234";
+
+pub use server::address as server_address;
+pub use server::url as server_url;
 
 ///
 /// Initializes a mock for the provided `method` and `path`.

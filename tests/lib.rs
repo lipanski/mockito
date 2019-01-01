@@ -9,10 +9,10 @@ use std::mem;
 use std::thread;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use mockito::{SERVER_ADDRESS, mock, Matcher};
+use mockito::{server_address, mock, Matcher};
 
 fn request_stream(route: &str, headers: &str, body: &str) -> TcpStream {
-    let mut stream = TcpStream::connect(SERVER_ADDRESS).unwrap();
+    let mut stream = TcpStream::connect(server_address()).unwrap();
     let message = [route, " HTTP/1.1\r\n", headers, "\r\n", body].join("");
     stream.write_all(message.as_bytes()).unwrap();
 
@@ -60,7 +60,7 @@ fn request_with_body(route: &str, headers: &str, body: &str) -> (String, Vec<Str
 fn test_create_starts_the_server() {
     let _m = mock("GET", "/").with_body("hello").create();
 
-    let stream = TcpStream::connect(SERVER_ADDRESS);
+    let stream = TcpStream::connect(server_address());
     assert!(stream.is_ok());
 }
 

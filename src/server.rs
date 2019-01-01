@@ -1,10 +1,10 @@
 use std::thread;
 use std::io::Write;
 use std::fmt::Display;
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::sync::Mutex;
-use {SERVER_ADDRESS, Request, Mock};
 use std::sync::mpsc;
+use {SERVER_ADDRESS_INTERNAL, Request, Mock};
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -36,7 +36,7 @@ impl<'a> PartialEq<Request> for &'a mut Mock {
 }
 
 pub struct State {
-    pub is_listening: bool,
+    pub listening_addr: Option<SocketAddr>,
     pub mocks: Vec<Mock>,
     pub unmatched_requests: Vec<Request>,
 }
@@ -44,7 +44,7 @@ pub struct State {
 impl State {
     fn new() -> Self {
         Self {
-            is_listening: false,
+            listening_addr: None,
             mocks: Vec::new(),
             unmatched_requests: Vec::new(),
         }
@@ -55,26 +55,53 @@ lazy_static! {
     pub static ref STATE: Mutex<State> = Mutex::new(State::new());
 }
 
+/// Address and port of the local server.
+/// Can be used with `std::net::TcpStream`.
+///
+/// The server will be started if necessary.
+pub fn address() -> SocketAddr {
+    try_start();
+
+    let state = STATE.lock().map(|state| state.listening_addr);
+    state.expect("state lock").expect("server should be listening")
+}
+
+/// A local `http://…` URL of the server.
+///
+/// The server will be started if necessary.
+pub fn url() -> String {
+    format!("http://{}", address())
+}
+
 pub fn try_start() {
     let mut state = STATE.lock().unwrap();
 
-    if state.is_listening { return }
+    if state.listening_addr.is_some() {
+        return
+    }
+
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
-        let listener = match TcpListener::bind(SERVER_ADDRESS) {
+        let res = TcpListener::bind(SERVER_ADDRESS_INTERNAL)
+        .or_else(|err| {
+            warn!("{}", err);
+            TcpListener::bind("127.0.0.1:0")
+        });
+        let (listener, addr) = match res {
             Ok(listener) => {
-                tx.send(true).unwrap();
-                listener
+                let addr = listener.local_addr().unwrap();
+                tx.send(Some(addr)).unwrap();
+                (listener, addr)
             },
             Err(err) => {
-                debug!("{}", err);
-                tx.send(false).unwrap();
+                error!("{}", err);
+                tx.send(None).unwrap();
                 return;
             },
         };
 
-        debug!("Server is listening");
+        debug!("Server is listening at {}", addr);
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream{
                 let request = Request::from(&mut stream);
@@ -92,7 +119,7 @@ pub fn try_start() {
         }
     });
 
-    state.is_listening = rx.recv() == Ok(true);
+    state.listening_addr = rx.recv().ok().and_then(|addr| addr);
 }
 
 fn handle_request(request: Request, stream: TcpStream) {

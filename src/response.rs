@@ -19,7 +19,7 @@ impl Default for Response {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature="cargo-clippy", allow(pub_enum_variant_names))]
+#[cfg_attr(feature="cargo-clippy", allow(clippy::pub_enum_variant_names))]
 pub enum Status {
     Continue,
     SwitchingProtocols,
