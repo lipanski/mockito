@@ -59,7 +59,7 @@ lazy_static! {
 /// Can be used with `std::net::TcpStream`.
 ///
 /// The server will be started if necessary.
-pub fn server_address() -> SocketAddr {
+pub fn address() -> SocketAddr {
     try_start();
 
     let state = STATE.lock().map(|state| state.listening_addr);
@@ -69,8 +69,8 @@ pub fn server_address() -> SocketAddr {
 /// A local `http://…` URL of the server.
 ///
 /// The server will be started if necessary.
-pub fn server_url() -> String {
-    format!("http://{}", server_address())
+pub fn url() -> String {
+    format!("http://{}", address())
 }
 
 pub fn try_start() {

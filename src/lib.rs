@@ -449,8 +449,8 @@ const SERVER_ADDRESS_INTERNAL: &str = "127.0.0.1:1234";
 #[deprecated(note="Call server_url() instead")]
 pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
-pub use server::server_address;
-pub use server::server_url;
+pub use server::address as server_address;
+pub use server::url as server_url;
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
