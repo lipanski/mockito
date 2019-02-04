@@ -263,6 +263,27 @@ fn test_match_body_with_json() {
 }
 
 #[test]
+fn test_match_body_with_more_headers_with_json() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::Json(json!({"hello":"world", "foo": "bar"})))
+        .create();
+
+    let headers = (0..15)
+        .map(|n| {
+            format!(
+                "x-header-{}: foo-bar-value-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+                n
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\r\n");
+
+    let (status, _, _) =
+        request_with_body("POST /", &headers, r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
 fn test_match_body_with_json_order() {
     let _m = mock("POST", "/")
         .match_body(Matcher::Json(json!({"foo": "bar", "hello": "world"})))
