@@ -135,7 +135,7 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
         debug!("Mock found");
         found = true;
         mock.hits += 1;
-        respond_with_mock(stream, mock);
+        respond_with_mock(stream, mock, request.is_head());
     } else {
         debug!("Mock not found");
         found = false;
@@ -145,19 +145,30 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
     if !found { state.unmatched_requests.push(request); }
 }
 
-fn respond<S: Display>(stream: TcpStream, status: S, headers: Option<&str>, body: Option<&str>) {
+fn respond<S: Display>(stream: TcpStream, status: S, headers: Option<&Vec<(String, String)>>, body: Option<&str>) {
     respond_bytes(stream, status, headers, body.map(|s| s.as_bytes()))
 }
 
-fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&str>, body: Option<&[u8]>) {
+fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&Vec<(String, String)>>, body: Option<&[u8]>) {
     let mut response = Vec::from(format!("HTTP/1.1 {}\r\n", status));
+    let mut has_content_length_header = false;
 
     if let Some(headers) = headers {
-        response.extend(headers.as_bytes());
+        for &(ref key, ref value) in headers {
+            response.extend(key.as_bytes());
+            response.extend(b": ");
+            response.extend(value.as_bytes());
+            response.extend(b"\r\n");
+        }
+
+        has_content_length_header = headers.iter().any(|(key, _)| key == "content-length");
     }
 
     if let Some(body) = body {
-        response.extend(format!("content-length: {}\r\n\r\n", body.len()).as_bytes());
+        if !has_content_length_header {
+            response.extend(format!("content-length: {}\r\n\r\n", body.len()).as_bytes());
+        }
+
         response.extend(body);
     } else {
         response.extend(b"\r\n");
@@ -167,16 +178,15 @@ fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&
     let _ = stream.flush();
 }
 
-fn respond_with_mock(stream: TcpStream, mock: &Mock) {
-    let mut headers = String::new();
-    for &(ref key, ref value) in &mock.response.headers {
-        headers.push_str(key);
-        headers.push_str(": ");
-        headers.push_str(value);
-        headers.push_str("\r\n");
-    }
+fn respond_with_mock(stream: TcpStream, mock: &Mock, skip_body: bool) {
+    let body =
+        if skip_body {
+            None
+        } else {
+            Some(&*mock.response.body)
+        };
 
-    respond_bytes(stream, &mock.response.status, Some(&headers), Some(&mock.response.body));
+    respond_bytes(stream, &mock.response.status, Some(&mock.response.headers), body);
 }
 
 fn respond_with_mock_not_found(stream: TcpStream) {

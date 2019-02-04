@@ -19,7 +19,7 @@ fn request_stream(route: &str, headers: &str, body: &str) -> TcpStream {
     stream
 }
 
-fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
+fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, String) {
     let mut reader = BufReader::new(stream);
 
     let mut status_line = String::new();
@@ -42,18 +42,20 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
     }
 
     let mut body = String::new();
-    reader.take(content_length).read_to_string(&mut body).unwrap();
+    if !skip_body {
+        reader.take(content_length).read_to_string(&mut body).unwrap();
+    }
 
     (status_line, headers, body)
 }
 
 fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
-    parse_stream(request_stream(route, headers, ""))
+    parse_stream(request_stream(route, headers, ""), route.starts_with("HEAD"))
 }
 
 fn request_with_body(route: &str, headers: &str, body: &str) -> (String, Vec<String>, String) {
     let headers = format!("{}content-length: {}\r\n", headers, body.len());
-    parse_stream(request_stream(route, &headers, body))
+    parse_stream(request_stream(route, &headers, body), false)
 }
 
 #[test]
@@ -711,4 +713,13 @@ fn test_mock_from_inside_thread_does_not_lock_forever() {
     let (_, _, body) = request("GET /", "");
 
     assert_eq!("outside", body);
+}
+
+#[test]
+fn test_head_request_with_overridden_content_length() {
+    let _mock = mock("HEAD", "/").with_header("content-length", "100").create();
+
+    let (_, headers, _) = request("HEAD /", "");
+
+    assert_eq!(vec![String::from("content-length: 100")], headers);
 }
