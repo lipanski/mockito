@@ -22,6 +22,10 @@ pub struct Request {
 }
 
 impl Request {
+    pub fn is_head(&self) -> bool {
+        self.method == "HEAD"
+    }
+
     pub fn is_ok(&self) -> bool {
         self.error.is_none()
     }
