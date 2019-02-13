@@ -11,9 +11,9 @@ use rand::distributions::Alphanumeric;
 use rand::Rng;
 use mockito::{server_address, mock, Matcher};
 
-fn request_stream(route: &str, headers: &str, body: &str) -> TcpStream {
+fn request_stream(version: &str, route: &str, headers: &str, body: &str) -> TcpStream {
     let mut stream = TcpStream::connect(server_address()).unwrap();
-    let message = [route, " HTTP/1.1\r\n", headers, "\r\n", body].join("");
+    let message = [route, " HTTP/", version, "\r\n", headers, "\r\n", body].join("");
     stream.write_all(message.as_bytes()).unwrap();
 
     stream
@@ -50,12 +50,12 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
 }
 
 fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
-    parse_stream(request_stream(route, headers, ""), route.starts_with("HEAD"))
+    parse_stream(request_stream("1.1", route, headers, ""), route.starts_with("HEAD"))
 }
 
 fn request_with_body(route: &str, headers: &str, body: &str) -> (String, Vec<String>, String) {
     let headers = format!("{}content-length: {}\r\n", headers, body.len());
-    parse_stream(request_stream(route, &headers, body), false)
+    parse_stream(request_stream("1.1", route, &headers, body), false)
 }
 
 #[test]
@@ -722,4 +722,12 @@ fn test_head_request_with_overridden_content_length() {
     let (_, headers, _) = request("HEAD /", "");
 
     assert_eq!(vec![String::from("content-length: 100")], headers);
+}
+
+#[test]
+fn test_propagate_protocol_to_response() {
+    let _mock = mock("GET", "/").create();
+
+    let (status_line, _, _) = parse_stream(request_stream("1.0", "GET /", "", ""), true);
+    assert_eq!("HTTP/1.0 200 OK\r\n", status_line);
 }

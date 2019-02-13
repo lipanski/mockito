@@ -10,7 +10,7 @@ use httparse;
 
 #[derive(Debug)]
 pub struct Request {
-    version: (u8, u8),
+    pub version: (u8, u8),
     pub method: String,
     pub path: String,
     pub headers: Vec<(String, String)>,
