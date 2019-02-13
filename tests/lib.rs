@@ -2,7 +2,7 @@ extern crate rand;
 extern crate mockito;
 #[macro_use] extern crate serde_json;
 
-use std::net::TcpStream;
+use std::net::{TcpStream, Shutdown};
 use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
 use std::mem;
@@ -728,6 +728,24 @@ fn test_head_request_with_overridden_content_length() {
 fn test_propagate_protocol_to_response() {
     let _mock = mock("GET", "/").create();
 
-    let (status_line, _, _) = parse_stream(request_stream("1.0", "GET /", "", ""), true);
+    let stream = request_stream("1.0", "GET /", "", "");
+    stream.shutdown(Shutdown::Write).unwrap();
+
+    let (status_line, _, _) = parse_stream(stream, true);
+    assert_eq!("HTTP/1.0 200 OK\r\n", status_line);
+}
+
+#[test]
+fn test_large_body_without_content_length() {
+    let body = "123".repeat(2048);
+
+    let _mock = mock("POST", "/")
+        .match_body(body.as_str())
+        .create();
+
+    let stream = request_stream("1.0", "POST /", "", &body);
+    stream.shutdown(Shutdown::Write).unwrap();
+
+    let (status_line, _, _) = parse_stream(stream, false);
     assert_eq!("HTTP/1.0 200 OK\r\n", status_line);
 }
