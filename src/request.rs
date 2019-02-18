@@ -10,7 +10,7 @@ use httparse;
 
 #[derive(Debug)]
 pub struct Request {
-    version: (u8, u8),
+    pub version: (u8, u8),
     pub method: String,
     pub path: String,
     pub headers: Vec<(String, String)>,
@@ -56,29 +56,32 @@ impl Request {
         }
     }
 
-    fn content_length(&self) -> usize {
+    fn content_length(&self) -> Option<usize> {
         use std::str::FromStr;
 
         self.find_header_values("content-length")
             .first()
             .and_then(|len| usize::from_str(*len).ok())
-            .unwrap_or(0)
     }
 
     fn read_request_body(&mut self, stream: &mut TcpStream) {
         let expected_content_length = self.content_length();
 
         loop {
-            if self.body.len() == expected_content_length {
+            if expected_content_length.map_or(false, |exp| self.body.len() == exp) {
                 break;
             }
 
             let mut body_buf = [0; 1024];
 
-            let body_read_len = stream.read(&mut body_buf).unwrap_or_else(|e| {
-                self.error = Some(e.to_string());
-                0
-            });
+            let body_read_len = match stream.read(&mut body_buf) {
+                Ok(0) => break,
+                Ok(read) => read,
+                Err(err) => {
+                    self.error = Some(err.to_string());
+                    break;
+                }
+            };
 
             self.body.extend_from_slice(&body_buf[..body_read_len]);
         }
@@ -156,11 +159,14 @@ impl<'a> From<&'a mut TcpStream> for Request {
 
                         request.body.extend_from_slice(&all_buf[head_len..]);
 
-                        let more_body_to_read = all_buf.len() < head_len + request.content_length();
-
-                        if more_body_to_read {
-                            request.read_request_body(stream);
+                        match request.content_length() {
+                            Some(content_length) if all_buf.len() < head_len + content_length =>
+                                request.read_request_body(stream),
+                            None if request.version == (1, 0) =>
+                                request.read_request_body(stream),
+                            _ => {}
                         }
+
                         request.is_parsed = true;
 
                         Ok(())

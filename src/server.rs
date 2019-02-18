@@ -111,7 +111,7 @@ pub fn try_start() {
                 } else {
                     let message = request.error().map_or("Could not parse the request.", |err| err.as_str());
                     debug!("Could not parse request because: {}", message);
-                    respond_with_error(stream, message);
+                    respond_with_error(stream, request.version, message);
                 }
             } else {
                 debug!("Could not read from stream");
@@ -135,22 +135,34 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
         debug!("Mock found");
         found = true;
         mock.hits += 1;
-        respond_with_mock(stream, mock, request.is_head());
+        respond_with_mock(stream, request.version, mock, request.is_head());
     } else {
         debug!("Mock not found");
         found = false;
-        respond_with_mock_not_found(stream);
+        respond_with_mock_not_found(stream, request.version);
     }
 
     if !found { state.unmatched_requests.push(request); }
 }
 
-fn respond<S: Display>(stream: TcpStream, status: S, headers: Option<&Vec<(String, String)>>, body: Option<&str>) {
-    respond_bytes(stream, status, headers, body.map(|s| s.as_bytes()))
+fn respond(
+    stream: TcpStream,
+    version: (u8, u8),
+    status: impl Display,
+    headers: Option<&Vec<(String, String)>>,
+    body: Option<&str>
+) {
+    respond_bytes(stream, version, status, headers, body.map(|s| s.as_bytes()))
 }
 
-fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&Vec<(String, String)>>, body: Option<&[u8]>) {
-    let mut response = Vec::from(format!("HTTP/1.1 {}\r\n", status));
+fn respond_bytes(
+    mut stream: TcpStream,
+    version: (u8, u8),
+    status: impl Display,
+    headers: Option<&Vec<(String, String)>>,
+    body: Option<&[u8]>
+) {
+    let mut response = Vec::from(format!("HTTP/{}.{} {}\r\n", version.0, version.1, status));
     let mut has_content_length_header = false;
 
     if let Some(headers) = headers {
@@ -178,7 +190,7 @@ fn respond_bytes<S: Display>(mut stream: TcpStream, status: S, headers: Option<&
     let _ = stream.flush();
 }
 
-fn respond_with_mock(stream: TcpStream, mock: &Mock, skip_body: bool) {
+fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_body: bool) {
     let body =
         if skip_body {
             None
@@ -186,13 +198,13 @@ fn respond_with_mock(stream: TcpStream, mock: &Mock, skip_body: bool) {
             Some(&*mock.response.body)
         };
 
-    respond_bytes(stream, &mock.response.status, Some(&mock.response.headers), body);
+    respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body);
 }
 
-fn respond_with_mock_not_found(stream: TcpStream) {
-    respond(stream, "501 Mock Not Found", None, None);
+fn respond_with_mock_not_found(stream: TcpStream, version: (u8, u8)) {
+    respond(stream, version, "501 Mock Not Found", None, None);
 }
 
-fn respond_with_error(stream: TcpStream, message: &str) {
-    respond(stream, "422 Mock Error", None, Some(message));
+fn respond_with_error(stream: TcpStream, version: (u8, u8), message: &str) {
+    respond(stream, version, "422 Mock Error", None, Some(message));
 }
