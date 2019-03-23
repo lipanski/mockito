@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{self, Read, BufRead, Cursor, BufReader};
 use std::mem;
 use std::str;
 use std::convert::From;
@@ -64,27 +64,50 @@ impl Request {
             .and_then(|len| usize::from_str(*len).ok())
     }
 
-    fn read_request_body(&mut self, stream: &mut TcpStream) {
-        let expected_content_length = self.content_length();
+    fn has_chunked_body(&self) -> bool {
+        self.headers.iter()
+            .filter(|(name, _)| name == "transfer-encoding")
+            .any(|(_, value)| value.contains("chunked"))
+    }
 
-        loop {
-            if expected_content_length.map_or(false, |exp| self.body.len() == exp) {
-                break;
-            }
+    fn read_request_body(&mut self, mut raw_body_rd: impl Read) -> io::Result<()> {
+        if let Some(content_length) = self.content_length() {
+            let mut rd = raw_body_rd.take(content_length as u64);
+            return io::copy(&mut rd, &mut self.body).map(|_| ());
+        }
 
-            let mut body_buf = [0; 1024];
+        if self.has_chunked_body() {
+            let mut chunk_size_buf = String::new();
+            let mut reader = BufReader::new(raw_body_rd);
 
-            let body_read_len = match stream.read(&mut body_buf) {
-                Ok(0) => break,
-                Ok(read) => read,
-                Err(err) => {
-                    self.error = Some(err.to_string());
+            loop {
+                reader.read_line(&mut chunk_size_buf)?;
+
+                let chunk_size = {
+                    let chunk_size_str = chunk_size_buf.trim_matches(|c| c == '\r' || c == '\n');
+
+                    u64::from_str_radix(chunk_size_str, 16)
+                        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?
+                };
+
+                if chunk_size == 0 {
                     break;
                 }
-            };
 
-            self.body.extend_from_slice(&body_buf[..body_read_len]);
+                io::copy(&mut (&mut reader).take(chunk_size), &mut self.body)?;
+
+                chunk_size_buf.clear();
+                reader.read_line(&mut chunk_size_buf)?;
+            }
+
+            return Ok(());
         }
+
+        if self.version == (1, 0) {
+            return io::copy(&mut raw_body_rd, &mut self.body).map(|_| ());
+        }
+
+        Ok(())
     }
 }
 
@@ -104,8 +127,8 @@ impl Default for Request {
     }
 }
 
-impl<'a> From<&'a mut TcpStream> for Request {
-    fn from(stream: &mut TcpStream) -> Self {
+impl<'a> From<&'a TcpStream> for Request {
+    fn from(mut stream: &TcpStream) -> Self {
         let mut request = Self::default();
 
         let mut all_buf = Vec::new();
@@ -139,7 +162,7 @@ impl<'a> From<&'a mut TcpStream> for Request {
                     request.error = Some(e.to_string());
                 })
                 .and_then(|status| match status {
-                    httparse::Status::Complete(head_len) => {
+                    httparse::Status::Complete(head_length) => {
                         if let Some(a @ 0...1) = req.version {
                             request.version = (1, a)
                         }
@@ -157,14 +180,10 @@ impl<'a> From<&'a mut TcpStream> for Request {
                             request.record_last_header();
                         }
 
-                        request.body.extend_from_slice(&all_buf[head_len..]);
+                        let raw_body_rd = Cursor::new(&all_buf[head_length..]).chain(stream);
 
-                        match request.content_length() {
-                            Some(content_length) if all_buf.len() < head_len + content_length =>
-                                request.read_request_body(stream),
-                            None if request.version == (1, 0) =>
-                                request.read_request_body(stream),
-                            _ => {}
+                        if let Err(err) = request.read_request_body(raw_body_rd) {
+                            request.error = Some(err.to_string());
                         }
 
                         request.is_parsed = true;
