@@ -103,8 +103,8 @@ pub fn try_start() {
 
         debug!("Server is listening at {}", addr);
         for stream in listener.incoming() {
-            if let Ok(mut stream) = stream{
-                let request = Request::from(&mut stream);
+            if let Ok(stream) = stream{
+                let request = Request::from(&stream);
                 debug!("Request received: {}", request);
                 if request.is_ok() {
                     handle_request(request, stream);

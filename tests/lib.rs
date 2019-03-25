@@ -273,12 +273,12 @@ fn test_match_body_with_more_headers_with_json() {
     let headers = (0..15)
         .map(|n| {
             format!(
-                "x-header-{}: foo-bar-value-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+                "x-header-{}: foo-bar-value-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\r\n",
                 n
             )
         })
         .collect::<Vec<String>>()
-        .join("\r\n");
+        .concat();
 
     let (status, _, _) =
         request_with_body("POST /", &headers, r#"{"hello":"world", "foo": "bar"}"#);
@@ -748,4 +748,20 @@ fn test_large_body_without_content_length() {
 
     let (status_line, _, _) = parse_stream(stream, false);
     assert_eq!("HTTP/1.0 200 OK\r\n", status_line);
+}
+
+#[test]
+fn test_transfer_encoding_chunked() {
+    let _mock = mock("POST", "/")
+        .match_body("Hello, chunked world!")
+        .create();
+
+    let body = "3\r\nHel\r\n5\r\nlo, c\r\nD\r\nhunked world!\r\n0\r\n\r\n";
+
+    let (status, _, _) = parse_stream(
+        request_stream("1.1", "POST /", "Transfer-Encoding: chunked\r\n", body),
+        false
+    );
+
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
