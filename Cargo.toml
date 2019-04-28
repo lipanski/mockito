@@ -14,11 +14,6 @@ categories = ["development-tools::testing", "web-programming"]
 travis-ci = { repository = "lipanski/mockito", branch = "master" }
 appveyor = { repository = "lipanski/mockito", branch = "master", service = "github" }
 
-[[bin]]
-name = "mockito-server"
-path = "src/main.rs"
-doc = false
-
 [dependencies]
 rand = "^0.5.5"
 httparse = "^1.3.3"
