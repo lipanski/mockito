@@ -9,6 +9,7 @@ documentation = "https://docs.rs/mockito"
 description = "HTTP mocking for Rust."
 keywords = ["mock", "mocks", "http", "webmock", "webmocks"]
 categories = ["development-tools::testing", "web-programming"]
+exclude = ["/.appveyor.yml", "/.travis.yml", "/benchmarks.txt", "/docs/", "/slides.pdf"]
 
 [badges]
 travis-ci = { repository = "lipanski/mockito", branch = "master" }
