@@ -459,7 +459,7 @@ fn test_regex_match_header() {
 }
 
 #[test]
-fn test_or_match_header() {
+fn test_any_of_match_header() {
     let _m = mock("GET", "/")
         .match_header("Via", Matcher::AnyOf(vec![
             Matcher::Exact("one".into()),
@@ -484,7 +484,28 @@ fn test_or_match_header() {
 }
 
 #[test]
-fn test_or_miss_match_header() {
+fn test_any_of_match_body() {
+    let _m = mock("GET", "/")
+        .match_body(Matcher::AnyOf(vec![
+            Matcher::Regex("one".to_string()),
+            Matcher::Regex("two".to_string())]))
+        .create();
+
+    let (status_line, _, _) = request_with_body("GET /", "", "one");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
+
+    let (status_line, _, _) = request_with_body("GET /", "", "two");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
+
+    let (status_line, _, _) = request_with_body("GET /", "", "one two");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
+
+    let (status_line, _, _) = request_with_body("GET /", "", "three");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+}
+
+#[test]
+fn test_any_of_missing_match_header() {
     let _m = mock("GET", "/")
         .match_header("Via", Matcher::AnyOf(vec![
             Matcher::Exact("one".into()),
@@ -500,6 +521,79 @@ fn test_or_miss_match_header() {
 
     let (_, _, body_json) = request("GET /", "NotVia: one\r\n");
     assert_eq!("{}", body_json);
+
+    let (status_line, _, _) = request("GET /", "Via: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: wrong\r\nVia: one\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: one\r\nVia: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+}
+
+#[test]
+fn test_all_of_match_header() {
+    let _m = mock("GET", "/")
+        .match_header("Via", Matcher::AllOf(vec![
+            Matcher::Regex("one".into()),
+            Matcher::Regex("two".into())]))
+        .with_body("{}")
+        .create();
+
+    let (status_line, _, _) = request("GET /", "Via: one\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: two\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: one two\r\nVia: one two three\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
+
+    let (status_line, _, _) = request("GET /", "Via: one\r\nVia: two\r\nVia: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: wrong\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+}
+
+#[test]
+fn test_all_of_match_body() {
+    let _m = mock("GET", "/")
+        .match_body(Matcher::AllOf(vec![
+            Matcher::Regex("one".to_string()),
+            Matcher::Regex("two".to_string())]))
+        .create();
+
+    let (status_line, _, _) = request_with_body("GET /", "", "one");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request_with_body("GET /", "", "two");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request_with_body("GET /", "", "one two");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
+
+    let (status_line, _, _) = request_with_body("GET /", "", "three");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+}
+
+#[test]
+fn test_all_of_missing_match_header() {
+    let _m = mock("GET", "/")
+        .match_header("Via", Matcher::AllOf(vec![
+            Matcher::Missing]))
+        .with_body("{}")
+        .create();
+
+    let (status_line, _, _) = request("GET /", "Via: one\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "Via: one\r\nVia: one\r\nVia: one\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 501 "));
+
+    let (status_line, _, _) = request("GET /", "NotVia: one\r\n");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
 
     let (status_line, _, _) = request("GET /", "Via: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
