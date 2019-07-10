@@ -13,6 +13,7 @@ pub struct Request {
     pub version: (u8, u8),
     pub method: String,
     pub path: String,
+    pub query: String,
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
     error: Option<String>,
@@ -117,6 +118,7 @@ impl Default for Request {
             version: (1, 1),
             method: String::new(),
             path: String::new(),
+            query: String::new(),
             headers: Vec::new(),
             body: Vec::new(),
             error: None,
@@ -164,14 +166,19 @@ impl<'a> From<&'a TcpStream> for Request {
                 .and_then(|status| match status {
                     httparse::Status::Complete(head_length) => {
                         if let Some(a @ 0...1) = req.version {
-                            request.version = (1, a)
+                            request.version = (1, a);
                         }
+
                         if let Some(a) = req.method {
-                            request.method += a
+                            request.method += a;
                         }
+
                         if let Some(a) = req.path {
-                            request.path += a
+                            let mut parts = a.splitn(2, "?");
+                            request.path += parts.next().unwrap();
+                            request.query += parts.next().unwrap_or("");
                         }
+
                         for h in req.headers {
                             request.last_header_field = Some(h.name.to_lowercase());
                             request.last_header_value =
@@ -200,7 +207,7 @@ impl<'a> From<&'a TcpStream> for Request {
 
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\r\n{} {}\r\n", &self.method, &self.path)?;
+        write!(f, "\r\n{} {}?{}\r\n", &self.method, &self.path, &self.query)?;
 
         for &(ref key, ref value) in &self.headers {
             writeln!(f, "{}: {}\r", key, value)?;
