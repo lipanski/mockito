@@ -202,26 +202,36 @@
 //!
 //! # Matching by query
 //!
-//! You can match the query part by using the `Mock#match_query` function together with the various matchers:
+//! You can match the query part by using the `Mock#match_query` function together with the various matchers,
+//! most notably `Matcher::UrlEncoded`:
 //!
 //! ## Example
 //!
 //! ```
 //! use mockito::{mock, Matcher};
 //!
-//! // This will apply a regex match against the query part
+//! // This will match requests containing the URL-encoded
+//! // query parameter `greeting=good%20day`
 //! let _m1 = mock("GET", "/test")
-//!   .match_query(Matcher::Regex("hello=word".to_string()))
+//!   .match_query(Matcher::UrlEncoded("greeting".into(), "good day".into()))
 //!   .create();
 //!
-//! // This will apply a couple of regex matches against the query part
+//! // This will match requests containing the URL-encoded
+//! // query parameters `hello=world` and `greeting=good%20day`
 //! let _m2 = mock("GET", "/test")
 //!   .match_query(Matcher::AllOf(vec![
-//!     Matcher::Regex("hello=world".to_string()),
-//!     Matcher::Regex("goodbye=stuff".to_string())
+//!     Matcher::UrlEncoded("hello".into(), "world".into()),
+//!     Matcher::UrlEncoded("greeting".into(), "good day".into())
 //!   ]))
 //!   .create();
+//!
+//! // You can achieve similar results with the regex matcher
+//! let _m3 = mock("GET", "/test")
+//!   .match_query(Matcher::Regex("hello=world".into()))
+//!   .create();
 //! ```
+//!
+//! Note that the key/value arguments for `Matcher::UrlEncoded` should be left in plain (unencoded) format.
 //!
 //! You can also specify the query as part of the path argument in a `mock` call, in which case an exact
 //! match will be performed:
@@ -461,6 +471,7 @@ extern crate regex;
 extern crate serde_json;
 extern crate difference;
 extern crate colored;
+extern crate percent_encoding;
 
 mod server;
 mod request;
@@ -480,6 +491,7 @@ use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::sync::{Mutex, LockResult, MutexGuard};
 use std::cell::RefCell;
+use percent_encoding::percent_decode;
 
 lazy_static! {
     // A global lock that ensure all Mockito tests are run on a single thread.
@@ -560,6 +572,9 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
+    /// Matches a URL-encoded key/value pair, where both key and value should be specified
+    /// in plain (unencoded) format
+    UrlEncoded(String, String),
     /// At least one matcher must match
     AnyOf(Vec<Matcher>),
     /// All matchers must match
@@ -607,6 +622,15 @@ impl Matcher {
                 let value: serde_json::Value = serde_json::from_str(value).unwrap();
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 value == other
+            },
+            Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
+                other.split("&").map( |pair| {
+                    let mut parts = pair.splitn(2, "=");
+                    let field = percent_decode(parts.next().unwrap().as_bytes()).decode_utf8_lossy();
+                    let value = percent_decode(parts.next().unwrap_or("").as_bytes()).decode_utf8_lossy();
+
+                    (field.to_string(), value.to_string())
+                }).any(|(ref field, ref value)| field == expected_field && value == expected_value)
             },
             Matcher::Any => true,
             Matcher::AnyOf(ref matchers) => {
@@ -678,21 +702,25 @@ impl Mock {
     /// ```
     /// use mockito::{mock, Matcher};
     ///
-    /// // This will perform a regex match against the query part
+    /// // This will match requests containing the URL-encoded
+    /// // query parameter `greeting=good%20day`
     /// let _m1 = mock("GET", "/test")
-    ///   .match_query(Matcher::Regex("hello=word".to_string()))
+    ///   .match_query(Matcher::UrlEncoded("greeting".into(), "good day".into()))
     ///   .create();
     ///
-    /// // This will perform a couple of regex matches against the query part
+    /// // This will match requests containing the URL-encoded
+    /// // query parameters `hello=world` and `greeting=good%20day`
     /// let _m2 = mock("GET", "/test")
     ///   .match_query(Matcher::AllOf(vec![
-    ///     Matcher::Regex("hello=world".to_string()),
-    ///     Matcher::Regex("goodbye=stuff".to_string())
+    ///     Matcher::UrlEncoded("hello".into(), "world".into()),
+    ///     Matcher::UrlEncoded("greeting".into(), "good day".into())
     ///   ]))
     ///   .create();
     ///
-    /// // This will perform a full match against the query part
-    /// let _m3 = mock("GET", "/test?hello=world").create();
+    /// // You can achieve similar results with the regex matcher
+    /// let _m3 = mock("GET", "/test")
+    ///   .match_query(Matcher::Regex("hello=world".into()))
+    ///   .create();
     /// ```
     ///
     pub fn match_query<M: Into<Matcher>>(mut self, query: M) -> Self {
@@ -942,6 +970,12 @@ impl fmt::Display for Mock {
                 formatted.push_str(value);
                 formatted.push_str(" (json)")
             },
+            Matcher::UrlEncoded(ref field, ref value) => {
+                formatted.push_str(field);
+                formatted.push_str("=");
+                formatted.push_str(value);
+                formatted.push_str(" (urlencoded)")
+            },
             Matcher::Any => formatted.push_str("(any)"),
             Matcher::AnyOf(..) => formatted.push_str("(any of)"),
             Matcher::AllOf(..) => formatted.push_str("(all of)"),
@@ -966,6 +1000,11 @@ impl fmt::Display for Mock {
             Matcher::JsonString(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str(" (json)\r\n")
+            },
+            Matcher::UrlEncoded(ref field, ref value) => {
+                formatted.push_str(field);
+                formatted.push_str("=");
+                formatted.push_str(value);
             },
             Matcher::Any => formatted.push_str("(any)\r\n"),
             Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
@@ -997,6 +1036,14 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (json)")
+                },
+                Matcher::UrlEncoded(ref field, ref value) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(field);
+                    formatted.push_str("=");
+                    formatted.push_str(value);
+                    formatted.push_str(" (urlencoded)")
                 },
                 Matcher::Any => {
                     formatted.push_str(key);
@@ -1031,6 +1078,11 @@ impl fmt::Display for Mock {
             Matcher::Json(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
                 formatted.push_str("\r\n")
+            },
+            Matcher::UrlEncoded(ref field, ref value) => {
+                formatted.push_str(field);
+                formatted.push_str("=");
+                formatted.push_str(value);
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
             Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
