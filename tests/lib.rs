@@ -917,7 +917,7 @@ fn test_match_exact_query_via_path() {
 }
 
 #[test]
-fn test_match_partial_query() {
+fn test_match_partial_query_by_regex() {
     let _m = mock("GET", "/hello")
         .match_query(Matcher::Regex("number=one".to_string()))
         .create();
@@ -927,7 +927,20 @@ fn test_match_partial_query() {
 }
 
 #[test]
-fn test_match_partial_query_all_of() {
+fn test_match_partial_query_by_urlencoded() {
+    let _m = mock("GET", "/hello")
+        .match_query(Matcher::UrlEncoded("num ber".into(), "o ne".into()))
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?something=else&num%20ber=o%20ne", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /hello?something=else&number=one", "");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+}
+
+#[test]
+fn test_match_partial_query_by_regex_all_of() {
     let _m = mock("GET", "/hello")
         .match_query(
             Matcher::AllOf(vec![
@@ -938,6 +951,24 @@ fn test_match_partial_query_all_of() {
         .create();
 
     let (status_line, _, _) = request("GET /hello?hello=world&something=else&number=one", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /hello?hello=world&something=else", "");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+}
+
+#[test]
+fn test_match_partial_query_by_urlencoded_all_of() {
+    let _m = mock("GET", "/hello")
+        .match_query(
+            Matcher::AllOf(vec![
+                Matcher::UrlEncoded("num ber".into(), "o ne".into()),
+                Matcher::UrlEncoded("hello".into(), "world".into())
+            ])
+        )
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?hello=world&something=else&num%20ber=o%20ne", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
     let (status_line, _, _) = request("GET /hello?hello=world&something=else", "");
