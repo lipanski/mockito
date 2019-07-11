@@ -347,6 +347,27 @@
 //!     .create();
 //!```
 //!
+//! # The `AllOf` matcher
+//!
+//! The `Matcher::AllOf` construct takes a vector of matchers as arguments and will be enabled
+//! if all of the provided matchers match the request.
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! // Will match requests to POST / whenever the request body contains both `hello` and `world`
+//! let _m = mock("POST", "/")
+//!     .match_body(
+//!         Matcher::AllOf(vec![
+//!             Matcher::Regex("hello".to_string()),
+//!             Matcher::Regex("world".to_string()),
+//!         ])
+//!      )
+//!     .create();
+//!```
+//!
 //! # Non-matching calls
 //!
 //! Any calls to the Mockito server that are not matched will return *501 Mock Not Found*.
@@ -504,8 +525,10 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
-    /// At least one must match
+    /// At least one matcher must match
     AnyOf(Vec<Matcher>),
+    /// All matchers must match
+    AllOf(Vec<Matcher>),
     /// Matches any path or any header value.
     Any,
     /// Checks that a header is not present in the request.
@@ -529,6 +552,9 @@ impl Matcher {
             Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
                 matchers.iter().any(|m| m.matches_values(header_values))
             },
+            Matcher::AllOf(ref matchers) if header_values.is_empty() => {
+                matchers.iter().all(|m| m.matches_values(header_values))
+            },
             _ => !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val)),
         }
     }
@@ -550,6 +576,9 @@ impl Matcher {
             Matcher::Any => true,
             Matcher::AnyOf(ref matchers) => {
                 matchers.iter().any(|m| m.matches_value(other))
+            },
+            Matcher::AllOf(ref matchers) => {
+                matchers.iter().all(|m| m.matches_value(other))
             },
             Matcher::Missing => false,
         }
@@ -831,6 +860,7 @@ impl fmt::Display for Mock {
             },
             Matcher::Any => formatted.push_str("(any)\r\n"),
             Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
+            Matcher::AllOf(..) => formatted.push_str("(all of)\r\n"),
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
         }
 
@@ -874,6 +904,11 @@ impl fmt::Display for Mock {
                     formatted.push_str(": ");
                     formatted.push_str("(any of)");
                 },
+                Matcher::AllOf(..) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str("(all of)");
+                },
             }
 
             formatted.push_str("\r\n");
@@ -890,6 +925,7 @@ impl fmt::Display for Mock {
             },
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
             Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
+            Matcher::AllOf(..) => formatted.push_str("(all of)\r\n"),
             Matcher::Any => {}
         }
 
