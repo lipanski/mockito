@@ -142,14 +142,14 @@
 //! ```text
 //! > Expected 1 request(s) to:
 //!
-//! POST /users
+//! POST /users?number=one
 //! bob
 //!
 //! ...but received 0
 //!
 //! > The last unmatched request was:
 //!
-//! POST /users
+//! POST /users?number=two
 //! content-length: 5
 //! alice
 //!
@@ -161,7 +161,7 @@
 //!
 //! # Matchers
 //!
-//! Mockito can match your request by method, path, headers or body.
+//! Mockito can match your request by method, path, query, headers or body.
 //!
 //! Various matchers are provided by the `Matcher` type: exact, partial (regular expressions), any or missing.
 //!
@@ -198,6 +198,41 @@
 //!
 //! // Will match any GET request
 //! let _m = mock("GET", Matcher::Any).create();
+//! ```
+//!
+//! # Matching by query
+//!
+//! You can match the query part by using the `Mock#match_query` function together with the various matchers:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::{mock, Matcher};
+//!
+//! // This will apply a regex match against the query part
+//! let _m1 = mock("GET", "/test")
+//!   .match_query(Matcher::Regex("hello=word".to_string()))
+//!   .create();
+//!
+//! // This will apply a couple of regex matches against the query part
+//! let _m2 = mock("GET", "/test")
+//!   .match_query(Matcher::AllOf(vec![
+//!     Matcher::Regex("hello=world".to_string()),
+//!     Matcher::Regex("goodbye=stuff".to_string())
+//!   ]))
+//!   .create();
+//! ```
+//!
+//! You can also specify the query as part of the path argument in a `mock` call, in which case an exact
+//! match will be performed:
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::mock;
+//!
+//! // This will perform a full match against the query part
+//! let _m = mock("GET", "/test?hello=world").create();
 //! ```
 //!
 //! # Matching by header
@@ -580,7 +615,7 @@ impl Matcher {
             Matcher::AllOf(ref matchers) => {
                 matchers.iter().all(|m| m.matches_value(other))
             },
-            Matcher::Missing => false,
+            Matcher::Missing => other.is_empty(),
         }
     }
 }
@@ -593,6 +628,7 @@ pub struct Mock {
     id: String,
     method: String,
     path: Matcher,
+    query: Matcher,
     headers: Vec<(String, Matcher)>,
     body: Matcher,
     response: Response,
@@ -603,10 +639,24 @@ pub struct Mock {
 
 impl Mock {
     fn new<P: Into<Matcher>>(method: &str, path: P) -> Self {
+        let (path, query) =
+            match path.into() {
+                // We also allow setting the query as part of the path argument
+                // but we split it under the hood into `Matcher::Exact` elements.
+                Matcher::Exact(ref raw_path) if raw_path.contains("?") => {
+                    let mut parts = raw_path.splitn(2, "?");
+                    (parts.next().unwrap().into(), parts.next().unwrap_or("").into())
+                },
+                other => {
+                    (other, Matcher::Any)
+                },
+            };
+
         Self {
             id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
             method: method.to_owned().to_uppercase(),
-            path: path.into(),
+            path: path,
+            query: query,
             headers: Vec::new(),
             body: Matcher::Any,
             response: Response::default(),
@@ -614,6 +664,41 @@ impl Mock {
             expected_hits: 1,
             is_remote: false,
         }
+    }
+
+    ///
+    /// Allows matching against the query part when responding with a mock.
+    ///
+    /// Note that you can also specify the query as part of the path argument
+    /// in a `mock` call, in which case an exact match will be performed.
+    /// Any future calls of `Mock#match_query` will override the query matcher.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use mockito::{mock, Matcher};
+    ///
+    /// // This will perform a regex match against the query part
+    /// let _m1 = mock("GET", "/test")
+    ///   .match_query(Matcher::Regex("hello=word".to_string()))
+    ///   .create();
+    ///
+    /// // This will perform a couple of regex matches against the query part
+    /// let _m2 = mock("GET", "/test")
+    ///   .match_query(Matcher::AllOf(vec![
+    ///     Matcher::Regex("hello=world".to_string()),
+    ///     Matcher::Regex("goodbye=stuff".to_string())
+    ///   ]))
+    ///   .create();
+    ///
+    /// // This will perform a full match against the query part
+    /// let _m3 = mock("GET", "/test?hello=world").create();
+    /// ```
+    ///
+    pub fn match_query<M: Into<Matcher>>(mut self, query: M) -> Self {
+        self.query = query.into();
+
+        self
     }
 
     ///
@@ -842,6 +927,30 @@ impl fmt::Display for Mock {
         formatted.push_str(" ");
 
         match self.path {
+            Matcher::Exact(ref value) => {
+                formatted.push_str(value);
+            },
+            Matcher::Regex(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str(" (regex)")
+            },
+            Matcher::Json(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str(" (json)")
+            },
+            Matcher::JsonString(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str(" (json)")
+            },
+            Matcher::Any => formatted.push_str("(any)"),
+            Matcher::AnyOf(..) => formatted.push_str("(any of)"),
+            Matcher::AllOf(..) => formatted.push_str("(all of)"),
+            Matcher::Missing => formatted.push_str("(missing)"),
+        }
+
+        formatted.push_str("?");
+
+        match self.query {
             Matcher::Exact(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");

@@ -183,6 +183,16 @@ fn test_match_header_missing_not_matching() {
 }
 
 #[test]
+fn test_match_header_missing_not_matching_even_when_empty() {
+    let _m = mock("GET", "/")
+        .match_header("Authorization", Matcher::Missing)
+        .create();
+
+    let (status, _, _) = request("GET /", "Authorization:\r\n");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
+}
+
+#[test]
 fn test_match_multiple_header_conditions_matching() {
     let _m = mock("GET", "/")
         .match_header("Hello", "World")
@@ -632,28 +642,49 @@ fn test_body_from_file() {
 fn test_display_mock_matching_exact_path() {
     let mock = mock("GET", "/hello");
 
-    assert_eq!("\r\nGET /hello\r\n", format!("{}", mock));
+    assert_eq!("\r\nGET /hello?(any)\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_regex_path() {
     let mock = mock("GET", Matcher::Regex(r"^/hello/\d+$".to_string()));
 
-    assert_eq!("\r\nGET ^/hello/\\d+$ (regex)\r\n", format!("{}", mock));
+    assert_eq!("\r\nGET ^/hello/\\d+$ (regex)?(any)\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_any_path() {
     let mock = mock("GET", Matcher::Any);
 
-    assert_eq!("\r\nGET (any)\r\n", format!("{}", mock));
+    assert_eq!("\r\nGET (any)?(any)\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_exact_query() {
+    let mock = mock("GET", "/test?hello=world");
+
+    assert_eq!("\r\nGET /test?hello=world\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_regex_query() {
+    let mock = mock("GET", "/test").match_query(Matcher::Regex("hello=world".to_string()));
+
+    assert_eq!("\r\nGET /test?hello=world (regex)\r\n", format!("{}", mock));
+}
+
+#[test]
+fn test_display_mock_matching_any_query() {
+    let mock = mock("GET", "/test").match_query(Matcher::Any);
+
+    assert_eq!("\r\nGET /test?(any)\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_exact_header() {
     let mock = mock("GET", "/").match_header("content-type", "text").create();
 
-    assert_eq!("\r\nGET /\r\ncontent-type: text\r\n", format!("{}", mock));
+    assert_eq!("\r\nGET /?(any)\r\ncontent-type: text\r\n", format!("{}", mock));
 }
 
 #[test]
@@ -665,35 +696,35 @@ fn test_display_mock_matching_multiple_headers() {
         .match_header("x-request-id", Matcher::Missing)
         .create();
 
-    assert_eq!("\r\nGET /\r\ncontent-type: text\r\ncontent-length: \\d+ (regex)\r\nauthorization: (any)\r\nx-request-id: (missing)\r\n", format!("{}", mock));
+    assert_eq!("\r\nGET /?(any)\r\ncontent-type: text\r\ncontent-length: \\d+ (regex)\r\nauthorization: (any)\r\nx-request-id: (missing)\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_exact_body() {
     let mock = mock("POST", "/").match_body("hello").create();
 
-    assert_eq!("\r\nPOST /\r\nhello\r\n", format!("{}", mock));
+    assert_eq!("\r\nPOST /?(any)\r\nhello\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_regex_body() {
     let mock = mock("POST", "/").match_body(Matcher::Regex("hello".to_string())).create();
 
-    assert_eq!("\r\nPOST /\r\nhello\r\n", format!("{}", mock));
+    assert_eq!("\r\nPOST /?(any)\r\nhello\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_any_body() {
     let mock = mock("POST", "/").match_body(Matcher::Any).create();
 
-    assert_eq!("\r\nPOST /\r\n", format!("{}", mock));
+    assert_eq!("\r\nPOST /?(any)\r\n", format!("{}", mock));
 }
 
 #[test]
 fn test_display_mock_matching_headers_and_body() {
     let mock = mock("POST", "/").match_header("content-type", "text").match_body("hello").create();
 
-    assert_eq!("\r\nPOST /\r\ncontent-type: text\r\nhello\r\n", format!("{}", mock));
+    assert_eq!("\r\nPOST /?(any)\r\ncontent-type: text\r\nhello\r\n", format!("{}", mock));
 }
 
 #[test]
@@ -717,7 +748,7 @@ fn test_expect() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello?(any)\r\n\n...but received 0\n")]
 fn test_assert_panics_if_no_request_was_performed() {
     let mock = mock("GET", "/hello").create();
 
@@ -725,7 +756,7 @@ fn test_assert_panics_if_no_request_was_performed() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 2\n")]
+#[should_panic(expected = "\n> Expected 3 request(s) to:\n\r\nGET /hello?(any)\r\n\n...but received 2\n")]
 fn test_assert_panics_with_too_few_requests() {
     let mock = mock("GET", "/hello").expect(3).create();
 
@@ -736,7 +767,7 @@ fn test_assert_panics_with_too_few_requests() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 4\n")]
+#[should_panic(expected = "\n> Expected 3 request(s) to:\n\r\nGET /hello?(any)\r\n\n...but received 4\n")]
 fn test_assert_panics_with_too_many_requests() {
     let mock = mock("GET", "/hello").expect(3).create();
 
@@ -749,7 +780,7 @@ fn test_assert_panics_with_too_many_requests() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello?(any)\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye?\r\n\n> Difference:\n\n\u{1b}[31mGET /hello?(any)\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye?\u{1b}[0m\n\n\n")]
 fn test_assert_with_last_unmatched_request() {
     let mock = mock("GET", "/hello").create();
 
@@ -759,7 +790,7 @@ fn test_assert_with_last_unmatched_request() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello?(any)\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye?\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello?(any)\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye?\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n")]
 fn test_assert_with_last_unmatched_request_and_headers() {
     let mock = mock("GET", "/hello").create();
 
@@ -769,7 +800,7 @@ fn test_assert_with_last_unmatched_request_and_headers() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nPOST /bye\r\ncontent-length: 5\r\nhello\r\n\n")]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello?(any)\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nPOST /bye?\r\ncontent-length: 5\r\nhello\r\n\n")]
 fn test_assert_with_last_unmatched_request_and_body() {
     let mock = mock("GET", "/hello").create();
 
@@ -858,4 +889,70 @@ fn test_transfer_encoding_chunked() {
     );
 
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
+fn test_match_exact_query() {
+    let _m = mock("GET", "/hello")
+        .match_query(Matcher::Exact("number=one".to_string()))
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?number=one", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /hello?number=two", "");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+}
+
+#[test]
+fn test_match_exact_query_via_path() {
+    let _m = mock("GET", "/hello?number=one")
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?number=one", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /hello?number=two", "");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+}
+
+#[test]
+fn test_match_partial_query() {
+    let _m = mock("GET", "/hello")
+        .match_query(Matcher::Regex("number=one".to_string()))
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?something=else&number=one", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+}
+
+#[test]
+fn test_match_partial_query_all_of() {
+    let _m = mock("GET", "/hello")
+        .match_query(
+            Matcher::AllOf(vec![
+                Matcher::Regex("number=one".to_string()),
+                Matcher::Regex("hello=world".to_string())
+            ])
+        )
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?hello=world&something=else&number=one", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /hello?hello=world&something=else", "");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+}
+
+#[test]
+fn test_match_missing_query() {
+    let _m = mock("GET", "/hello")
+        .match_query(Matcher::Missing)
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request("GET /hello?number=one", "");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
 }
