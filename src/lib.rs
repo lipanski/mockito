@@ -481,8 +481,7 @@ mod diff;
 type Request = request::Request;
 type Response = response::Response;
 
-use std::fs::File;
-use std::io::Read;
+use std::path::Path;
 use std::convert::{From, Into};
 use std::ops::Drop;
 use std::fmt;
@@ -492,6 +491,8 @@ use regex::Regex;
 use std::sync::{Mutex, LockResult, MutexGuard};
 use std::cell::RefCell;
 use percent_encoding::percent_decode;
+use std::sync::Arc;
+use std::io;
 
 lazy_static! {
     // A global lock that ensure all Mockito tests are run on a single thread.
@@ -827,8 +828,25 @@ impl Mock {
     /// ```
     ///
     pub fn with_body<StrOrBytes: AsRef<[u8]>>(mut self, body: StrOrBytes) -> Self {
-        self.response.body = body.as_ref().to_owned();
+        self.response.body = response::Body::Bytes(body.as_ref().to_owned());
+        self
+    }
 
+    /// Sets the body of the mock response dynamically. The response is buffered, so the `Content-Length` is handled automatically.
+    ///
+    /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
+    /// Use `move` closures and `Arc` to share any data.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use mockito::mock;
+    ///
+    /// let _m = mock("GET", "/").with_body_from_fn(|w| w.write_all(b"hello world"));
+    /// ```
+    ///
+    pub fn with_body_from_fn(mut self, cb: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static) -> Self {
+        self.response.body = response::Body::Fn(Arc::new(cb));
         self
     }
 
@@ -844,14 +862,8 @@ impl Mock {
     /// let _m = mock("GET", "/").with_body_from_file("tests/files/simple.http");
     /// ```
     ///
-    pub fn with_body_from_file(mut self, path: &str) -> Self {
-        let mut file = File::open(path).unwrap();
-        let mut body = Vec::new();
-
-        file.read_to_end(&mut body).unwrap();
-
-        self.response.body = body;
-
+    pub fn with_body_from_file(mut self, path: impl AsRef<Path>) -> Self {
+        self.response.body = response::Body::Bytes(std::fs::read(path).unwrap());
         self
     }
 

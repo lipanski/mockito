@@ -1,11 +1,38 @@
+use std::sync::Arc;
 use std::convert::From;
 use std::fmt;
+use std::io;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Response {
+pub(crate) struct Response {
     pub status: Status,
     pub headers: Vec<(String, String)>,
-    pub body: Vec<u8>,
+    pub body: Body,
+}
+
+#[derive(Clone)]
+pub(crate) enum Body {
+    Bytes(Vec<u8>),
+    Fn(Arc<Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static>),
+}
+
+impl fmt::Debug for Body {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Body::Bytes(ref b) => b.fmt(f),
+            Body::Fn(_) => f.write_str("<callback>"),
+        }
+    }
+}
+
+impl PartialEq for Body {
+    fn eq(&self, other: &Body) -> bool {
+        match (self, other) {
+            (Body::Bytes(ref a), Body::Bytes(ref b)) => a == b,
+            (Body::Fn(ref a), Body::Fn(ref b)) => Arc::ptr_eq(a, b),
+            _ => false,
+        }
+    }
 }
 
 impl Default for Response {
@@ -13,7 +40,7 @@ impl Default for Response {
         Self {
             status: Status::Ok,
             headers: Vec::new(),
-            body: Vec::new(),
+            body: Body::Bytes(Vec::new()),
         }
     }
 }

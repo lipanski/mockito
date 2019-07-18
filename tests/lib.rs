@@ -38,7 +38,7 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
             content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
         }
 
-        headers.push(header_line.trim_right().to_string());
+        headers.push(header_line.trim_end().to_string());
     }
 
     let mut body = String::new();

@@ -5,6 +5,7 @@ use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::sync::Mutex;
 use std::sync::mpsc;
 use {SERVER_ADDRESS_INTERNAL, Request, Mock};
+use response::Body;
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -157,7 +158,8 @@ fn respond(
     headers: Option<&Vec<(String, String)>>,
     body: Option<&str>
 ) {
-    respond_bytes(stream, version, status, headers, body.map(|s| s.as_bytes()))
+    let body = body.map(|s| Body::Bytes(s.as_bytes().to_owned()));
+    respond_bytes(stream, version, status, headers, body.as_ref())
 }
 
 fn respond_bytes(
@@ -165,7 +167,7 @@ fn respond_bytes(
     version: (u8, u8),
     status: impl Display,
     headers: Option<&Vec<(String, String)>>,
-    body: Option<&[u8]>
+    body: Option<&Body>
 ) {
     let mut response = Vec::from(format!("HTTP/{}.{} {}\r\n", version.0, version.1, status));
     let mut has_content_length_header = false;
@@ -181,17 +183,27 @@ fn respond_bytes(
         has_content_length_header = headers.iter().any(|(key, _)| key == "content-length");
     }
 
-    if let Some(body) = body {
+    let mut buffer;
+    let body = match body {
+        Some(Body::Bytes(bytes)) => Some(&bytes[..]),
+        Some(Body::Fn(cb)) => {
+            // we don't implement transfer-encoding: chunked, so need to buffer
+            buffer = Vec::new();
+            let _ = cb(&mut buffer);
+            Some(&buffer[..])
+        },
+        None => None,
+    };
+    if let Some(bytes) = body {
         if !has_content_length_header {
-            response.extend(format!("content-length: {}\r\n\r\n", body.len()).as_bytes());
+            response.extend(format!("content-length: {}\r\n", bytes.len()).as_bytes());
         }
-
-        response.extend(body);
-    } else {
-        response.extend(b"\r\n");
     }
-
+    response.extend(b"\r\n");
     let _ = stream.write(&response);
+    if let Some(bytes) = body {
+        let _ = stream.write(bytes);
+    }
     let _ = stream.flush();
 }
 
@@ -200,7 +212,7 @@ fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_bod
         if skip_body {
             None
         } else {
-            Some(&*mock.response.body)
+            Some(&mock.response.body)
         };
 
     respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body);
