@@ -174,7 +174,7 @@ impl<'a> From<&'a TcpStream> for Request {
                         }
 
                         if let Some(a) = req.path {
-                            let mut parts = a.splitn(2, "?");
+                            let mut parts = a.splitn(2, '?');
                             request.path += parts.next().unwrap();
                             request.query += parts.next().unwrap_or("");
                         }

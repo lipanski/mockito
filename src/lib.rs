@@ -625,8 +625,8 @@ impl Matcher {
                 value == other
             },
             Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
-                other.split("&").map( |pair| {
-                    let mut parts = pair.splitn(2, "=");
+                other.split('&').map( |pair| {
+                    let mut parts = pair.splitn(2, '=');
                     let field = percent_decode(parts.next().unwrap().as_bytes()).decode_utf8_lossy();
                     let value = percent_decode(parts.next().unwrap_or("").as_bytes()).decode_utf8_lossy();
 
@@ -668,8 +668,8 @@ impl Mock {
             match path.into() {
                 // We also allow setting the query as part of the path argument
                 // but we split it under the hood into `Matcher::Exact` elements.
-                Matcher::Exact(ref raw_path) if raw_path.contains("?") => {
-                    let mut parts = raw_path.splitn(2, "?");
+                Matcher::Exact(ref raw_path) if raw_path.contains('?') => {
+                    let mut parts = raw_path.splitn(2, '?');
                     (parts.next().unwrap().into(), parts.next().unwrap_or("").into())
                 },
                 other => {
@@ -680,8 +680,8 @@ impl Mock {
         Self {
             id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
             method: method.to_owned().to_uppercase(),
-            path: path,
-            query: query,
+            path,
+            query,
             headers: Vec::new(),
             body: Matcher::Any,
             response: Response::default(),
