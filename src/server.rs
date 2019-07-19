@@ -1,4 +1,5 @@
 use std::thread;
+use std::io;
 use std::io::Write;
 use std::fmt::Display;
 use std::net::{TcpListener, TcpStream, SocketAddr};
@@ -159,7 +160,9 @@ fn respond(
     body: Option<&str>
 ) {
     let body = body.map(|s| Body::Bytes(s.as_bytes().to_owned()));
-    respond_bytes(stream, version, status, headers, body.as_ref())
+    if let Err(e) = respond_bytes(stream, version, status, headers, body.as_ref()) {
+        eprintln!("warning: Mock response write error: {}", e);
+    }
 }
 
 fn respond_bytes(
@@ -168,7 +171,7 @@ fn respond_bytes(
     status: impl Display,
     headers: Option<&Vec<(String, String)>>,
     body: Option<&Body>
-) {
+) -> io::Result<()> {
     let mut response = Vec::from(format!("HTTP/{}.{} {}\r\n", version.0, version.1, status));
     let mut has_content_length_header = false;
 
@@ -193,19 +196,19 @@ fn respond_bytes(
         None => {},
     };
     response.extend(b"\r\n");
-    let _ = stream.write(&response);
+    stream.write_all(&response)?;
     match body {
         Some(Body::Bytes(bytes)) => {
-            let _ = stream.write_all(bytes);
+            stream.write_all(bytes)?;
         },
         Some(Body::Fn(cb)) => {
             let mut chunked = Chunked::new(&mut stream);
-            let _ = cb(&mut chunked);
-            let _ = chunked.finish();
+            cb(&mut chunked)?;
+            chunked.finish()?;
         },
         None => {},
     };
-    let _ = stream.flush();
+    stream.flush()
 }
 
 fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_body: bool) {
@@ -216,7 +219,9 @@ fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_bod
             Some(&mock.response.body)
         };
 
-    respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body);
+    if let Err(e) = respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body) {
+        eprintln!("warning: Mock response write error: {}", e);
+    }
 }
 
 fn respond_with_mock_not_found(stream: TcpStream, version: (u8, u8)) {
