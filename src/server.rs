@@ -5,7 +5,7 @@ use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::sync::Mutex;
 use std::sync::mpsc;
 use {SERVER_ADDRESS_INTERNAL, Request, Mock};
-use response::Body;
+use response::{Chunked, Body};
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -183,27 +183,28 @@ fn respond_bytes(
         has_content_length_header = headers.iter().any(|(key, _)| key == "content-length");
     }
 
-    let mut buffer;
-    let body = match body {
-        Some(Body::Bytes(bytes)) => Some(&bytes[..]),
-        Some(Body::Fn(cb)) => {
-            // we don't implement transfer-encoding: chunked, so need to buffer
-            buffer = Vec::new();
-            let _ = cb(&mut buffer);
-            Some(&buffer[..])
-        },
-        None => None,
-    };
-    if let Some(bytes) = body {
-        if !has_content_length_header {
+    match body {
+        Some(Body::Bytes(bytes)) => if !has_content_length_header {
             response.extend(format!("content-length: {}\r\n", bytes.len()).as_bytes());
-        }
-    }
+        },
+        Some(Body::Fn(_)) => {
+            response.extend(b"transfer-encoding: chunked\r\n");
+        },
+        None => {},
+    };
     response.extend(b"\r\n");
     let _ = stream.write(&response);
-    if let Some(bytes) = body {
-        let _ = stream.write(bytes);
-    }
+    match body {
+        Some(Body::Bytes(bytes)) => {
+            let _ = stream.write_all(bytes);
+        },
+        Some(Body::Fn(cb)) => {
+            let mut chunked = Chunked::new(&mut stream);
+            let _ = cb(&mut chunked);
+            let _ = chunked.finish();
+        },
+        None => {},
+    };
     let _ = stream.flush();
 }
 

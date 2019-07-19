@@ -26,7 +26,7 @@ impl fmt::Debug for Body {
 }
 
 impl PartialEq for Body {
-    fn eq(&self, other: &Body) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Body::Bytes(ref a), Body::Bytes(ref b)) => a == b,
             (Body::Fn(ref a), Body::Fn(ref b)) => Arc::ptr_eq(a, b),
@@ -42,6 +42,37 @@ impl Default for Response {
             headers: Vec::new(),
             body: Body::Bytes(Vec::new()),
         }
+    }
+}
+
+pub(crate) struct Chunked<W: io::Write> {
+    writer: W
+}
+
+impl<W: io::Write> Chunked<W> {
+    pub fn new(writer: W) -> Self {
+        Self {writer}
+    }
+
+    pub fn finish(mut self) -> io::Result<W> {
+        self.writer.write_all(b"0\r\n\r\n")?;
+        Ok(self.writer)
+    }
+}
+
+impl<W: io::Write> io::Write for Chunked<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+        self.writer.write_all(format!("{:x}\r\n", buf.len()).as_bytes())?;
+        self.writer.write_all(buf)?;
+        self.writer.write_all(b"\r\n")?;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
     }
 }
 

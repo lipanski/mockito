@@ -832,7 +832,7 @@ impl Mock {
         self
     }
 
-    /// Sets the body of the mock response dynamically. The response is buffered, so the `Content-Length` is handled automatically.
+    /// Sets the body of the mock response dynamically. The response will use chunked transfer encoding.
     ///
     /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
     /// Use `move` closures and `Arc` to share any data.
