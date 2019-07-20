@@ -1,10 +1,12 @@
 use std::thread;
+use std::io;
 use std::io::Write;
 use std::fmt::Display;
 use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::sync::Mutex;
 use std::sync::mpsc;
 use {SERVER_ADDRESS_INTERNAL, Request, Mock};
+use response::{Chunked, Body};
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -157,7 +159,10 @@ fn respond(
     headers: Option<&Vec<(String, String)>>,
     body: Option<&str>
 ) {
-    respond_bytes(stream, version, status, headers, body.map(|s| s.as_bytes()))
+    let body = body.map(|s| Body::Bytes(s.as_bytes().to_owned()));
+    if let Err(e) = respond_bytes(stream, version, status, headers, body.as_ref()) {
+        eprintln!("warning: Mock response write error: {}", e);
+    }
 }
 
 fn respond_bytes(
@@ -165,8 +170,8 @@ fn respond_bytes(
     version: (u8, u8),
     status: impl Display,
     headers: Option<&Vec<(String, String)>>,
-    body: Option<&[u8]>
-) {
+    body: Option<&Body>
+) -> io::Result<()> {
     let mut response = Vec::from(format!("HTTP/{}.{} {}\r\n", version.0, version.1, status));
     let mut has_content_length_header = false;
 
@@ -181,18 +186,29 @@ fn respond_bytes(
         has_content_length_header = headers.iter().any(|(key, _)| key == "content-length");
     }
 
-    if let Some(body) = body {
-        if !has_content_length_header {
-            response.extend(format!("content-length: {}\r\n\r\n", body.len()).as_bytes());
-        }
-
-        response.extend(body);
-    } else {
-        response.extend(b"\r\n");
-    }
-
-    let _ = stream.write(&response);
-    let _ = stream.flush();
+    match body {
+        Some(Body::Bytes(bytes)) => if !has_content_length_header {
+            response.extend(format!("content-length: {}\r\n", bytes.len()).as_bytes());
+        },
+        Some(Body::Fn(_)) => {
+            response.extend(b"transfer-encoding: chunked\r\n");
+        },
+        None => {},
+    };
+    response.extend(b"\r\n");
+    stream.write_all(&response)?;
+    match body {
+        Some(Body::Bytes(bytes)) => {
+            stream.write_all(bytes)?;
+        },
+        Some(Body::Fn(cb)) => {
+            let mut chunked = Chunked::new(&mut stream);
+            cb(&mut chunked)?;
+            chunked.finish()?;
+        },
+        None => {},
+    };
+    stream.flush()
 }
 
 fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_body: bool) {
@@ -200,10 +216,12 @@ fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_bod
         if skip_body {
             None
         } else {
-            Some(&*mock.response.body)
+            Some(&mock.response.body)
         };
 
-    respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body);
+    if let Err(e) = respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body) {
+        eprintln!("warning: Mock response write error: {}", e);
+    }
 }
 
 fn respond_with_mock_not_found(stream: TcpStream, version: (u8, u8)) {

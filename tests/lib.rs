@@ -26,24 +26,48 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
     reader.read_line(&mut status_line).unwrap();
 
     let mut headers = vec![];
-    let mut content_length: u64 = 0;
+    let mut content_length: Option<u64> = None;
+    let mut is_chunked = false;
     loop {
         let mut header_line = String::new();
         reader.read_line(&mut header_line).unwrap();
 
         if header_line == "\r\n" { break }
 
-        if header_line.starts_with("content-length:") {
-            let mut parts = header_line.split(':');
-            content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
+        if header_line.starts_with("transfer-encoding:") && header_line.contains("chunked") {
+            is_chunked = true;
         }
 
-        headers.push(header_line.trim_right().to_string());
+        if header_line.starts_with("content-length:") {
+            let mut parts = header_line.split(':');
+            content_length = Some(u64::from_str(parts.nth(1).unwrap().trim()).unwrap());
+        }
+
+        headers.push(header_line.trim_end().to_string());
     }
 
     let mut body = String::new();
     if !skip_body {
-        reader.take(content_length).read_to_string(&mut body).unwrap();
+        if let Some(content_length) = content_length {
+            reader.take(content_length).read_to_string(&mut body).unwrap();
+        } else if is_chunked {
+            let mut chunk_size_buf = String::new();
+            loop {
+                chunk_size_buf.clear();
+                reader.read_line(&mut chunk_size_buf).unwrap();
+
+                let chunk_size = u64::from_str_radix(chunk_size_buf.trim_matches(|c| c == '\r' || c == '\n'), 16)
+                    .expect("chunk size");
+                if chunk_size == 0 {
+                    break;
+                }
+
+                (&mut reader).take(chunk_size).read_to_string(&mut body).unwrap();
+
+                chunk_size_buf.clear();
+                reader.read_line(&mut chunk_size_buf).unwrap();
+            }
+        }
     }
 
     (status_line, headers, body)
@@ -346,6 +370,29 @@ fn test_mock_with_custom_status() {
 
     let (status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 333 Custom\r\n", status_line);
+}
+
+#[test]
+fn test_mock_with_body() {
+    let _m = mock("GET", "/")
+        .with_body("hello")
+        .create();
+
+    let (_, _, body) = request("GET /", "");
+    assert_eq!("hello", body);
+}
+
+#[test]
+fn test_mock_with_fn_body() {
+    let _m = mock("GET", "/")
+        .with_body_from_fn(|w| {
+            w.write_all(b"hel")?;
+            w.write_all(b"lo")
+        })
+        .create();
+
+    let (_, _, body) = request("GET /", "");
+    assert_eq!("hello", body);
 }
 
 #[test]
