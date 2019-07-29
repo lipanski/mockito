@@ -349,6 +349,45 @@ fn test_match_body_with_json_string_order() {
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
+#[test]
+fn test_match_body_with_partial_json() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::PartialJson(json!({"hello":"world"})))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_partial_json_and_extra_fields() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::PartialJson(json!({"hello":"world", "foo": "bar"})))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world"}"#);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_partial_json_string() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::PartialJsonString("{\"hello\": \"world\"}".to_string()))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
+fn test_match_body_with_partial_json_string_and_extra_fields() {
+    let _m = mock("POST", "/")
+        .match_body(Matcher::PartialJsonString("{\"foo\": \"bar\", \"hello\": \"world\"}".to_string()))
+        .create();
+
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world"}"#);
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
+}
 
 #[test]
 fn test_mock_with_status() {

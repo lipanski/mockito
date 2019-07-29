@@ -472,6 +472,7 @@ extern crate serde_json;
 extern crate difference;
 extern crate colored;
 extern crate percent_encoding;
+extern crate assert_json_diff;
 
 mod server;
 mod request;
@@ -520,6 +521,7 @@ pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
 pub use server::address as server_address;
 pub use server::url as server_url;
+use assert_json_diff::{Comparison, assert_json_no_panic, Actual, Expected};
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
@@ -573,6 +575,10 @@ pub enum Matcher {
     Json(serde_json::Value),
     /// Matches a specified JSON body from a `String`
     JsonString(String),
+    /// Matches a partial JSON body from a `serde_json::Value`
+    PartialJson(serde_json::Value),
+    /// Matches a specified partial JSON body from a `String`
+    PartialJsonString(String),
     /// Matches a URL-encoded key/value pair, where both key and value should be specified
     /// in plain (unencoded) format
     UrlEncoded(String, String),
@@ -623,6 +629,19 @@ impl Matcher {
                 let value: serde_json::Value = serde_json::from_str(value).unwrap();
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 value == other
+            },
+            Matcher::PartialJson(ref json_obj) => {
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                let actual = Actual::new(other);
+                let expected = Expected::new(json_obj.clone());
+                assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
+            },
+            Matcher::PartialJsonString(ref value) => {
+                let value: serde_json::Value = serde_json::from_str(value).unwrap();
+                let other: serde_json::Value = serde_json::from_str(other).unwrap();
+                let actual = Actual::new(other);
+                let expected = Expected::new(value);
+                assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
             },
             Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
                 other.split('&').map( |pair| {
@@ -983,6 +1002,14 @@ impl fmt::Display for Mock {
                 formatted.push_str(value);
                 formatted.push_str(" (json)")
             },
+            Matcher::PartialJson(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str(" (partial json)")
+            }
+            Matcher::PartialJsonString(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str(" (partial json)")
+            },
             Matcher::UrlEncoded(ref field, ref value) => {
                 formatted.push_str(field);
                 formatted.push_str("=");
@@ -1013,6 +1040,14 @@ impl fmt::Display for Mock {
             Matcher::JsonString(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str(" (json)\r\n")
+            },
+            Matcher::PartialJson(ref json_obj) => {
+                formatted.push_str(&json_obj.to_string());
+                formatted.push_str(" (partial json)\r\n")
+            },
+            Matcher::PartialJsonString(ref value) => {
+                formatted.push_str(value);
+                formatted.push_str(" (partial json)\r\n")
             },
             Matcher::UrlEncoded(ref field, ref value) => {
                 formatted.push_str(field);
@@ -1050,6 +1085,18 @@ impl fmt::Display for Mock {
                     formatted.push_str(value);
                     formatted.push_str(" (json)")
                 },
+                Matcher::PartialJson(ref json_obj) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(&json_obj.to_string());
+                    formatted.push_str(" (partial json)")
+                },
+                Matcher::PartialJsonString(ref value) => {
+                    formatted.push_str(key);
+                    formatted.push_str(": ");
+                    formatted.push_str(value);
+                    formatted.push_str(" (partial json)")
+                },
                 Matcher::UrlEncoded(ref field, ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
@@ -1084,11 +1131,11 @@ impl fmt::Display for Mock {
         }
 
         match self.body {
-            Matcher::Exact(ref value) | Matcher::JsonString(ref value) | Matcher::Regex(ref value) => {
+            Matcher::Exact(ref value) | Matcher::JsonString(ref value) | Matcher::PartialJsonString(ref value) | Matcher::Regex(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");
             },
-            Matcher::Json(ref json_obj) => {
+            Matcher::Json(ref json_obj) | Matcher::PartialJson(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
                 formatted.push_str("\r\n")
             },
