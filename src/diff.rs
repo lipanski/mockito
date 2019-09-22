@@ -1,4 +1,5 @@
 use difference::{Difference, Changeset};
+#[cfg(feature = "color")]
 use colored::*;
 
 pub fn compare(expected: &str, actual: &str) -> String {
@@ -21,11 +22,19 @@ pub fn compare(expected: &str, actual: &str) -> String {
                     for (i, change) in diffs.iter().enumerate() {
                         match change {
                             Difference::Same(ref z) => {
+                                #[cfg(feature = "color")]
                                 result.push_str(&z.green().to_string());
+                                #[cfg(not(feature = "color"))]
+                                result.push_str(&z);
+
                                 if i < diffs.len() - 1 { result.push(' '); }
                             }
                             Difference::Add(ref z) => {
+                                #[cfg(feature = "color")]
                                 result.push_str(&z.white().on_green().to_string());
+                                #[cfg(not(feature = "color"))]
+                                result.push_str(&z);
+
                                 if i < diffs.len() - 1 { result.push(' '); }
                             }
                             _ => (),
@@ -33,12 +42,20 @@ pub fn compare(expected: &str, actual: &str) -> String {
                     }
                     result.push('\n');
                 } else {
+                    #[cfg(feature = "color")]
                     result.push_str(&x.bright_green().to_string());
+                    #[cfg(not(feature = "color"))]
+                    result.push_str(&x);
+
                     result.push('\n');
                 }
             },
             Difference::Rem(ref x) => {
+                #[cfg(feature = "color")]
                 result.push_str(&x.red().to_string());
+                #[cfg(not(feature = "color"))]
+                result.push_str(&x);
+
                 result.push('\n');
             },
         }

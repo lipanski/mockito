@@ -470,6 +470,7 @@ extern crate regex;
 #[macro_use] extern crate log;
 extern crate serde_json;
 extern crate difference;
+#[cfg(feature = "color")]
 extern crate colored;
 extern crate percent_encoding;
 extern crate assert_json_diff;
