@@ -135,7 +135,9 @@
 //!
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
-//! a missing or incomplete mock. A coloured diff is also displayed.
+//! a missing or incomplete mock. A colored diff is also displayed.
+//! 
+//! Color output is enabled by default, but can be toggled with the `color` feature flag.
 //!
 //! Here's an example of how a `Mock#assert` error looks like:
 //!
@@ -155,7 +157,7 @@
 //!
 //! > Difference:
 //!
-//! # A coloured diff
+//! # A colored diff
 //!
 //! ```
 //!
