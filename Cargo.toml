@@ -27,6 +27,9 @@ log = "0.4.6"
 percent-encoding = "^1.0.1"
 assert-json-diff = "^1.0.0"
 
+[dev-dependencies]
+env_logger = "0.6"
+
 [features]
 default = ["color"]
 color = ["colored"]
