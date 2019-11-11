@@ -754,14 +754,17 @@ impl Mock {
     /// ```
     ///
     pub fn match_query<M: Into<Matcher>>(mut self, query: M) -> Self {
-        match &self.path {
-            PathAndQueryMatcher::Unified(matcher) => {
-                self.path = PathAndQueryMatcher::Split(Box::new(matcher.clone()), Box::new(query.into()));
-            },
-            PathAndQueryMatcher::Split(path, _) => {
-                self.path = PathAndQueryMatcher::Split(path.clone(), Box::new(query.into()));
-            },
-        }
+        let new_path =
+            match &self.path {
+                PathAndQueryMatcher::Unified(matcher) => {
+                    PathAndQueryMatcher::Split(Box::new(matcher.clone()), Box::new(query.into()))
+                },
+                PathAndQueryMatcher::Split(path, _) => {
+                    PathAndQueryMatcher::Split(path.clone(), Box::new(query.into()))
+                },
+            };
+
+        self.path = new_path;
 
         self
     }
