@@ -17,9 +17,6 @@ impl Mock {
         self.path.matches_value(&request.path)
     }
 
-    fn query_matches(&self, request: &Request) -> bool {
-        self.query.matches_value(&request.query)
-    }
 
     fn headers_match(&self, request: &Request) -> bool {
         self.headers.iter().all(|&(ref field, ref expected)| {
@@ -36,7 +33,6 @@ impl<'a> PartialEq<Request> for &'a mut Mock {
     fn eq(&self, other: &Request) -> bool {
         self.method_matches(other)
             && self.path_matches(other)
-            && self.query_matches(other)
             && self.headers_match(other)
             && self.body_matches(other)
     }

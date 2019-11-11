@@ -13,7 +13,6 @@ pub struct Request {
     pub version: (u8, u8),
     pub method: String,
     pub path: String,
-    pub query: String,
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
     error: Option<String>,
@@ -118,7 +117,6 @@ impl Default for Request {
             version: (1, 1),
             method: String::new(),
             path: String::new(),
-            query: String::new(),
             headers: Vec::new(),
             body: Vec::new(),
             error: None,
@@ -174,9 +172,7 @@ impl<'a> From<&'a TcpStream> for Request {
                         }
 
                         if let Some(a) = req.path {
-                            let mut parts = a.splitn(2, '?');
-                            request.path += parts.next().unwrap();
-                            request.query += parts.next().unwrap_or("");
+                            request.path += a
                         }
 
                         for h in req.headers {
@@ -207,7 +203,7 @@ impl<'a> From<&'a TcpStream> for Request {
 
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\r\n{} {}?{}\r\n", &self.method, &self.path, &self.query)?;
+        write!(f, "\r\n{} {}\r\n", &self.method, &self.path)?;
 
         for &(ref key, ref value) in &self.headers {
             writeln!(f, "{}: {}\r", key, value)?;
