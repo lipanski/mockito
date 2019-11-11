@@ -13,7 +13,7 @@ pub(crate) struct Response {
 #[derive(Clone)]
 pub(crate) enum Body {
     Bytes(Vec<u8>),
-    Fn(Arc<Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static>),
+    Fn(Arc<dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static>),
 }
 
 impl fmt::Debug for Body {

@@ -522,8 +522,8 @@ const SERVER_ADDRESS_INTERNAL: &str = "127.0.0.1:1234";
 #[deprecated(note="Call server_url() instead")]
 pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
-pub use server::address as server_address;
-pub use server::url as server_url;
+pub use crate::server::address as server_address;
+pub use crate::server::url as server_url;
 use assert_json_diff::{Comparison, assert_json_no_panic, Actual, Expected};
 
 ///
