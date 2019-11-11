@@ -5,8 +5,8 @@ use std::fmt::Display;
 use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::sync::Mutex;
 use std::sync::mpsc;
-use {SERVER_ADDRESS_INTERNAL, Request, Mock};
-use response::{Chunked, Body};
+use crate::{SERVER_ADDRESS_INTERNAL, Request, Mock};
+use crate::response::{Chunked, Body};
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {

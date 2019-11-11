@@ -165,7 +165,7 @@ impl<'a> From<&'a TcpStream> for Request {
                 })
                 .and_then(|status| match status {
                     httparse::Status::Complete(head_length) => {
-                        if let Some(a @ 0...1) = req.version {
+                        if let Some(a @ 0..=1) = req.version {
                             request.version = (1, a);
                         }
 
