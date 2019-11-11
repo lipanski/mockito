@@ -836,11 +836,8 @@ fn test_expect() {
 #[test]
 #[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n")]
 fn test_assert_panics_if_no_request_was_performed() {
-    env_logger::init();
     let mock = mock("GET", "/hello").create();
-    println!("{}", mock);
 
-//panic!("stuff panic");
     mock.assert();
 }
 
@@ -981,7 +978,7 @@ fn test_transfer_encoding_chunked() {
 }
 
 #[test]
-fn test_match_exact_query2() {
+fn test_match_exact_query() {
     let _m = mock("GET", "/hello")
         .match_query(Matcher::Exact("number=one".to_string()))
         .create();
@@ -1077,19 +1074,18 @@ fn test_match_missing_query() {
     assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
 }
 
-// Test to prevent reappearance of https://github.com/lipanski/mockito/issues/86
 #[test]
-fn query_in_exact_test() {
-    let m = mockito::mock(
-        "GET",
-        Matcher::AnyOf(vec![
-            Matcher::Exact("/hello?world".to_string()),
-        ]),
-    )
-        .create();
+fn test_anyof_exact_path_and_query_matcher() {
+    let mock =
+        mock(
+            "GET",
+            Matcher::AnyOf(vec![
+                Matcher::Exact("/hello?world".to_string()),
+            ]),
+        ).create();
 
     let (status_line, _, _) = request("GET /hello?world", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
-    m.assert();
+    mock.assert();
 }

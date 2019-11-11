@@ -136,7 +136,7 @@
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
 //! a missing or incomplete mock. A colored diff is also displayed.
-//! 
+//!
 //! Color output is enabled by default, but can be toggled with the `color` feature flag.
 //!
 //! Here's an example of how a `Mock#assert` error looks like:
@@ -668,23 +668,23 @@ impl Matcher {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-enum PathMatcher {
-    PubMatcher(Matcher),
-    PathAndQuery(Box<Matcher>, Box<Matcher>),
+enum PathAndQueryMatcher {
+    Unified(Matcher),
+    Split(Box<Matcher>, Box<Matcher>),
 }
 
-impl PathMatcher{
+impl PathAndQueryMatcher{
     fn matches_value(&self, other: &str) -> bool {
         match self {
-            PathMatcher::PubMatcher(m) => m.matches_value(other),
-            PathMatcher::PathAndQuery(ref path_matcher, ref query_matcher) => {
-                let mut parts = other.splitn(2, '?');
+            PathAndQueryMatcher::Unified(matcher) => matcher.matches_value(other),
+            PathAndQueryMatcher::Split(ref path_matcher, ref query_matcher) => {
+                let mut parts = other.splitn(2, "?");
                 let path = parts.next().unwrap();
                 let query = parts.next().unwrap_or("");
+
                 return path_matcher.matches_value(path) && query_matcher.matches_value(query);
             }
         }
-
     }
 }
 
@@ -695,7 +695,7 @@ impl PathMatcher{
 pub struct Mock {
     id: String,
     method: String,
-    path: PathMatcher,
+    path: PathAndQueryMatcher,
     headers: Vec<(String, Matcher)>,
     body: Matcher,
     response: Response,
@@ -710,7 +710,7 @@ impl Mock {
         Self {
             id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
             method: method.to_owned().to_uppercase(),
-            path: PathMatcher::PubMatcher(path.into()),
+            path: PathAndQueryMatcher::Unified(path.into()),
             headers: Vec::new(),
             body: Matcher::Any,
             response: Response::default(),
@@ -755,11 +755,11 @@ impl Mock {
     ///
     pub fn match_query<M: Into<Matcher>>(mut self, query: M) -> Self {
         match &self.path {
-            PathMatcher::PubMatcher(m) => {
-                self.path = PathMatcher::PathAndQuery(Box::new(m.clone()), Box::new(query.into()));
+            PathAndQueryMatcher::Unified(matcher) => {
+                self.path = PathAndQueryMatcher::Split(Box::new(matcher.clone()), Box::new(query.into()));
             },
-            PathMatcher::PathAndQuery(path, _) => {
-                self.path = PathMatcher::PathAndQuery(path.clone(), Box::new(query.into()));
+            PathAndQueryMatcher::Split(path, _) => {
+                self.path = PathAndQueryMatcher::Split(path.clone(), Box::new(query.into()));
             },
         }
 
@@ -994,51 +994,129 @@ impl Drop for Mock {
     }
 }
 
-fn format_matcher(matcher : &Matcher) -> String{
-    let mut formatted = String::new();
-    match matcher {
-        Matcher::Exact(ref value) => {
-            formatted.push_str(value);
-        },
-        Matcher::Regex(ref value) => {
-            formatted.push_str(value);
-            formatted.push_str(" (regex)")
-        },
-        Matcher::Json(ref json_obj) => {
-            formatted.push_str(&json_obj.to_string());
-            formatted.push_str(" (json)")
-        },
-        Matcher::JsonString(ref value) => {
-            formatted.push_str(value);
-            formatted.push_str(" (json)")
-        },
-        Matcher::PartialJson(ref json_obj) => {
-            formatted.push_str(&json_obj.to_string());
-            formatted.push_str(" (partial json)")
-        }
-        Matcher::PartialJsonString(ref value) => {
-            formatted.push_str(value);
-            formatted.push_str(" (partial json)")
-        },
-        Matcher::UrlEncoded(ref field, ref value) => {
-            formatted.push_str(field);
-            formatted.push_str("=");
-            formatted.push_str(value);
-            formatted.push_str(" (urlencoded)")
-        },
-        Matcher::Any => formatted.push_str("(any)"),
-        Matcher::AnyOf(..) => formatted.push_str("(any of)"),
-        Matcher::AllOf(..) => formatted.push_str("(all of)"),
-        Matcher::Missing => formatted.push_str("(missing)"),
-    }
-    formatted
-}
+impl fmt::Display for PathAndQueryMatcher {
+    #[allow(deprecated)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut formatted = String::new();
 
-fn format_path_matcher(path_matcher : &PathMatcher) -> String{
-    match path_matcher {
-        PathMatcher::PubMatcher(m) => format_matcher(m),
-        PathMatcher::PathAndQuery(path, query) =>
-            format!("{}?{}", format_matcher(path), format_matcher(query)),
+        match self {
+            PathAndQueryMatcher::Unified(matcher) => {
+                match matcher {
+                    Matcher::Exact(ref value) => {
+                        formatted.push_str(value);
+                    },
+                    Matcher::Regex(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (regex)")
+                    },
+                    Matcher::Json(ref json_obj) => {
+                        formatted.push_str(&json_obj.to_string());
+                        formatted.push_str(" (json)")
+                    },
+                    Matcher::JsonString(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (json)")
+                    },
+                    Matcher::PartialJson(ref json_obj) => {
+                        formatted.push_str(&json_obj.to_string());
+                        formatted.push_str(" (partial json)")
+                    }
+                    Matcher::PartialJsonString(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (partial json)")
+                    },
+                    Matcher::UrlEncoded(ref field, ref value) => {
+                        formatted.push_str(field);
+                        formatted.push_str("=");
+                        formatted.push_str(value);
+                        formatted.push_str(" (urlencoded)")
+                    },
+                    Matcher::Any => formatted.push_str("(any)"),
+                    Matcher::AnyOf(..) => formatted.push_str("(any of)"),
+                    Matcher::AllOf(..) => formatted.push_str("(all of)"),
+                    Matcher::Missing => formatted.push_str("(missing)"),
+                }
+
+                formatted.push_str("\r\n");
+            },
+            PathAndQueryMatcher::Split(path, query) => {
+                match **path {
+                    Matcher::Exact(ref value) => {
+                        formatted.push_str(value);
+                    },
+                    Matcher::Regex(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (regex)")
+                    },
+                    Matcher::Json(ref json_obj) => {
+                        formatted.push_str(&json_obj.to_string());
+                        formatted.push_str(" (json)")
+                    },
+                    Matcher::JsonString(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (json)")
+                    },
+                    Matcher::PartialJson(ref json_obj) => {
+                        formatted.push_str(&json_obj.to_string());
+                        formatted.push_str(" (partial json)")
+                    }
+                    Matcher::PartialJsonString(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (partial json)")
+                    },
+                    Matcher::UrlEncoded(ref field, ref value) => {
+                        formatted.push_str(field);
+                        formatted.push_str("=");
+                        formatted.push_str(value);
+                        formatted.push_str(" (urlencoded)")
+                    },
+                    Matcher::Any => formatted.push_str("(any)"),
+                    Matcher::AnyOf(..) => formatted.push_str("(any of)"),
+                    Matcher::AllOf(..) => formatted.push_str("(all of)"),
+                    Matcher::Missing => formatted.push_str("(missing)"),
+                }
+
+                formatted.push_str("?");
+
+                match **query {
+                    Matcher::Exact(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str("\r\n");
+                    },
+                    Matcher::Regex(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (regex)\r\n")
+                    },
+                    Matcher::Json(ref json_obj) => {
+                        formatted.push_str(&json_obj.to_string());
+                        formatted.push_str(" (json)\r\n")
+                    },
+                    Matcher::JsonString(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (json)\r\n")
+                    },
+                    Matcher::PartialJson(ref json_obj) => {
+                        formatted.push_str(&json_obj.to_string());
+                        formatted.push_str(" (partial json)\r\n")
+                    },
+                    Matcher::PartialJsonString(ref value) => {
+                        formatted.push_str(value);
+                        formatted.push_str(" (partial json)\r\n")
+                    },
+                    Matcher::UrlEncoded(ref field, ref value) => {
+                        formatted.push_str(field);
+                        formatted.push_str("=");
+                        formatted.push_str(value);
+                    },
+                    Matcher::Any => formatted.push_str("(any)\r\n"),
+                    Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
+                    Matcher::AllOf(..) => formatted.push_str("(all of)\r\n"),
+                    Matcher::Missing => formatted.push_str("(missing)\r\n"),
+                }
+            }
+        }
+
+        f.write_str(&formatted)
     }
 }
 
@@ -1050,8 +1128,7 @@ impl fmt::Display for Mock {
         formatted.push_str("\r\n");
         formatted.push_str(&self.method);
         formatted.push_str(" ");
-        formatted.push_str(&format_path_matcher(&self.path));
-        formatted.push_str("\r\n");
+        formatted.push_str(&self.path.to_string());
 
 
         for &(ref key, ref value) in &self.headers {
