@@ -465,17 +465,16 @@
 //! still be run in parallel.
 //!
 
-extern crate httparse;
-extern crate rand;
-extern crate regex;
+
+
+
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
-extern crate serde_json;
-extern crate difference;
-#[cfg(feature = "color")]
-extern crate colored;
-extern crate percent_encoding;
-extern crate assert_json_diff;
+use serde_json;
+
+
+
+
 
 mod server;
 mod request;
@@ -999,7 +998,7 @@ impl Drop for Mock {
 
 impl fmt::Display for PathAndQueryMatcher {
     #[allow(deprecated)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut formatted = String::new();
 
         match self {
@@ -1125,7 +1124,7 @@ impl fmt::Display for PathAndQueryMatcher {
 
 impl fmt::Display for Mock {
     #[allow(deprecated)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut formatted = String::new();
 
         formatted.push_str("\r\n");

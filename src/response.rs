@@ -17,7 +17,7 @@ pub(crate) enum Body {
 }
 
 impl fmt::Debug for Body {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Body::Bytes(ref b) => b.fmt(f),
             Body::Fn(_) => f.write_str("<callback>"),
@@ -217,7 +217,7 @@ impl From<usize> for Status {
 }
 
 impl fmt::Display for Status {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let formatted = match self {
             Status::Continue => "100 Continue",
             Status::SwitchingProtocols => "101 Switching Protocols",

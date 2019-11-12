@@ -1,4 +1,4 @@
-extern crate mockito;
+use mockito;
 
 use std::time::Duration;
 

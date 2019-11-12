@@ -202,7 +202,7 @@ impl<'a> From<&'a TcpStream> for Request {
 }
 
 impl fmt::Display for Request {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "\r\n{} {}\r\n", &self.method, &self.path)?;
 
         for &(ref key, ref value) in &self.headers {

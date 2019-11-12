@@ -1,5 +1,5 @@
-extern crate rand;
-extern crate mockito;
+use rand;
+
 #[macro_use] extern crate serde_json;
 
 use std::net::{TcpStream, Shutdown};

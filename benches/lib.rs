@@ -1,7 +1,7 @@
 #![feature(test)]
 
 extern crate test;
-extern crate mockito;
+
 
 use std::net::TcpStream;
 use std::io::{Read, Write, BufRead, BufReader};
@@ -36,7 +36,7 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
             content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
         }
 
-        headers.push(header_line.trim_right().to_string());
+        headers.push(header_line.trim_end().to_string());
     }
 
     let mut body = String::new();
