@@ -1,10 +1,10 @@
-use std::io::{self, Read, BufRead, Cursor, BufReader};
-use std::mem;
-use std::str;
 use std::convert::From;
 use std::default::Default;
-use std::net::TcpStream;
 use std::fmt;
+use std::io::{self, BufRead, BufReader, Cursor, Read};
+use std::mem;
+use std::net::TcpStream;
+use std::str;
 
 use httparse;
 
@@ -39,20 +39,24 @@ impl Request {
     }
 
     pub fn find_header_values(&self, searched_field: &str) -> Vec<&str> {
-        self.headers.iter().filter_map(|(field, value)| {
-            if field == searched_field {
-                Some(value.as_str())
-            } else {
-                None
-            }
-        }).collect()
+        self.headers
+            .iter()
+            .filter_map(|(field, value)| {
+                if field == searched_field {
+                    Some(value.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     fn record_last_header(&mut self) {
         if self.last_header_field.is_some() && self.last_header_value.is_some() {
             let last_header_field = mem::replace(&mut self.last_header_field, None).unwrap();
             let last_header_value = mem::replace(&mut self.last_header_value, None).unwrap();
-            self.headers.push((last_header_field.to_lowercase(), last_header_value));
+            self.headers
+                .push((last_header_field.to_lowercase(), last_header_value));
         }
     }
 
@@ -65,7 +69,8 @@ impl Request {
     }
 
     fn has_chunked_body(&self) -> bool {
-        self.headers.iter()
+        self.headers
+            .iter()
             .filter(|(name, _)| name == "transfer-encoding")
             .any(|(_, value)| value.contains("chunked"))
     }

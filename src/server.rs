@@ -1,12 +1,12 @@
-use std::thread;
+use crate::response::{Body, Chunked};
+use crate::{Mock, Request, SERVER_ADDRESS_INTERNAL};
+use std::fmt::Display;
 use std::io;
 use std::io::Write;
-use std::fmt::Display;
-use std::net::{TcpListener, TcpStream, SocketAddr};
-use std::sync::Mutex;
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::mpsc;
-use crate::{SERVER_ADDRESS_INTERNAL, Request, Mock};
-use crate::response::{Chunked, Body};
+use std::sync::Mutex;
+use std::thread;
 
 impl Mock {
     fn method_matches(&self, request: &Request) -> bool {
@@ -17,7 +17,6 @@ impl Mock {
         self.path.matches_value(&request.path)
     }
 
-
     fn headers_match(&self, request: &Request) -> bool {
         self.headers.iter().all(|&(ref field, ref expected)| {
             expected.matches_values(&request.find_header_values(field))
@@ -25,7 +24,8 @@ impl Mock {
     }
 
     fn body_matches(&self, request: &Request) -> bool {
-        self.body.matches_value(&String::from_utf8_lossy(&request.body))
+        self.body
+            .matches_value(&String::from_utf8_lossy(&request.body))
     }
 }
 
@@ -66,7 +66,9 @@ pub fn address() -> SocketAddr {
     try_start();
 
     let state = STATE.lock().map(|state| state.listening_addr);
-    state.expect("state lock").expect("server should be listening")
+    state
+        .expect("state lock")
+        .expect("server should be listening")
 }
 
 /// A local `http://…` URL of the server.
@@ -80,14 +82,13 @@ pub fn try_start() {
     let mut state = STATE.lock().unwrap();
 
     if state.listening_addr.is_some() {
-        return
+        return;
     }
 
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
-        let res = TcpListener::bind(SERVER_ADDRESS_INTERNAL)
-        .or_else(|err| {
+        let res = TcpListener::bind(SERVER_ADDRESS_INTERNAL).or_else(|err| {
             warn!("{}", err);
             TcpListener::bind("127.0.0.1:0")
         });
@@ -96,23 +97,25 @@ pub fn try_start() {
                 let addr = listener.local_addr().unwrap();
                 tx.send(Some(addr)).unwrap();
                 (listener, addr)
-            },
+            }
             Err(err) => {
                 error!("{}", err);
                 tx.send(None).unwrap();
                 return;
-            },
+            }
         };
 
         debug!("Server is listening at {}", addr);
         for stream in listener.incoming() {
-            if let Ok(stream) = stream{
+            if let Ok(stream) = stream {
                 let request = Request::from(&stream);
                 debug!("Request received: {}", request);
                 if request.is_ok() {
                     handle_request(request, stream);
                 } else {
-                    let message = request.error().map_or("Could not parse the request.", |err| err.as_str());
+                    let message = request
+                        .error()
+                        .map_or("Could not parse the request.", |err| err.as_str());
                     debug!("Could not parse request because: {}", message);
                     respond_with_error(stream, request.version, message);
                 }
@@ -145,7 +148,9 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
         respond_with_mock_not_found(stream, request.version);
     }
 
-    if !found { state.unmatched_requests.push(request); }
+    if !found {
+        state.unmatched_requests.push(request);
+    }
 }
 
 fn respond(
@@ -153,7 +158,7 @@ fn respond(
     version: (u8, u8),
     status: impl Display,
     headers: Option<&Vec<(String, String)>>,
-    body: Option<&str>
+    body: Option<&str>,
 ) {
     let body = body.map(|s| Body::Bytes(s.as_bytes().to_owned()));
     if let Err(e) = respond_bytes(stream, version, status, headers, body.as_ref()) {
@@ -166,7 +171,7 @@ fn respond_bytes(
     version: (u8, u8),
     status: impl Display,
     headers: Option<&Vec<(String, String)>>,
-    body: Option<&Body>
+    body: Option<&Body>,
 ) -> io::Result<()> {
     let mut response = Vec::from(format!("HTTP/{}.{} {}\r\n", version.0, version.1, status));
     let mut has_content_length_header = false;
@@ -183,39 +188,46 @@ fn respond_bytes(
     }
 
     match body {
-        Some(Body::Bytes(bytes)) => if !has_content_length_header {
-            response.extend(format!("content-length: {}\r\n", bytes.len()).as_bytes());
-        },
+        Some(Body::Bytes(bytes)) => {
+            if !has_content_length_header {
+                response.extend(format!("content-length: {}\r\n", bytes.len()).as_bytes());
+            }
+        }
         Some(Body::Fn(_)) => {
             response.extend(b"transfer-encoding: chunked\r\n");
-        },
-        None => {},
+        }
+        None => {}
     };
     response.extend(b"\r\n");
     stream.write_all(&response)?;
     match body {
         Some(Body::Bytes(bytes)) => {
             stream.write_all(bytes)?;
-        },
+        }
         Some(Body::Fn(cb)) => {
             let mut chunked = Chunked::new(&mut stream);
             cb(&mut chunked)?;
             chunked.finish()?;
-        },
-        None => {},
+        }
+        None => {}
     };
     stream.flush()
 }
 
 fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_body: bool) {
-    let body =
-        if skip_body {
-            None
-        } else {
-            Some(&mock.response.body)
-        };
+    let body = if skip_body {
+        None
+    } else {
+        Some(&mock.response.body)
+    };
 
-    if let Err(e) = respond_bytes(stream, version, &mock.response.status, Some(&mock.response.headers), body) {
+    if let Err(e) = respond_bytes(
+        stream,
+        version,
+        &mock.response.status,
+        Some(&mock.response.headers),
+        body,
+    ) {
         eprintln!("warning: Mock response write error: {}", e);
     }
 }

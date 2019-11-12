@@ -1,5 +1,7 @@
 #![warn(missing_docs)]
-#![doc(html_logo_url = "https://raw.githubusercontent.com/lipanski/mockito/master/docs/logo-black.png")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/lipanski/mockito/master/docs/logo-black.png"
+)]
 
 //!
 //! Mockito is a library for creating HTTP mocks to be used in integration tests or for offline work.
@@ -465,37 +467,32 @@
 //! still be run in parallel.
 //!
 
-
-
-
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
 use serde_json;
 
-
-
-
-
-mod server;
+mod diff;
 mod request;
 mod response;
-mod diff;
+mod server;
 
 type Request = request::Request;
 type Response = response::Response;
 
-use std::path::Path;
-use std::convert::{From, Into};
-use std::ops::Drop;
-use std::fmt;
+use percent_encoding::percent_decode;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use regex::Regex;
-use std::sync::{Mutex, LockResult, MutexGuard};
 use std::cell::RefCell;
-use percent_encoding::percent_decode;
-use std::sync::Arc;
+use std::convert::{From, Into};
+use std::fmt;
 use std::io;
+use std::ops::Drop;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::{LockResult, Mutex, MutexGuard};
 
 lazy_static! {
     // A global lock that ensure all Mockito tests are run on a single thread.
@@ -504,26 +501,27 @@ lazy_static! {
 
 thread_local!(
     // A thread-local reference to the global lock. This is acquired within `Mock#create()`.
-    static LOCAL_TEST_MUTEX: RefCell<LockResult<MutexGuard<'static, ()>>> = RefCell::new(TEST_MUTEX.lock());
+    static LOCAL_TEST_MUTEX: RefCell<LockResult<MutexGuard<'static, ()>>> =
+        RefCell::new(TEST_MUTEX.lock());
 );
 
 ///
 /// Points to the address the mock server is running at.
 /// Can be used with `std::net::TcpStream`.
 ///
-#[deprecated(note="Call server_address() instead")]
+#[deprecated(note = "Call server_address() instead")]
 pub const SERVER_ADDRESS: &str = SERVER_ADDRESS_INTERNAL;
 const SERVER_ADDRESS_INTERNAL: &str = "127.0.0.1:1234";
 
 ///
 /// Points to the URL the mock server is running at.
 ///
-#[deprecated(note="Call server_url() instead")]
+#[deprecated(note = "Call server_url() instead")]
 pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
 pub use crate::server::address as server_address;
 pub use crate::server::url as server_url;
-use assert_json_diff::{Comparison, assert_json_no_panic, Actual, Expected};
+use assert_json_diff::{assert_json_no_panic, Actual, Comparison, Expected};
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
@@ -610,57 +608,58 @@ impl Matcher {
             // but other matchers match against individual values.
             Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
                 matchers.iter().any(|m| m.matches_values(header_values))
-            },
+            }
             Matcher::AllOf(ref matchers) if header_values.is_empty() => {
                 matchers.iter().all(|m| m.matches_values(header_values))
-            },
-            _ => !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val)),
+            }
+            _ => {
+                !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val))
+            }
         }
     }
 
     #[allow(deprecated)]
     fn matches_value(&self, other: &str) -> bool {
         match self {
-            Matcher::Exact(ref value) => { value == other },
-            Matcher::Regex(ref regex) => { Regex::new(regex).unwrap().is_match(other) },
+            Matcher::Exact(ref value) => value == other,
+            Matcher::Regex(ref regex) => Regex::new(regex).unwrap().is_match(other),
             Matcher::Json(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 *json_obj == other
-            },
+            }
             Matcher::JsonString(ref value) => {
                 let value: serde_json::Value = serde_json::from_str(value).unwrap();
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 value == other
-            },
+            }
             Matcher::PartialJson(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 let actual = Actual::new(other);
                 let expected = Expected::new(json_obj.clone());
                 assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
-            },
+            }
             Matcher::PartialJsonString(ref value) => {
                 let value: serde_json::Value = serde_json::from_str(value).unwrap();
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 let actual = Actual::new(other);
                 let expected = Expected::new(value);
                 assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
-            },
-            Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
-                other.split('&').map( |pair| {
+            }
+            Matcher::UrlEncoded(ref expected_field, ref expected_value) => other
+                .split('&')
+                .map(|pair| {
                     let mut parts = pair.splitn(2, '=');
-                    let field = percent_decode(parts.next().unwrap().as_bytes()).decode_utf8_lossy();
-                    let value = percent_decode(parts.next().unwrap_or("").as_bytes()).decode_utf8_lossy();
+                    let field =
+                        percent_decode(parts.next().unwrap().as_bytes()).decode_utf8_lossy();
+                    let value =
+                        percent_decode(parts.next().unwrap_or("").as_bytes()).decode_utf8_lossy();
 
                     (field.to_string(), value.to_string())
-                }).any(|(ref field, ref value)| field == expected_field && value == expected_value)
-            },
+                })
+                .any(|(ref field, ref value)| field == expected_field && value == expected_value),
             Matcher::Any => true,
-            Matcher::AnyOf(ref matchers) => {
-                matchers.iter().any(|m| m.matches_value(other))
-            },
-            Matcher::AllOf(ref matchers) => {
-                matchers.iter().all(|m| m.matches_value(other))
-            },
+            Matcher::AnyOf(ref matchers) => matchers.iter().any(|m| m.matches_value(other)),
+            Matcher::AllOf(ref matchers) => matchers.iter().all(|m| m.matches_value(other)),
             Matcher::Missing => other.is_empty(),
         }
     }
@@ -672,7 +671,7 @@ enum PathAndQueryMatcher {
     Split(Box<Matcher>, Box<Matcher>),
 }
 
-impl PathAndQueryMatcher{
+impl PathAndQueryMatcher {
     fn matches_value(&self, other: &str) -> bool {
         match self {
             PathAndQueryMatcher::Unified(matcher) => matcher.matches_value(other),
@@ -705,7 +704,6 @@ pub struct Mock {
 
 impl Mock {
     fn new<P: Into<Matcher>>(method: &str, path: P) -> Self {
-
         Self {
             id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
             method: method.to_owned().to_uppercase(),
@@ -753,15 +751,14 @@ impl Mock {
     /// ```
     ///
     pub fn match_query<M: Into<Matcher>>(mut self, query: M) -> Self {
-        let new_path =
-            match &self.path {
-                PathAndQueryMatcher::Unified(matcher) => {
-                    PathAndQueryMatcher::Split(Box::new(matcher.clone()), Box::new(query.into()))
-                },
-                PathAndQueryMatcher::Split(path, _) => {
-                    PathAndQueryMatcher::Split(path.clone(), Box::new(query.into()))
-                },
-            };
+        let new_path = match &self.path {
+            PathAndQueryMatcher::Unified(matcher) => {
+                PathAndQueryMatcher::Split(Box::new(matcher.clone()), Box::new(query.into()))
+            }
+            PathAndQueryMatcher::Split(path, _) => {
+                PathAndQueryMatcher::Split(path.clone(), Box::new(query.into()))
+            }
+        };
 
         self.path = new_path;
 
@@ -794,7 +791,8 @@ impl Mock {
     /// ```
     ///
     pub fn match_header<M: Into<Matcher>>(mut self, field: &str, value: M) -> Self {
-        self.headers.push((field.to_owned().to_lowercase(), value.into()));
+        self.headers
+            .push((field.to_owned().to_lowercase(), value.into()));
 
         self
     }
@@ -849,7 +847,9 @@ impl Mock {
     /// ```
     ///
     pub fn with_header(mut self, field: &str, value: &str) -> Self {
-        self.response.headers.push((field.to_owned(), value.to_owned()));
+        self.response
+            .headers
+            .push((field.to_owned(), value.to_owned()));
 
         self
     }
@@ -884,7 +884,10 @@ impl Mock {
     /// let _m = mock("GET", "/").with_body_from_fn(|w| w.write_all(b"hello world"));
     /// ```
     ///
-    pub fn with_body_from_fn(mut self, cb: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static) -> Self {
+    pub fn with_body_from_fn(
+        mut self,
+        cb: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
+    ) -> Self {
         self.response.body = response::Body::Fn(Arc::new(cb));
         self
     }
@@ -930,10 +933,16 @@ impl Mock {
             if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
                 opt_hits = Some(remote_mock.hits);
 
-                let mut message = format!("\n> Expected {} request(s) to:\n{}\n...but received {}\n\n", self.expected_hits, self, remote_mock.hits);
+                let mut message = format!(
+                    "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
+                    self.expected_hits, self, remote_mock.hits
+                );
 
                 if let Some(last_request) = state.unmatched_requests.last() {
-                    message.push_str(&format!("> The last unmatched request was:\n{}\n", last_request));
+                    message.push_str(&format!(
+                        "> The last unmatched request was:\n{}\n",
+                        last_request
+                    ));
 
                     let difference = diff::compare(&self.to_string(), &last_request.to_string());
                     message.push_str(&format!("> Difference:\n{}\n", difference));
@@ -1006,19 +1015,19 @@ impl fmt::Display for PathAndQueryMatcher {
                 match matcher {
                     Matcher::Exact(ref value) => {
                         formatted.push_str(value);
-                    },
+                    }
                     Matcher::Regex(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (regex)")
-                    },
+                    }
                     Matcher::Json(ref json_obj) => {
                         formatted.push_str(&json_obj.to_string());
                         formatted.push_str(" (json)")
-                    },
+                    }
                     Matcher::JsonString(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (json)")
-                    },
+                    }
                     Matcher::PartialJson(ref json_obj) => {
                         formatted.push_str(&json_obj.to_string());
                         formatted.push_str(" (partial json)")
@@ -1026,13 +1035,13 @@ impl fmt::Display for PathAndQueryMatcher {
                     Matcher::PartialJsonString(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (partial json)")
-                    },
+                    }
                     Matcher::UrlEncoded(ref field, ref value) => {
                         formatted.push_str(field);
                         formatted.push_str("=");
                         formatted.push_str(value);
                         formatted.push_str(" (urlencoded)")
-                    },
+                    }
                     Matcher::Any => formatted.push_str("(any)"),
                     Matcher::AnyOf(..) => formatted.push_str("(any of)"),
                     Matcher::AllOf(..) => formatted.push_str("(all of)"),
@@ -1040,24 +1049,24 @@ impl fmt::Display for PathAndQueryMatcher {
                 }
 
                 formatted.push_str("\r\n");
-            },
+            }
             PathAndQueryMatcher::Split(path, query) => {
                 match **path {
                     Matcher::Exact(ref value) => {
                         formatted.push_str(value);
-                    },
+                    }
                     Matcher::Regex(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (regex)")
-                    },
+                    }
                     Matcher::Json(ref json_obj) => {
                         formatted.push_str(&json_obj.to_string());
                         formatted.push_str(" (json)")
-                    },
+                    }
                     Matcher::JsonString(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (json)")
-                    },
+                    }
                     Matcher::PartialJson(ref json_obj) => {
                         formatted.push_str(&json_obj.to_string());
                         formatted.push_str(" (partial json)")
@@ -1065,13 +1074,13 @@ impl fmt::Display for PathAndQueryMatcher {
                     Matcher::PartialJsonString(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (partial json)")
-                    },
+                    }
                     Matcher::UrlEncoded(ref field, ref value) => {
                         formatted.push_str(field);
                         formatted.push_str("=");
                         formatted.push_str(value);
                         formatted.push_str(" (urlencoded)")
-                    },
+                    }
                     Matcher::Any => formatted.push_str("(any)"),
                     Matcher::AnyOf(..) => formatted.push_str("(any of)"),
                     Matcher::AllOf(..) => formatted.push_str("(all of)"),
@@ -1084,32 +1093,32 @@ impl fmt::Display for PathAndQueryMatcher {
                     Matcher::Exact(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str("\r\n");
-                    },
+                    }
                     Matcher::Regex(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (regex)\r\n")
-                    },
+                    }
                     Matcher::Json(ref json_obj) => {
                         formatted.push_str(&json_obj.to_string());
                         formatted.push_str(" (json)\r\n")
-                    },
+                    }
                     Matcher::JsonString(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (json)\r\n")
-                    },
+                    }
                     Matcher::PartialJson(ref json_obj) => {
                         formatted.push_str(&json_obj.to_string());
                         formatted.push_str(" (partial json)\r\n")
-                    },
+                    }
                     Matcher::PartialJsonString(ref value) => {
                         formatted.push_str(value);
                         formatted.push_str(" (partial json)\r\n")
-                    },
+                    }
                     Matcher::UrlEncoded(ref field, ref value) => {
                         formatted.push_str(field);
                         formatted.push_str("=");
                         formatted.push_str(value);
-                    },
+                    }
                     Matcher::Any => formatted.push_str("(any)\r\n"),
                     Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
                     Matcher::AllOf(..) => formatted.push_str("(all of)\r\n"),
@@ -1132,44 +1141,43 @@ impl fmt::Display for Mock {
         formatted.push_str(" ");
         formatted.push_str(&self.path.to_string());
 
-
         for &(ref key, ref value) in &self.headers {
             match value {
                 Matcher::Exact(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
-                },
+                }
                 Matcher::Regex(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (regex)")
-                },
+                }
                 Matcher::Json(ref json_obj) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(&json_obj.to_string());
                     formatted.push_str(" (json)")
-                },
+                }
                 Matcher::JsonString(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (json)")
-                },
+                }
                 Matcher::PartialJson(ref json_obj) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(&json_obj.to_string());
                     formatted.push_str(" (partial json)")
-                },
+                }
                 Matcher::PartialJsonString(ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str(value);
                     formatted.push_str(" (partial json)")
-                },
+                }
                 Matcher::UrlEncoded(ref field, ref value) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
@@ -1177,46 +1185,49 @@ impl fmt::Display for Mock {
                     formatted.push_str("=");
                     formatted.push_str(value);
                     formatted.push_str(" (urlencoded)")
-                },
+                }
                 Matcher::Any => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(any)");
-                },
+                }
                 Matcher::Missing => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(missing)");
-                },
+                }
                 Matcher::AnyOf(..) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(any of)");
-                },
+                }
                 Matcher::AllOf(..) => {
                     formatted.push_str(key);
                     formatted.push_str(": ");
                     formatted.push_str("(all of)");
-                },
+                }
             }
 
             formatted.push_str("\r\n");
         }
 
         match self.body {
-            Matcher::Exact(ref value) | Matcher::JsonString(ref value) | Matcher::PartialJsonString(ref value) | Matcher::Regex(ref value) => {
+            Matcher::Exact(ref value)
+            | Matcher::JsonString(ref value)
+            | Matcher::PartialJsonString(ref value)
+            | Matcher::Regex(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");
-            },
+            }
             Matcher::Json(ref json_obj) | Matcher::PartialJson(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
                 formatted.push_str("\r\n")
-            },
+            }
             Matcher::UrlEncoded(ref field, ref value) => {
                 formatted.push_str(field);
                 formatted.push_str("=");
                 formatted.push_str(value);
-            },
+            }
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
             Matcher::AnyOf(..) => formatted.push_str("(any of)\r\n"),
             Matcher::AllOf(..) => formatted.push_str("(all of)\r\n"),
