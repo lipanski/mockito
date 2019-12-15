@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use std::convert::From;
 use std::fmt;
 use std::io;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Response {
@@ -17,7 +17,7 @@ pub(crate) enum Body {
 }
 
 impl fmt::Debug for Body {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Body::Bytes(ref b) => b.fmt(f),
             Body::Fn(_) => f.write_str("<callback>"),
@@ -46,12 +46,12 @@ impl Default for Response {
 }
 
 pub(crate) struct Chunked<W: io::Write> {
-    writer: W
+    writer: W,
 }
 
 impl<W: io::Write> Chunked<W> {
     pub fn new(writer: W) -> Self {
-        Self {writer}
+        Self { writer }
     }
 
     pub fn finish(mut self) -> io::Result<W> {
@@ -65,7 +65,8 @@ impl<W: io::Write> io::Write for Chunked<W> {
         if buf.is_empty() {
             return Ok(0);
         }
-        self.writer.write_all(format!("{:x}\r\n", buf.len()).as_bytes())?;
+        self.writer
+            .write_all(format!("{:x}\r\n", buf.len()).as_bytes())?;
         self.writer.write_all(buf)?;
         self.writer.write_all(b"\r\n")?;
         Ok(buf.len())
@@ -77,7 +78,7 @@ impl<W: io::Write> io::Write for Chunked<W> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature="cargo-clippy", allow(clippy::pub_enum_variant_names))]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::pub_enum_variant_names))]
 pub enum Status {
     Continue,
     SwitchingProtocols,
@@ -217,7 +218,7 @@ impl From<usize> for Status {
 }
 
 impl fmt::Display for Status {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let formatted = match self {
             Status::Continue => "100 Continue",
             Status::SwitchingProtocols => "101 Switching Protocols",

@@ -1,15 +1,16 @@
-extern crate rand;
-extern crate mockito;
-#[macro_use] extern crate serde_json;
+use rand;
 
-use std::net::{TcpStream, Shutdown};
-use std::io::{Read, Write, BufRead, BufReader};
-use std::str::FromStr;
-use std::mem;
-use std::thread;
+#[macro_use]
+extern crate serde_json;
+
+use mockito::{mock, server_address, Matcher};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
-use mockito::{server_address, mock, Matcher};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::mem;
+use std::net::{Shutdown, TcpStream};
+use std::str::FromStr;
+use std::thread;
 
 fn request_stream(version: &str, route: &str, headers: &str, body: &str) -> TcpStream {
     let mut stream = TcpStream::connect(server_address()).unwrap();
@@ -32,7 +33,9 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
         let mut header_line = String::new();
         reader.read_line(&mut header_line).unwrap();
 
-        if header_line == "\r\n" { break }
+        if header_line == "\r\n" {
+            break;
+        }
 
         if header_line.starts_with("transfer-encoding:") && header_line.contains("chunked") {
             is_chunked = true;
@@ -49,20 +52,29 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
     let mut body = String::new();
     if !skip_body {
         if let Some(content_length) = content_length {
-            reader.take(content_length).read_to_string(&mut body).unwrap();
+            reader
+                .take(content_length)
+                .read_to_string(&mut body)
+                .unwrap();
         } else if is_chunked {
             let mut chunk_size_buf = String::new();
             loop {
                 chunk_size_buf.clear();
                 reader.read_line(&mut chunk_size_buf).unwrap();
 
-                let chunk_size = u64::from_str_radix(chunk_size_buf.trim_matches(|c| c == '\r' || c == '\n'), 16)
-                    .expect("chunk size");
+                let chunk_size = u64::from_str_radix(
+                    chunk_size_buf.trim_matches(|c| c == '\r' || c == '\n'),
+                    16,
+                )
+                .expect("chunk size");
                 if chunk_size == 0 {
                     break;
                 }
 
-                (&mut reader).take(chunk_size).read_to_string(&mut body).unwrap();
+                (&mut reader)
+                    .take(chunk_size)
+                    .read_to_string(&mut body)
+                    .unwrap();
 
                 chunk_size_buf.clear();
                 reader.read_line(&mut chunk_size_buf).unwrap();
@@ -74,7 +86,10 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
 }
 
 fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
-    parse_stream(request_stream("1.1", route, headers, ""), route.starts_with("HEAD"))
+    parse_stream(
+        request_stream("1.1", route, headers, ""),
+        route.starts_with("HEAD"),
+    )
 }
 
 fn request_with_body(route: &str, headers: &str, body: &str) -> (String, Vec<String>, String) {
@@ -140,7 +155,9 @@ fn test_match_header() {
 
 #[test]
 fn test_match_header_is_case_insensitive_on_the_field_name() {
-    let _m = mock("GET", "/").match_header("content-type", "text/plain").create();
+    let _m = mock("GET", "/")
+        .match_header("content-type", "text/plain")
+        .create();
 
     let (uppercase_status_line, _, _) = request("GET /", "Content-Type: text/plain\r\n");
     assert_eq!("HTTP/1.1 200 OK\r\n", uppercase_status_line);
@@ -157,10 +174,16 @@ fn test_match_multiple_headers() {
         .with_body("matched")
         .create();
 
-    let (_, _, body_matching) = request("GET /", "content-type: text/plain\r\nauthorization: secret\r\n");
+    let (_, _, body_matching) = request(
+        "GET /",
+        "content-type: text/plain\r\nauthorization: secret\r\n",
+    );
     assert_eq!("matched", body_matching);
 
-    let (status_not_matching, _, _) = request("GET /", "content-type: text/plain\r\nauthorization: meh\r\n");
+    let (status_not_matching, _, _) = request(
+        "GET /",
+        "content-type: text/plain\r\nauthorization: meh\r\n",
+    );
     assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_not_matching);
 }
 
@@ -250,9 +273,7 @@ fn test_match_any_body_by_default() {
 
 #[test]
 fn test_match_body() {
-    let _m = mock("POST", "/")
-        .match_body("hello")
-        .create();
+    let _m = mock("POST", "/").match_body("hello").create();
 
     let (status, _, _) = request_with_body("POST /", "", "hello");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
@@ -260,9 +281,7 @@ fn test_match_body() {
 
 #[test]
 fn test_match_body_not_matching() {
-    let _m = mock("POST", "/")
-        .match_body("hello")
-        .create();
+    let _m = mock("POST", "/").match_body("hello").create();
 
     let (status, _, _) = request_with_body("POST /", "", "bye");
     assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
@@ -290,12 +309,12 @@ fn test_match_body_with_regex_not_matching() {
 
 #[test]
 fn test_match_body_with_json() {
-   let _m = mock("POST", "/")
-       .match_body(Matcher::Json(json!({"hello":"world", "foo": "bar"})))
-       .create();
+    let _m = mock("POST", "/")
+        .match_body(Matcher::Json(json!({"hello":"world", "foo": "bar"})))
+        .create();
 
-   let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
-   assert_eq!("HTTP/1.1 200 OK\r\n", status);
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
@@ -331,18 +350,22 @@ fn test_match_body_with_json_order() {
 
 #[test]
 fn test_match_body_with_json_string() {
-   let _m = mock("POST", "/")
-       .match_body(Matcher::JsonString("{\"hello\":\"world\", \"foo\": \"bar\"}".to_string()))
-       .create();
+    let _m = mock("POST", "/")
+        .match_body(Matcher::JsonString(
+            "{\"hello\":\"world\", \"foo\": \"bar\"}".to_string(),
+        ))
+        .create();
 
-   let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
-   assert_eq!("HTTP/1.1 200 OK\r\n", status);
+    let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
 #[test]
 fn test_match_body_with_json_string_order() {
     let _m = mock("POST", "/")
-        .match_body(Matcher::JsonString("{\"foo\": \"bar\", \"hello\": \"world\"}".to_string()))
+        .match_body(Matcher::JsonString(
+            "{\"foo\": \"bar\", \"hello\": \"world\"}".to_string(),
+        ))
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
@@ -372,7 +395,9 @@ fn test_match_body_with_partial_json_and_extra_fields() {
 #[test]
 fn test_match_body_with_partial_json_string() {
     let _m = mock("POST", "/")
-        .match_body(Matcher::PartialJsonString("{\"hello\": \"world\"}".to_string()))
+        .match_body(Matcher::PartialJsonString(
+            "{\"hello\": \"world\"}".to_string(),
+        ))
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world", "foo": "bar"}"#);
@@ -382,7 +407,9 @@ fn test_match_body_with_partial_json_string() {
 #[test]
 fn test_match_body_with_partial_json_string_and_extra_fields() {
     let _m = mock("POST", "/")
-        .match_body(Matcher::PartialJsonString("{\"foo\": \"bar\", \"hello\": \"world\"}".to_string()))
+        .match_body(Matcher::PartialJsonString(
+            "{\"foo\": \"bar\", \"hello\": \"world\"}".to_string(),
+        ))
         .create();
 
     let (status, _, _) = request_with_body("POST /", "", r#"{"hello":"world"}"#);
@@ -391,10 +418,7 @@ fn test_match_body_with_partial_json_string_and_extra_fields() {
 
 #[test]
 fn test_mock_with_status() {
-    let _m = mock("GET", "/")
-        .with_status(204)
-        .with_body("")
-        .create();
+    let _m = mock("GET", "/").with_status(204).with_body("").create();
 
     let (status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 204 No Content\r\n", status_line);
@@ -402,10 +426,7 @@ fn test_mock_with_status() {
 
 #[test]
 fn test_mock_with_custom_status() {
-    let _m = mock("GET", "/")
-        .with_status(333)
-        .with_body("")
-        .create();
+    let _m = mock("GET", "/").with_status(333).with_body("").create();
 
     let (status_line, _, _) = request("GET /", "");
     assert_eq!("HTTP/1.1 333 Custom\r\n", status_line);
@@ -413,9 +434,7 @@ fn test_mock_with_custom_status() {
 
 #[test]
 fn test_mock_with_body() {
-    let _m = mock("GET", "/")
-        .with_body("hello")
-        .create();
+    let _m = mock("GET", "/").with_body("hello").create();
 
     let (_, _, body) = request("GET /", "");
     assert_eq!("hello", body);
@@ -474,7 +493,8 @@ fn test_mock_preserves_header_order() {
     let _m = mock.create();
 
     let (_, headers, _) = request("GET /", "");
-    let custom_headers: Vec<_> = headers.into_iter()
+    let custom_headers: Vec<_> = headers
+        .into_iter()
         .filter(|header| header.starts_with("x-custom-header"))
         .collect();
 
@@ -524,8 +544,12 @@ fn test_explicitly_calling_drop_removes_the_mock() {
 
 #[test]
 fn test_regex_match_path() {
-    let _m1 = mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string())).with_body("aaa").create();
-    let _m2 = mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string())).with_body("bbb").create();
+    let _m1 = mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string()))
+        .with_body("aaa")
+        .create();
+    let _m2 = mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string()))
+        .with_body("bbb")
+        .create();
 
     let (_, _, body_a) = request("GET /a/1", "");
     assert_eq!("aaa", body_a);
@@ -543,7 +567,10 @@ fn test_regex_match_path() {
 #[test]
 fn test_regex_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Authorization", Matcher::Regex(r"^Bearer token\.\w+$".to_string()))
+        .match_header(
+            "Authorization",
+            Matcher::Regex(r"^Bearer token\.\w+$".to_string()),
+        )
         .with_body("{}")
         .create();
 
@@ -557,9 +584,13 @@ fn test_regex_match_header() {
 #[test]
 fn test_any_of_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::AnyOf(vec![
-            Matcher::Exact("one".into()),
-            Matcher::Exact("two".into())]))
+        .match_header(
+            "Via",
+            Matcher::AnyOf(vec![
+                Matcher::Exact("one".into()),
+                Matcher::Exact("two".into()),
+            ]),
+        )
         .with_body("{}")
         .create();
 
@@ -584,7 +615,8 @@ fn test_any_of_match_body() {
     let _m = mock("GET", "/")
         .match_body(Matcher::AnyOf(vec![
             Matcher::Regex("one".to_string()),
-            Matcher::Regex("two".to_string())]))
+            Matcher::Regex("two".to_string()),
+        ]))
         .create();
 
     let (status_line, _, _) = request_with_body("GET /", "", "one");
@@ -603,9 +635,10 @@ fn test_any_of_match_body() {
 #[test]
 fn test_any_of_missing_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::AnyOf(vec![
-            Matcher::Exact("one".into()),
-            Matcher::Missing]))
+        .match_header(
+            "Via",
+            Matcher::AnyOf(vec![Matcher::Exact("one".into()), Matcher::Missing]),
+        )
         .with_body("{}")
         .create();
 
@@ -631,9 +664,13 @@ fn test_any_of_missing_match_header() {
 #[test]
 fn test_all_of_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::AllOf(vec![
-            Matcher::Regex("one".into()),
-            Matcher::Regex("two".into())]))
+        .match_header(
+            "Via",
+            Matcher::AllOf(vec![
+                Matcher::Regex("one".into()),
+                Matcher::Regex("two".into()),
+            ]),
+        )
         .with_body("{}")
         .create();
 
@@ -658,7 +695,8 @@ fn test_all_of_match_body() {
     let _m = mock("GET", "/")
         .match_body(Matcher::AllOf(vec![
             Matcher::Regex("one".to_string()),
-            Matcher::Regex("two".to_string())]))
+            Matcher::Regex("two".to_string()),
+        ]))
         .create();
 
     let (status_line, _, _) = request_with_body("GET /", "", "one");
@@ -677,8 +715,7 @@ fn test_all_of_match_body() {
 #[test]
 fn test_all_of_missing_match_header() {
     let _m = mock("GET", "/")
-        .match_header("Via", Matcher::AllOf(vec![
-            Matcher::Missing]))
+        .match_header("Via", Matcher::AllOf(vec![Matcher::Missing]))
         .with_body("{}")
         .create();
 
@@ -768,7 +805,9 @@ fn test_display_mock_matching_any_query() {
 
 #[test]
 fn test_display_mock_matching_exact_header() {
-    let mock = mock("GET", "/").match_header("content-type", "text").create();
+    let mock = mock("GET", "/")
+        .match_header("content-type", "text")
+        .create();
 
     assert_eq!("\r\nGET /\r\ncontent-type: text\r\n", format!("{}", mock));
 }
@@ -794,7 +833,9 @@ fn test_display_mock_matching_exact_body() {
 
 #[test]
 fn test_display_mock_matching_regex_body() {
-    let mock = mock("POST", "/").match_body(Matcher::Regex("hello".to_string())).create();
+    let mock = mock("POST", "/")
+        .match_body(Matcher::Regex("hello".to_string()))
+        .create();
 
     assert_eq!("\r\nPOST /\r\nhello\r\n", format!("{}", mock));
 }
@@ -808,9 +849,15 @@ fn test_display_mock_matching_any_body() {
 
 #[test]
 fn test_display_mock_matching_headers_and_body() {
-    let mock = mock("POST", "/").match_header("content-type", "text").match_body("hello").create();
+    let mock = mock("POST", "/")
+        .match_header("content-type", "text")
+        .match_body("hello")
+        .create();
 
-    assert_eq!("\r\nPOST /\r\ncontent-type: text\r\nhello\r\n", format!("{}", mock));
+    assert_eq!(
+        "\r\nPOST /\r\ncontent-type: text\r\nhello\r\n",
+        format!("{}", mock)
+    );
 }
 
 #[test]
@@ -866,7 +913,9 @@ fn test_assert_panics_with_too_many_requests() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n")]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n"
+)]
 fn test_assert_with_last_unmatched_request() {
     let mock = mock("GET", "/hello").create();
 
@@ -876,7 +925,9 @@ fn test_assert_with_last_unmatched_request() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n")]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n"
+)]
 fn test_assert_with_last_unmatched_request_and_headers() {
     let mock = mock("GET", "/hello").create();
 
@@ -886,7 +937,9 @@ fn test_assert_with_last_unmatched_request_and_headers() {
 }
 
 #[test]
-#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nPOST /bye\r\ncontent-length: 5\r\nhello\r\n\n")]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nPOST /bye\r\ncontent-length: 5\r\nhello\r\n\n"
+)]
 fn test_assert_with_last_unmatched_request_and_body() {
     let mock = mock("GET", "/hello").create();
 
@@ -928,7 +981,9 @@ fn test_mock_from_inside_thread_does_not_lock_forever() {
 
 #[test]
 fn test_head_request_with_overridden_content_length() {
-    let _mock = mock("HEAD", "/").with_header("content-length", "100").create();
+    let _mock = mock("HEAD", "/")
+        .with_header("content-length", "100")
+        .create();
 
     let (_, headers, _) = request("HEAD /", "");
 
@@ -950,9 +1005,7 @@ fn test_propagate_protocol_to_response() {
 fn test_large_body_without_content_length() {
     let body = "123".repeat(2048);
 
-    let _mock = mock("POST", "/")
-        .match_body(body.as_str())
-        .create();
+    let _mock = mock("POST", "/").match_body(body.as_str()).create();
 
     let stream = request_stream("1.0", "POST /", "", &body);
     stream.shutdown(Shutdown::Write).unwrap();
@@ -971,7 +1024,7 @@ fn test_transfer_encoding_chunked() {
 
     let (status, _, _) = parse_stream(
         request_stream("1.1", "POST /", "Transfer-Encoding: chunked\r\n", body),
-        false
+        false,
     );
 
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
@@ -992,8 +1045,7 @@ fn test_match_exact_query() {
 
 #[test]
 fn test_match_exact_query_via_path() {
-    let _m = mock("GET", "/hello?number=one")
-        .create();
+    let _m = mock("GET", "/hello?number=one").create();
 
     let (status_line, _, _) = request("GET /hello?number=one", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
@@ -1028,12 +1080,10 @@ fn test_match_partial_query_by_urlencoded() {
 #[test]
 fn test_match_partial_query_by_regex_all_of() {
     let _m = mock("GET", "/hello")
-        .match_query(
-            Matcher::AllOf(vec![
-                Matcher::Regex("number=one".to_string()),
-                Matcher::Regex("hello=world".to_string())
-            ])
-        )
+        .match_query(Matcher::AllOf(vec![
+            Matcher::Regex("number=one".to_string()),
+            Matcher::Regex("hello=world".to_string()),
+        ]))
         .create();
 
     let (status_line, _, _) = request("GET /hello?hello=world&something=else&number=one", "");
@@ -1046,12 +1096,10 @@ fn test_match_partial_query_by_regex_all_of() {
 #[test]
 fn test_match_partial_query_by_urlencoded_all_of() {
     let _m = mock("GET", "/hello")
-        .match_query(
-            Matcher::AllOf(vec![
-                Matcher::UrlEncoded("num ber".into(), "o ne".into()),
-                Matcher::UrlEncoded("hello".into(), "world".into())
-            ])
-        )
+        .match_query(Matcher::AllOf(vec![
+            Matcher::UrlEncoded("num ber".into(), "o ne".into()),
+            Matcher::UrlEncoded("hello".into(), "world".into()),
+        ]))
         .create();
 
     let (status_line, _, _) = request("GET /hello?hello=world&something=else&num%20ber=o%20ne", "");
@@ -1063,9 +1111,7 @@ fn test_match_partial_query_by_urlencoded_all_of() {
 
 #[test]
 fn test_match_missing_query() {
-    let _m = mock("GET", "/hello")
-        .match_query(Matcher::Missing)
-        .create();
+    let _m = mock("GET", "/hello").match_query(Matcher::Missing).create();
 
     let (status_line, _, _) = request("GET /hello?", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
@@ -1076,13 +1122,11 @@ fn test_match_missing_query() {
 
 #[test]
 fn test_anyof_exact_path_and_query_matcher() {
-    let mock =
-        mock(
-            "GET",
-            Matcher::AnyOf(vec![
-                Matcher::Exact("/hello?world".to_string()),
-            ]),
-        ).create();
+    let mock = mock(
+        "GET",
+        Matcher::AnyOf(vec![Matcher::Exact("/hello?world".to_string())]),
+    )
+    .create();
 
     let (status_line, _, _) = request("GET /hello?world", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);

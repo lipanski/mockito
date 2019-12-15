@@ -1,6 +1,6 @@
-use difference::{Difference, Changeset};
 #[cfg(feature = "color")]
 use colored::*;
+use difference::{Changeset, Difference};
 
 pub fn compare(expected: &str, actual: &str) -> String {
     let mut result = String::new();
@@ -15,7 +15,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
             Difference::Same(ref x) => {
                 result.push_str(x);
                 result.push('\n');
-            },
+            }
             Difference::Add(ref x) => {
                 if let Difference::Rem(ref y) = diffs[i - 1] {
                     let Changeset { diffs, .. } = Changeset::new(y, x, " ");
@@ -27,7 +27,9 @@ pub fn compare(expected: &str, actual: &str) -> String {
                                 #[cfg(not(feature = "color"))]
                                 result.push_str(&z);
 
-                                if i < diffs.len() - 1 { result.push(' '); }
+                                if i < diffs.len() - 1 {
+                                    result.push(' ');
+                                }
                             }
                             Difference::Add(ref z) => {
                                 #[cfg(feature = "color")]
@@ -35,7 +37,9 @@ pub fn compare(expected: &str, actual: &str) -> String {
                                 #[cfg(not(feature = "color"))]
                                 result.push_str(&z);
 
-                                if i < diffs.len() - 1 { result.push(' '); }
+                                if i < diffs.len() - 1 {
+                                    result.push(' ');
+                                }
                             }
                             _ => (),
                         }
@@ -49,7 +53,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
 
                     result.push('\n');
                 }
-            },
+            }
             Difference::Rem(ref x) => {
                 #[cfg(feature = "color")]
                 result.push_str(&x.red().to_string());
@@ -57,7 +61,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
                 result.push_str(&x);
 
                 result.push('\n');
-            },
+            }
         }
     }
 

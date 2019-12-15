@@ -1,13 +1,12 @@
 #![feature(test)]
 
 extern crate test;
-extern crate mockito;
 
+use mockito::{mock, reset, server_address};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::io::{Read, Write, BufRead, BufReader};
 use std::str::FromStr;
 use test::Bencher;
-use mockito::{server_address, mock, reset};
 
 fn request_stream(route: &str, headers: &str) -> TcpStream {
     let mut stream = TcpStream::connect(server_address()).unwrap();
@@ -29,18 +28,23 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
         let mut header_line = String::new();
         reader.read_line(&mut header_line).unwrap();
 
-        if header_line == "\r\n" { break }
+        if header_line == "\r\n" {
+            break;
+        }
 
         if header_line.starts_with("content-length:") {
             let mut parts = header_line.split(':');
             content_length = u64::from_str(parts.nth(1).unwrap().trim()).unwrap();
         }
 
-        headers.push(header_line.trim_right().to_string());
+        headers.push(header_line.trim_end().to_string());
     }
 
     let mut body = String::new();
-    reader.take(content_length).read_to_string(&mut body).unwrap();
+    reader
+        .take(content_length)
+        .read_to_string(&mut body)
+        .unwrap();
 
     (status_line, headers, body)
 }
