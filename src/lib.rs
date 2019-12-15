@@ -459,6 +459,27 @@
 //! // Still in the scope of `m`, but requests to GET /hello aren't mocked any more
 //! ```
 //!
+//! # Debug
+//!
+//! Mockito uses the `env_logger` crate under the hood to provide useful debugging information.
+//!
+//! If you'd like to activate the debug output, introduce the [env_logger](https://crates.rs/crates/env_logger) crate
+//! within your project and initialize it before each test that needs debugging:
+//!
+//! ```
+//! #[test]
+//! fn example_test() {
+//!     let _ = env_logger::try_init();
+//!     // ...
+//! }
+//! ```
+//!
+//! Run your tests with:
+//!
+//! ```sh
+//! RUST_LOG=mockito=debug cargo test
+//! ```
+//!
 //! # Threads
 //!
 //! Mockito records all your mocks on the same server running in the background. For this

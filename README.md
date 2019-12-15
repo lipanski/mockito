@@ -19,9 +19,12 @@ Before upgrading, make sure to check out the [changelog](https://github.com/lipa
 
 1. Check the existing issues and pull requests.
 2. One commit is one feature - consider squashing.
-3. :shipit:
+3. Format code with `cargo fmt`.
+4. :shipit:
 
 ## Development
+
+### Tests
 
 Run tests:
 
@@ -29,12 +32,44 @@ Run tests:
 cargo test
 ```
 
-Run [clippy](https://github.com/rust-lang/rust-clippy)
+### Code style
+
+Mockito uses [rustfmt](https://github.com/rust-lang/rustfmt) as a general code style.
+
+Install `rustfmt`:
+
+```sh
+rustup component add rustfmt
+```
+
+Format code:
+
+```sh
+cargo fmt
+```
+
+Some editors might provide a plugin to format your Rust code automatically.
+
+### Linter
+
+Mockito uses [clippy](https://github.com/rust-lang/rust-clippy) as a linter.
+
+Install `clippy`:
+
 ```sh
 rustup component add clippy-preview
-touch src/lib.rs  # Touch the file to force cargo to rerun clippy on the project
+```
+
+Run the linter:
+
+```sh
+# Touch a file to force cargo to rerun clippy on the project
+touch src/lib.rs
+
 cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
 ```
+
+### Release
 
 Release:
 
@@ -42,29 +77,18 @@ Release:
 cargo package && cargo publish
 ```
 
-Run benchmarks:
+### Benchmarks
+
+Install `rust nightly`:
 
 ```sh
 rustup install nightly
-rustup run nightly cargo bench
 ```
 
-## Debug output from tests
-
-In your project, add [`env_logger`](https://crates.rs/crates/env_logger) crate, and init it before each test:
-
-```rust
-#[test]
-fn example_test() {
-    let _ = env_logger::try_init();
-    /* … */
-}
-```
-
-and run tests with:
+Run benchmarks:
 
 ```sh
-RUST_LOG=mockito=debug cargo test
+rustup run nightly cargo bench
 ```
 
 ---
