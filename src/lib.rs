@@ -76,9 +76,6 @@
 //! // Requests to GET /long will be mocked til here
 //! ```
 //!
-//! Note how I **didn't use the same variable name** for both mocks (e.g. `let _m`), as it would have ended the
-//! lifetime of the first mock with the second assignment.
-//!
 //! # Limitations
 //!
 //! Creating mocks from threads is currently not possible. Please use the main (test) thread for that.
