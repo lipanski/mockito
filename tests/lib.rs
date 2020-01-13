@@ -881,6 +881,130 @@ fn test_expect() {
 }
 
 #[test]
+fn test_expect_at_least_and_at_most() {
+    let mock = mock("GET", "/hello")
+        .expect_at_least(3)
+        .expect_at_most(6)
+        .create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+fn test_expect_at_least() {
+    let mock = mock("GET", "/hello").expect_at_least(3).create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+fn test_expect_at_least_more() {
+    let mock = mock("GET", "/hello").expect_at_least(3).create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+fn test_expect_at_most_with_needed_requests() {
+    let mock = mock("GET", "/hello").expect_at_most(3).create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+fn test_expect_at_most_with_few_requests() {
+    let mock = mock("GET", "/hello").expect_at_most(3).create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+#[should_panic(
+    expected = "\n> Expected at least 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 2\n"
+)]
+fn test_assert_panics_expect_at_least_with_too_few_requests() {
+    let mock = mock("GET", "/hello").expect_at_least(3).create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+#[should_panic(
+    expected = "\n> Expected at most 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 4\n"
+)]
+fn test_assert_panics_expect_at_most_with_too_many_requests() {
+    let mock = mock("GET", "/hello").expect_at_most(3).create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+#[should_panic(
+    expected = "\n> Expected between 3 and 5 request(s) to:\n\r\nGET /hello\r\n\n...but received 2\n"
+)]
+fn test_assert_panics_expect_at_least_and_at_most_with_too_few_requests() {
+    let mock = mock("GET", "/hello")
+        .expect_at_least(3)
+        .expect_at_most(5)
+        .create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
+#[should_panic(
+    expected = "\n> Expected between 3 and 5 request(s) to:\n\r\nGET /hello\r\n\n...but received 6\n"
+)]
+fn test_assert_panics_expect_at_least_and_at_most_with_too_many_requests() {
+    let mock = mock("GET", "/hello")
+        .expect_at_least(3)
+        .expect_at_most(5)
+        .create();
+
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+    request("GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
 #[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n")]
 fn test_assert_panics_if_no_request_was_performed() {
     let mock = mock("GET", "/hello").create();

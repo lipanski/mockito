@@ -716,7 +716,8 @@ pub struct Mock {
     body: Matcher,
     response: Response,
     hits: usize,
-    expected_hits: usize,
+    expected_hits_at_least: Option<usize>,
+    expected_hits_at_most: Option<usize>,
     is_remote: bool,
 }
 
@@ -730,7 +731,8 @@ impl Mock {
             body: Matcher::Any,
             response: Response::default(),
             hits: 0,
-            expected_hits: 1,
+            expected_hits_at_least: None,
+            expected_hits_at_most: None,
             is_remote: false,
         }
     }
@@ -933,8 +935,36 @@ impl Mock {
     /// Defaults to 1 request.
     ///
     pub fn expect(mut self, hits: usize) -> Self {
-        self.expected_hits = hits;
+        self.expected_hits_at_least = Some(hits);
+        self.expected_hits_at_most = Some(hits);
+        self
+    }
 
+    ///
+    /// Sets the minimal amount of requests that this mock is supposed to receive.
+    /// This is only enforced when calling the `assert` method.
+    ///
+    pub fn expect_at_least(mut self, hits: usize) -> Self {
+        self.expected_hits_at_least = Some(hits);
+        if self.expected_hits_at_most.is_some()
+            && self.expected_hits_at_most < self.expected_hits_at_least
+        {
+            self.expected_hits_at_most = Some(hits);
+        }
+        self
+    }
+
+    ///
+    /// Sets the maximal amount of requests that this mock is supposed to receive.
+    /// This is only enforced when calling the `assert` method.
+    ///
+    pub fn expect_at_most(mut self, hits: usize) -> Self {
+        self.expected_hits_at_most = Some(hits);
+        if self.expected_hits_at_least.is_some()
+            && self.expected_hits_at_least > self.expected_hits_at_most
+        {
+            self.expected_hits_at_least = Some(hits);
+        }
         self
     }
 
@@ -950,11 +980,28 @@ impl Mock {
 
             if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
                 opt_hits = Some(remote_mock.hits);
-
-                let mut message = format!(
-                    "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
-                    self.expected_hits, self, remote_mock.hits
-                );
+                let mut message = match (self.expected_hits_at_least, self.expected_hits_at_most) {
+                    (Some(min), Some(max)) if min == max => format!(
+                        "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
+                        min, self, remote_mock.hits
+                    ),
+                    (Some(min), Some(max)) => format!(
+                        "\n> Expected between {} and {} request(s) to:\n{}\n...but received {}\n\n",
+                        min, max, self, remote_mock.hits
+                    ),
+                    (Some(min), None) => format!(
+                        "\n> Expected at least {} request(s) to:\n{}\n...but received {}\n\n",
+                        min, self, remote_mock.hits
+                    ),
+                    (None, Some(max)) => format!(
+                        "\n> Expected at most {} request(s) to:\n{}\n...but received {}\n\n",
+                        max, self, remote_mock.hits
+                    ),
+                    (None, None) => format!(
+                        "\n> Expected 1 request(s) to:\n{}\n...but received {}\n\n",
+                        self, remote_mock.hits
+                    ),
+                };
 
                 if let Some(last_request) = state.unmatched_requests.last() {
                     message.push_str(&format!(
@@ -971,7 +1018,16 @@ impl Mock {
         }
 
         match (opt_hits, opt_message) {
-            (Some(hits), Some(message)) => assert_eq!(self.expected_hits, hits, "{}", message),
+            (Some(hits), Some(message)) => assert!(
+                match (self.expected_hits_at_least, self.expected_hits_at_most) {
+                    (Some(min), Some(max)) => hits >= min && hits <= max,
+                    (Some(min), None) => hits >= min,
+                    (None, Some(max)) => hits <= max,
+                    (None, None) => hits == 1,
+                },
+                "{}",
+                message
+            ),
             _ => panic!("Could not retrieve enough information about the remote mock."),
         }
     }
