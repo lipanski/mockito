@@ -949,7 +949,7 @@ impl Mock {
         if self.expected_hits_at_most.is_some()
             && self.expected_hits_at_most < self.expected_hits_at_least
         {
-            self.expected_hits_at_most = Some(hits);
+            self.expected_hits_at_most = None;
         }
         self
     }
@@ -963,7 +963,7 @@ impl Mock {
         if self.expected_hits_at_least.is_some()
             && self.expected_hits_at_least > self.expected_hits_at_most
         {
-            self.expected_hits_at_least = Some(hits);
+            self.expected_hits_at_least = None;
         }
         self
     }
