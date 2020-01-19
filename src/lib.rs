@@ -694,11 +694,11 @@ impl PathAndQueryMatcher {
         match self {
             PathAndQueryMatcher::Unified(matcher) => matcher.matches_value(other),
             PathAndQueryMatcher::Split(ref path_matcher, ref query_matcher) => {
-                let mut parts = other.splitn(2, "?");
+                let mut parts = other.splitn(2, '?');
                 let path = parts.next().unwrap();
                 let query = parts.next().unwrap_or("");
 
-                return path_matcher.matches_value(path) && query_matcher.matches_value(query);
+                path_matcher.matches_value(path) && query_matcher.matches_value(query)
             }
         }
     }
@@ -932,6 +932,7 @@ impl Mock {
     /// This is only enforced when calling the `assert` method.
     /// Defaults to 1 request.
     ///
+    #[allow(clippy::missing_const_for_fn)]
     pub fn expect(mut self, hits: usize) -> Self {
         self.expected_hits = hits;
 
@@ -1004,6 +1005,7 @@ impl Mock {
         self
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn is_local(&self) -> bool {
         !self.is_remote
     }
