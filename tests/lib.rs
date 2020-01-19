@@ -916,6 +916,21 @@ fn test_assert_panics_with_too_many_requests() {
 #[should_panic(
     expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n"
 )]
+#[cfg(feature = "color")]
+fn test_assert_with_last_unmatched_request() {
+    let mock = mock("GET", "/hello").create();
+
+    request("GET /bye", "");
+
+    mock.assert();
+}
+
+// Same test but without colors (for Appveyor)
+#[test]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\nGET /hello\nGET /bye\n\n\n"
+)]
+#[cfg(not(feature = "color"))]
 fn test_assert_with_last_unmatched_request() {
     let mock = mock("GET", "/hello").create();
 
@@ -928,6 +943,21 @@ fn test_assert_with_last_unmatched_request() {
 #[should_panic(
     expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n"
 )]
+#[cfg(feature = "color")]
+fn test_assert_with_last_unmatched_request_and_headers() {
+    let mock = mock("GET", "/hello").create();
+
+    request("GET /bye", "authorization: 1234\r\naccept: text\r\n");
+
+    mock.assert();
+}
+
+// Same test but without colors (for Appveyor)
+#[test]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\nGET /hello\nGET /bye\nauthorization: 1234\naccept: text\n\n\n"
+)]
+#[cfg(not(feature = "color"))]
 fn test_assert_with_last_unmatched_request_and_headers() {
     let mock = mock("GET", "/hello").create();
 

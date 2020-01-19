@@ -45,6 +45,7 @@ pub struct State {
 }
 
 impl State {
+    #[allow(clippy::missing_const_for_fn)]
     fn new() -> Self {
         Self {
             listening_addr: None,
