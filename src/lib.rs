@@ -132,6 +132,29 @@
 //! mock.assert();
 //! ```
 //!
+//! You can also work with ranges, by using the `Mock::expect_at_least` and `Mock::expect_at_most` methods:
+//!
+//! ## Example
+//!
+//! ```no_run
+//! use std::net::TcpStream;
+//! use std::io::{Read, Write};
+//! use mockito::{mock, server_address};
+//!
+//! let mock = mockito::mock("GET", "/hello").expect_at_least(2).expect_at_most(4).create();
+//!
+//! for _ in 0..3 {
+//!     // Place a request
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
+//!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
+//! }
+//!
+//! mock.assert();
+//! ```
+//!
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
 //! a missing or incomplete mock. A colored diff is also displayed.
@@ -942,7 +965,7 @@ impl Mock {
     }
 
     ///
-    /// Sets the minimal amount of requests that this mock is supposed to receive.
+    /// Sets the minimum amount of requests that this mock is supposed to receive.
     /// This is only enforced when calling the `assert` method.
     ///
     pub fn expect_at_least(mut self, hits: usize) -> Self {
@@ -956,7 +979,7 @@ impl Mock {
     }
 
     ///
-    /// Sets the maximal amount of requests that this mock is supposed to receive.
+    /// Sets the maximum amount of requests that this mock is supposed to receive.
     /// This is only enforced when calling the `assert` method.
     ///
     pub fn expect_at_most(mut self, hits: usize) -> Self {
