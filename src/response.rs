@@ -39,7 +39,7 @@ impl Default for Response {
     fn default() -> Self {
         Self {
             status: Status::Ok,
-            headers: Vec::new(),
+            headers: vec![("connection".into(), "close".into())],
             body: Body::Bytes(Vec::new()),
         }
     }

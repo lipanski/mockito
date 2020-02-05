@@ -1141,7 +1141,7 @@ fn test_head_request_with_overridden_content_length() {
 
     let (_, headers, _) = request("HEAD /", "");
 
-    assert_eq!(vec![String::from("content-length: 100")], headers);
+    assert_eq!(vec!["connection: close", "content-length: 100"], headers);
 }
 
 #[test]
@@ -1286,4 +1286,12 @@ fn test_anyof_exact_path_and_query_matcher() {
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
     mock.assert();
+}
+
+#[test]
+fn test_default_headers() {
+    let _m = mock("GET", "/").create();
+
+    let (_, headers, _) = request("GET /", "");
+    assert_eq!(vec!["connection: close", "content-length: 0"], headers);
 }
