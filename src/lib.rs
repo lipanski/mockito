@@ -562,7 +562,7 @@ pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
 pub use crate::server::address as server_address;
 pub use crate::server::url as server_url;
-use assert_json_diff::{assert_json_no_panic, Actual, Comparison, Expected};
+use assert_json_diff::{assert_json_no_panic, Mode};
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
@@ -674,17 +674,14 @@ impl Matcher {
                 value == other
             }
             Matcher::PartialJson(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                let actual = Actual::new(other);
-                let expected = Expected::new(json_obj.clone());
-                assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
+                let actual: serde_json::Value = serde_json::from_str(other).unwrap();
+                let expected = json_obj.clone();
+                assert_json_no_panic(actual, expected, Mode::Lenient).is_ok()
             }
             Matcher::PartialJsonString(ref value) => {
-                let value: serde_json::Value = serde_json::from_str(value).unwrap();
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                let actual = Actual::new(other);
-                let expected = Expected::new(value);
-                assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
+                let expected: serde_json::Value = serde_json::from_str(value).unwrap();
+                let actual: serde_json::Value = serde_json::from_str(other).unwrap();
+                assert_json_no_panic(actual, expected, Mode::Lenient).is_ok()
             }
             Matcher::UrlEncoded(ref expected_field, ref expected_value) => other
                 .split('&')
