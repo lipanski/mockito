@@ -1068,6 +1068,7 @@ impl Mock {
     /// let _m = mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
+    #[must_use]
     pub fn create(mut self) -> Self {
         server::try_start();
 
