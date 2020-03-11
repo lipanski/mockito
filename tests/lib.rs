@@ -1304,14 +1304,17 @@ fn test_missing_create_bad() {
     drop(m);
 
     // Expecting one warning
-    testing_logger::validate( |captured_logs| {
+    testing_logger::validate(|captured_logs| {
         let warnings = captured_logs
             .iter()
             .filter(|c| c.level == log::Level::Warn)
             .collect::<Vec<&testing_logger::CapturedLog>>();
 
         assert_eq!(warnings.len(), 1);
-        assert_eq!(warnings[0].body, "Missing .create() call on mock \r\nGET /\r\n");
+        assert_eq!(
+            warnings[0].body,
+            "Missing .create() call on mock \r\nGET /\r\n"
+        );
         assert_eq!(warnings[0].level, log::Level::Warn);
     });
 }
@@ -1324,7 +1327,7 @@ fn test_missing_create_good() {
     drop(m);
 
     // No warnings should occur
-    testing_logger::validate( |captured_logs| {
+    testing_logger::validate(|captured_logs| {
         let warnings = captured_logs
             .iter()
             .filter(|c| c.level == log::Level::Warn)
