@@ -94,7 +94,7 @@ rustup run --install 1.35.0 cargo clippy --lib --tests --all-features -- -D clip
 Release:
 
 ```sh
-cargo package && cargo publish
+cargo publish
 ```
 
 ### Benchmarks
