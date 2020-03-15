@@ -739,6 +739,9 @@ pub struct Mock {
     expected_hits_at_least: Option<usize>,
     expected_hits_at_most: Option<usize>,
     is_remote: bool,
+
+    /// Used to warn of mocks missing a `.create()` call. See issue #112
+    created: bool,
 }
 
 impl Mock {
@@ -754,6 +757,7 @@ impl Mock {
             expected_hits_at_least: None,
             expected_hits_at_most: None,
             is_remote: false,
+            created: false,
         }
     }
 
@@ -1064,7 +1068,8 @@ impl Mock {
     /// let _m = mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
-    pub fn create(self) -> Self {
+    #[must_use]
+    pub fn create(mut self) -> Self {
         server::try_start();
 
         // Ensures Mockito tests are run sequentially.
@@ -1072,11 +1077,11 @@ impl Mock {
 
         let mut state = server::STATE.lock().unwrap();
 
+        self.created = true;
+
         let mut remote_mock = self.clone();
         remote_mock.is_remote = true;
         state.mocks.push(remote_mock);
-
-        debug!("Mock::create() called for {}", self);
 
         self
     }
@@ -1097,6 +1102,10 @@ impl Drop for Mock {
             }
 
             debug!("Mock::drop() called for {}", self);
+
+            if !self.created {
+                warn!("Missing .create() call on mock {}", self);
+            }
         }
     }
 }

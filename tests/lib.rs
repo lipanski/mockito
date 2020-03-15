@@ -1295,3 +1295,43 @@ fn test_default_headers() {
     let (_, headers, _) = request("GET /", "");
     assert_eq!(vec!["connection: close", "content-length: 0"], headers);
 }
+
+#[test]
+fn test_missing_create_bad() {
+    testing_logger::setup();
+
+    let m = mock("GET", "/");
+    drop(m);
+
+    // Expecting one warning
+    testing_logger::validate(|captured_logs| {
+        let warnings = captured_logs
+            .iter()
+            .filter(|c| c.level == log::Level::Warn)
+            .collect::<Vec<&testing_logger::CapturedLog>>();
+
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(
+            warnings[0].body,
+            "Missing .create() call on mock \r\nGET /\r\n"
+        );
+        assert_eq!(warnings[0].level, log::Level::Warn);
+    });
+}
+
+#[test]
+fn test_missing_create_good() {
+    testing_logger::setup();
+
+    let m = mock("GET", "/").create();
+    drop(m);
+
+    // No warnings should occur
+    testing_logger::validate(|captured_logs| {
+        let warnings = captured_logs
+            .iter()
+            .filter(|c| c.level == log::Level::Warn)
+            .collect::<Vec<&testing_logger::CapturedLog>>();
+        assert_eq!(warnings.len(), 0);
+    });
+}
