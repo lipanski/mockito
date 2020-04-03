@@ -197,7 +197,11 @@ fn respond_bytes(
         Some(Body::Fn(_)) => {
             response.extend(b"transfer-encoding: chunked\r\n");
         }
-        None => {}
+        None => {
+            if !has_content_length_header {
+                response.extend(format!("content-length: 0\r\n").as_bytes());
+            }
+        }
     };
     response.extend(b"\r\n");
     stream.write_all(&response)?;
