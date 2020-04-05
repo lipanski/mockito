@@ -109,6 +109,42 @@
 //! mock.assert();
 //! ```
 //!
+//! When several mocks can match a request, Mockito applies the first one that still expects requests.
+//! You can use this behaviour to provide **different responses for subsequent requests to the same endpoint**.
+//!
+//! ## Example
+//!
+//! ```
+//! use std::net::TcpStream;
+//! use std::io::{Read, Write};
+//! use mockito::{mock, server_address};
+//!
+//! let english_hello_mock = mock("GET", "/hello").with_body("good bye").create();
+//! let french_hello_mock = mock("GET", "/hello").with_body("au revoir").create();
+//!
+//! {
+//!     // Place a request to GET /hello
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
+//!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
+//! }
+//!
+//! english_hello_mock.assert();
+//!
+//! {
+//!     // Place another request to GET /hello
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
+//!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
+//! }
+//!
+//! french_hello_mock.assert();
+//! ```
+//!
 //! If you're expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amount of requests:
 //!
 //! ## Example
