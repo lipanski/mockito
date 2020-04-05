@@ -4,10 +4,43 @@ use std::io;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Response {
-    pub status: Status,
-    pub headers: Vec<(String, String)>,
-    pub body: Body,
+pub struct Response {
+    status: Status,
+    headers: Vec<(String, String)>,
+    body: Body,
+}
+
+impl Response {
+    pub fn with_status<I: Into<Status>>(mut self, status: I) -> Self {
+        self.status = status.into();
+        self
+    }
+    pub fn with_header(mut self, field: &str, value: &str) -> Self {
+        self.headers.push((field.to_owned(), value.to_owned()));
+        self
+    }
+    pub fn with_body<StrOrBytes: AsRef<[u8]>>(mut self, body: StrOrBytes) -> Self {
+        self.body = Body::Bytes(body.as_ref().to_owned());
+        self
+    }
+    pub(crate) fn status(&self) -> &Status {
+        &self.status
+    }
+    pub(crate) fn status_mut(&mut self) -> &mut Status {
+        &mut self.status
+    }
+    pub(crate) fn headers(&self) -> &Vec<(String, String)> {
+        &self.headers
+    }
+    pub(crate) fn headers_mut(&mut self) -> &mut Vec<(String, String)> {
+        &mut self.headers
+    }
+    pub(crate) fn body(&self) -> &Body {
+        &self.body
+    }
+    pub(crate) fn body_mut(&mut self) -> &mut Body {
+        &mut self.body
+    }
 }
 
 #[derive(Clone)]

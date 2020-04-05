@@ -242,17 +242,18 @@ fn respond_bytes(
 }
 
 fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_body: bool) {
+    let idx = mock.hits - 1;
     let body = if skip_body {
         None
     } else {
-        Some(&mock.response.body)
+        Some(mock.response_at(idx).body())
     };
 
     if let Err(e) = respond_bytes(
         stream,
         version,
-        &mock.response.status,
-        Some(&mock.response.headers),
+        &mock.response_at(idx).status(),
+        Some(&mock.response_at(idx).headers()),
         body,
     ) {
         eprintln!("warning: Mock response write error: {}", e);

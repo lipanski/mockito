@@ -563,6 +563,7 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::cell::RefCell;
+use std::cmp;
 use std::convert::{From, Into};
 use std::fmt;
 use std::io;
@@ -770,7 +771,7 @@ pub struct Mock {
     path: PathAndQueryMatcher,
     headers: Vec<(String, Matcher)>,
     body: Matcher,
-    response: Response,
+    responses: Vec<Response>,
     hits: usize,
     expected_hits_at_least: Option<usize>,
     expected_hits_at_most: Option<usize>,
@@ -788,13 +789,27 @@ impl Mock {
             path: PathAndQueryMatcher::Unified(path.into()),
             headers: Vec::new(),
             body: Matcher::Any,
-            response: Response::default(),
+            responses: vec![Response::default()],
             hits: 0,
             expected_hits_at_least: None,
             expected_hits_at_most: None,
             is_remote: false,
             created: false,
         }
+    }
+
+    pub(crate) fn response_at(&self, idx: usize) -> &Response {
+        // if the idx would be beyond the bounds, pin in to the last element
+        let last = self.responses.len().checked_sub(1).unwrap_or(0);
+        let idx = cmp::min(idx, last);
+        &self.responses[idx]
+    }
+
+    fn response_at_mut(&mut self, idx: usize) -> &mut Response {
+        // if the idx would be beyond the bounds, pin in to the last element
+        let last = self.responses.len().checked_sub(1).unwrap_or(0);
+        let idx = cmp::min(idx, last);
+        &mut self.responses[idx]
     }
 
     ///
@@ -910,7 +925,7 @@ impl Mock {
     /// ```
     ///
     pub fn with_status(mut self, status: usize) -> Self {
-        self.response.status = status.into();
+        *self.response_at_mut(0).status_mut() = status.into();
 
         self
     }
@@ -927,10 +942,9 @@ impl Mock {
     /// ```
     ///
     pub fn with_header(mut self, field: &str, value: &str) -> Self {
-        self.response
-            .headers
+        self.response_at_mut(0)
+            .headers_mut()
             .push((field.to_owned(), value.to_owned()));
-
         self
     }
 
@@ -946,7 +960,7 @@ impl Mock {
     /// ```
     ///
     pub fn with_body<StrOrBytes: AsRef<[u8]>>(mut self, body: StrOrBytes) -> Self {
-        self.response.body = response::Body::Bytes(body.as_ref().to_owned());
+        *self.response_at_mut(0).body_mut() = response::Body::Bytes(body.as_ref().to_owned());
         self
     }
 
@@ -968,7 +982,7 @@ impl Mock {
         mut self,
         cb: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
     ) -> Self {
-        self.response.body = response::Body::Fn(Arc::new(cb));
+        *self.response_at_mut(0).body_mut()  = response::Body::Fn(Arc::new(cb));
         self
     }
 
@@ -985,7 +999,8 @@ impl Mock {
     /// ```
     ///
     pub fn with_body_from_file(mut self, path: impl AsRef<Path>) -> Self {
-        self.response.body = response::Body::Bytes(std::fs::read(path).unwrap());
+        *self.response_at_mut(0).body_mut() = response::Body::Bytes(std::fs::read(path).unwrap());
+
         self
     }
 
