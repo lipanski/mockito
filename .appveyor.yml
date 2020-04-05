@@ -18,4 +18,5 @@ install:
   - cargo -vV
 build: false
 test_script:
-  - cargo test
+  # Appveyor seems to fail the color tests, so we disable this feature
+  - cargo test --no-default-features

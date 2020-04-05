@@ -130,8 +130,9 @@ fn test_two_route_mocks() {
 fn test_no_match_returns_501() {
     let _m = mock("GET", "/").with_body("matched").create();
 
-    let (status_line, _, _) = request("GET /nope", "");
+    let (status_line, headers, _) = request("GET /nope", "");
     assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+    assert_eq!(vec!["content-length: 0"], headers);
 }
 
 #[test]
@@ -1040,6 +1041,21 @@ fn test_assert_panics_with_too_many_requests() {
 #[should_panic(
     expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n"
 )]
+#[cfg(feature = "color")]
+fn test_assert_with_last_unmatched_request() {
+    let mock = mock("GET", "/hello").create();
+
+    request("GET /bye", "");
+
+    mock.assert();
+}
+
+// Same test but without colors (for Appveyor)
+#[test]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\nGET /hello\nGET /bye\n\n\n"
+)]
+#[cfg(not(feature = "color"))]
 fn test_assert_with_last_unmatched_request() {
     let mock = mock("GET", "/hello").create();
 
@@ -1052,6 +1068,21 @@ fn test_assert_with_last_unmatched_request() {
 #[should_panic(
     expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n"
 )]
+#[cfg(feature = "color")]
+fn test_assert_with_last_unmatched_request_and_headers() {
+    let mock = mock("GET", "/hello").create();
+
+    request("GET /bye", "authorization: 1234\r\naccept: text\r\n");
+
+    mock.assert();
+}
+
+// Same test but without colors (for Appveyor)
+#[test]
+#[should_panic(
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\nGET /hello\nGET /bye\nauthorization: 1234\naccept: text\n\n\n"
+)]
+#[cfg(not(feature = "color"))]
 fn test_assert_with_last_unmatched_request_and_headers() {
     let mock = mock("GET", "/hello").create();
 
@@ -1111,7 +1142,7 @@ fn test_head_request_with_overridden_content_length() {
 
     let (_, headers, _) = request("HEAD /", "");
 
-    assert_eq!(vec![String::from("content-length: 100")], headers);
+    assert_eq!(vec!["connection: close", "content-length: 100"], headers);
 }
 
 #[test]
@@ -1256,6 +1287,54 @@ fn test_anyof_exact_path_and_query_matcher() {
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
     mock.assert();
+}
+
+#[test]
+fn test_default_headers() {
+    let _m = mock("GET", "/").create();
+
+    let (_, headers, _) = request("GET /", "");
+    assert_eq!(vec!["connection: close", "content-length: 0"], headers);
+}
+
+#[test]
+fn test_missing_create_bad() {
+    testing_logger::setup();
+
+    let m = mock("GET", "/");
+    drop(m);
+
+    // Expecting one warning
+    testing_logger::validate(|captured_logs| {
+        let warnings = captured_logs
+            .iter()
+            .filter(|c| c.level == log::Level::Warn)
+            .collect::<Vec<&testing_logger::CapturedLog>>();
+
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(
+            warnings[0].body,
+            "Missing .create() call on mock \r\nGET /\r\n"
+        );
+        assert_eq!(warnings[0].level, log::Level::Warn);
+    });
+}
+
+#[test]
+fn test_missing_create_good() {
+    testing_logger::setup();
+
+    let m = mock("GET", "/").create();
+    drop(m);
+
+    // No warnings should occur
+    testing_logger::validate(|captured_logs| {
+        let warnings = captured_logs
+            .iter()
+            .filter(|c| c.level == log::Level::Warn)
+            .collect::<Vec<&testing_logger::CapturedLog>>();
+        assert_eq!(warnings.len(), 0);
+    });
 }
 
 #[test]

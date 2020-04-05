@@ -132,6 +132,29 @@
 //! mock.assert();
 //! ```
 //!
+//! You can also work with ranges, by using the `Mock::expect_at_least` and `Mock::expect_at_most` methods:
+//!
+//! ## Example
+//!
+//! ```no_run
+//! use std::net::TcpStream;
+//! use std::io::{Read, Write};
+//! use mockito::{mock, server_address};
+//!
+//! let mock = mockito::mock("GET", "/hello").expect_at_least(2).expect_at_most(4).create();
+//!
+//! for _ in 0..3 {
+//!     // Place a request
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
+//!     stream.write_all("GET /hello HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
+//! }
+//!
+//! mock.assert();
+//! ```
+//!
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
 //! a missing or incomplete mock. A colored diff is also displayed.
@@ -539,7 +562,7 @@ pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
 pub use crate::server::address as server_address;
 pub use crate::server::url as server_url;
-use assert_json_diff::{assert_json_no_panic, Actual, Comparison, Expected};
+use assert_json_diff::assert_json_include_no_panic;
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
@@ -651,17 +674,14 @@ impl Matcher {
                 value == other
             }
             Matcher::PartialJson(ref json_obj) => {
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                let actual = Actual::new(other);
-                let expected = Expected::new(json_obj.clone());
-                assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
+                let actual: serde_json::Value = serde_json::from_str(other).unwrap();
+                let expected = json_obj.clone();
+                assert_json_include_no_panic(&actual, &expected).is_ok()
             }
             Matcher::PartialJsonString(ref value) => {
-                let value: serde_json::Value = serde_json::from_str(value).unwrap();
-                let other: serde_json::Value = serde_json::from_str(other).unwrap();
-                let actual = Actual::new(other);
-                let expected = Expected::new(value);
-                assert_json_no_panic(Comparison::Include(actual, expected)).is_ok()
+                let expected: serde_json::Value = serde_json::from_str(value).unwrap();
+                let actual: serde_json::Value = serde_json::from_str(other).unwrap();
+                assert_json_include_no_panic(&actual, &expected).is_ok()
             }
             Matcher::UrlEncoded(ref expected_field, ref expected_value) => other
                 .split('&')
@@ -694,11 +714,11 @@ impl PathAndQueryMatcher {
         match self {
             PathAndQueryMatcher::Unified(matcher) => matcher.matches_value(other),
             PathAndQueryMatcher::Split(ref path_matcher, ref query_matcher) => {
-                let mut parts = other.splitn(2, "?");
+                let mut parts = other.splitn(2, '?');
                 let path = parts.next().unwrap();
                 let query = parts.next().unwrap_or("");
 
-                return path_matcher.matches_value(path) && query_matcher.matches_value(query);
+                path_matcher.matches_value(path) && query_matcher.matches_value(query)
             }
         }
     }
@@ -719,6 +739,9 @@ pub struct Mock {
     expected_hits_at_least: Option<usize>,
     expected_hits_at_most: Option<usize>,
     is_remote: bool,
+
+    /// Used to warn of mocks missing a `.create()` call. See issue #112
+    created: bool,
 }
 
 impl Mock {
@@ -734,6 +757,7 @@ impl Mock {
             expected_hits_at_least: None,
             expected_hits_at_most: None,
             is_remote: false,
+            created: false,
         }
     }
 
@@ -934,6 +958,7 @@ impl Mock {
     /// This is only enforced when calling the `assert` method.
     /// Defaults to 1 request.
     ///
+    #[allow(clippy::missing_const_for_fn)]
     pub fn expect(mut self, hits: usize) -> Self {
         self.expected_hits_at_least = Some(hits);
         self.expected_hits_at_most = Some(hits);
@@ -941,7 +966,7 @@ impl Mock {
     }
 
     ///
-    /// Sets the minimal amount of requests that this mock is supposed to receive.
+    /// Sets the minimum amount of requests that this mock is supposed to receive.
     /// This is only enforced when calling the `assert` method.
     ///
     pub fn expect_at_least(mut self, hits: usize) -> Self {
@@ -949,13 +974,13 @@ impl Mock {
         if self.expected_hits_at_most.is_some()
             && self.expected_hits_at_most < self.expected_hits_at_least
         {
-            self.expected_hits_at_most = Some(hits);
+            self.expected_hits_at_most = None;
         }
         self
     }
 
     ///
-    /// Sets the maximal amount of requests that this mock is supposed to receive.
+    /// Sets the maximum amount of requests that this mock is supposed to receive.
     /// This is only enforced when calling the `assert` method.
     ///
     pub fn expect_at_most(mut self, hits: usize) -> Self {
@@ -963,7 +988,7 @@ impl Mock {
         if self.expected_hits_at_least.is_some()
             && self.expected_hits_at_least > self.expected_hits_at_most
         {
-            self.expected_hits_at_least = Some(hits);
+            self.expected_hits_at_least = None;
         }
         self
     }
@@ -1043,7 +1068,8 @@ impl Mock {
     /// let _m = mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
-    pub fn create(self) -> Self {
+    #[must_use]
+    pub fn create(mut self) -> Self {
         server::try_start();
 
         // Ensures Mockito tests are run sequentially.
@@ -1051,15 +1077,16 @@ impl Mock {
 
         let mut state = server::STATE.lock().unwrap();
 
+        self.created = true;
+
         let mut remote_mock = self.clone();
         remote_mock.is_remote = true;
         state.mocks.push(remote_mock);
 
-        debug!("Mock::create() called for {}", self);
-
         self
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn is_local(&self) -> bool {
         !self.is_remote
     }
@@ -1075,6 +1102,10 @@ impl Drop for Mock {
             }
 
             debug!("Mock::drop() called for {}", self);
+
+            if !self.created {
+                warn!("Missing .create() call on mock {}", self);
+            }
         }
     }
 }

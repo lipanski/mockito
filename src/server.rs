@@ -54,6 +54,7 @@ pub struct State {
 }
 
 impl State {
+    #[allow(clippy::missing_const_for_fn)]
     fn new() -> Self {
         Self {
             listening_addr: None,
@@ -259,7 +260,13 @@ fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_bod
 }
 
 fn respond_with_mock_not_found(stream: TcpStream, version: (u8, u8)) {
-    respond(stream, version, "501 Mock Not Found", None, None);
+    respond(
+        stream,
+        version,
+        "501 Mock Not Found",
+        Some(&vec![("content-length".into(), "0".into())]),
+        None,
+    );
 }
 
 fn respond_with_error(stream: TcpStream, version: (u8, u8), message: &str) {
