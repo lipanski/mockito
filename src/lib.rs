@@ -555,9 +555,6 @@ mod request;
 mod response;
 mod server;
 
-type Request = request::Request;
-type Response = response::Response;
-
 use percent_encoding::percent_decode;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -571,6 +568,8 @@ use std::ops::Drop;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::{LockResult, Mutex, MutexGuard};
+use crate::request::Request;
+use crate::response::{Response, Status};
 
 lazy_static! {
     // A global lock that ensure all Mockito tests are run on a single thread.
@@ -600,6 +599,7 @@ pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 pub use crate::server::address as server_address;
 pub use crate::server::url as server_url;
 use assert_json_diff::assert_json_include_no_panic;
+use std::iter::FromIterator;
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
@@ -618,6 +618,21 @@ use assert_json_diff::assert_json_include_no_panic;
 ///
 pub fn mock<P: Into<Matcher>>(method: &str, path: P) -> Mock {
     Mock::new(method, path)
+}
+
+///
+/// Initializes a response that can be added to a `Mock`
+///
+/// ## Example
+///
+/// ```
+/// use mockito::response;
+///
+/// let _r = response(200).with_body(r#"{"status":"success"}"#);
+/// ```
+///
+pub fn response<S: Into<Status>>(status: S) -> Response {
+    Response::default().with_status(status)
 }
 
 ///
@@ -799,14 +814,14 @@ impl Mock {
     }
 
     pub(crate) fn response_at(&self, idx: usize) -> &Response {
-        // if the idx would be beyond the bounds, pin in to the last element
+        // if the idx would be beyond the bounds, pin it to the last element
         let last = self.responses.len().checked_sub(1).unwrap_or(0);
         let idx = cmp::min(idx, last);
         &self.responses[idx]
     }
 
     fn response_at_mut(&mut self, idx: usize) -> &mut Response {
-        // if the idx would be beyond the bounds, pin in to the last element
+        // if the idx would be beyond the bounds, pin it to the last element
         let last = self.responses.len().checked_sub(1).unwrap_or(0);
         let idx = cmp::min(idx, last);
         &mut self.responses[idx]
@@ -1141,6 +1156,27 @@ impl Mock {
     fn is_local(&self) -> bool {
         !self.is_remote
     }
+
+    ///
+    /// Sets a sequence of responses this mock should use to respond to requests
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use mockito::{mock, response};
+    ///
+    /// let _m = mock("GET", "/")
+    ///     .with_responses(vec![
+    ///         response(429),
+    ///         response(200).with_body(r#"{"status":"success"}"#),
+    ///     ]);
+    /// ```
+    pub fn with_responses<R: IntoIterator<Item=Response>>(mut self, responses: R) -> Self {
+        let responses = Vec::from_iter(responses);
+        self.responses = responses;
+        self
+    }
+
 }
 
 impl Drop for Mock {

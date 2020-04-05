@@ -3,7 +3,7 @@ use rand;
 #[macro_use]
 extern crate serde_json;
 
-use mockito::{mock, server_address, Matcher};
+use mockito::{mock, response, server_address, Matcher};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -124,6 +124,25 @@ fn test_two_route_mocks() {
     assert_eq!("aaa", body_a);
     let (_, _, body_b) = request("GET /b", "");
     assert_eq!("bbb", body_b);
+}
+
+#[test]
+fn test_request_sequence() {
+    let _m1 = mock("GET", "/")
+        .with_responses(vec![
+            response(429),
+            response(200)
+                .with_body(r#"aaa"#),
+        ])
+        .create();
+    let (status_line, _, _) = request("GET /", "");
+    assert_eq!("HTTP/1.1 429 Too Many Requests\r\n", status_line, "First request returns a 429");
+    let (status_line, _, body) = request("GET /", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line, "Second request succeeds");
+    assert_eq!("aaa", body, "correct body gets returned in successful response");
+    let (status_line, _, body) = request("GET /", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line, "Third request continues to receive the last response in the sequence");
+    assert_eq!("aaa", body, "correct body gets returned in successful response");
 }
 
 #[test]
