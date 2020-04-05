@@ -130,8 +130,9 @@ fn test_two_route_mocks() {
 fn test_no_match_returns_501() {
     let _m = mock("GET", "/").with_body("matched").create();
 
-    let (status_line, _, _) = request("GET /nope", "");
+    let (status_line, headers, _) = request("GET /nope", "");
     assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status_line);
+    assert_eq!(vec!["content-length: 0"], headers);
 }
 
 #[test]
