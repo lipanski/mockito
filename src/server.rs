@@ -27,6 +27,15 @@ impl Mock {
         self.body
             .matches_value(&String::from_utf8_lossy(&request.body))
     }
+
+    fn is_missing_hits(&self) -> bool {
+        match (self.expected_hits_at_least, self.expected_hits_at_most) {
+            (Some(_at_least), Some(at_most)) => self.hits < at_most,
+            (Some(at_least), None) => self.hits < at_least,
+            (None, Some(at_most)) => self.hits < at_most,
+            (None, None) => self.hits < 1,
+        }
+    }
 }
 
 impl<'a> PartialEq<Request> for &'a mut Mock {
@@ -138,7 +147,24 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
 
     let mut state = STATE.lock().unwrap();
 
-    if let Some(mock) = state.mocks.iter_mut().rev().find(|mock| mock == &request) {
+    let mut mocks_matched = state
+        .mocks
+        .iter_mut()
+        .rev()
+        .filter(|mock| mock == &request)
+        .collect::<Vec<_>>();
+
+    let mock = if let Some(mock) = mocks_matched
+        .iter_mut()
+        .rev()
+        .find(|mock| mock.is_missing_hits())
+    {
+        Some(mock)
+    } else {
+        mocks_matched.last_mut()
+    };
+
+    if let Some(mock) = mock {
         debug!("Mock found");
         found = true;
         mock.hits += 1;

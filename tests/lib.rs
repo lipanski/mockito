@@ -1336,3 +1336,22 @@ fn test_missing_create_good() {
         assert_eq!(warnings.len(), 0);
     });
 }
+
+#[test]
+fn test_same_endpoint_responses() {
+    let mock_200 = mock("GET", "/hello").with_status(200).create();
+    let mock_404 = mock("GET", "/hello").with_status(404).create();
+    let mock_500 = mock("GET", "/hello").with_status(500).create();
+
+    let response_200 = request("GET /hello", "");
+    let response_404 = request("GET /hello", "");
+    let response_500 = request("GET /hello", "");
+
+    mock_200.assert();
+    mock_404.assert();
+    mock_500.assert();
+
+    assert_eq!(response_200.0, "HTTP/1.1 200 OK\r\n");
+    assert_eq!(response_404.0, "HTTP/1.1 404 Not Found\r\n");
+    assert_eq!(response_500.0, "HTTP/1.1 500 Internal Server Error\r\n");
+}
