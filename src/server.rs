@@ -147,21 +147,19 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
 
     let mut state = STATE.lock().unwrap();
 
-    let mut mocks_matched = state
+    let mut matchings_mocks = state
         .mocks
         .iter_mut()
-        .rev()
         .filter(|mock| mock == &request)
         .collect::<Vec<_>>();
 
-    let mock = if let Some(mock) = mocks_matched
+    let mock = if let Some(mock_missing_hits) = matchings_mocks
         .iter_mut()
-        .rev()
         .find(|mock| mock.is_missing_hits())
     {
-        Some(mock)
+        Some(mock_missing_hits)
     } else {
-        mocks_matched.last_mut()
+        matchings_mocks.last_mut()
     };
 
     if let Some(mock) = mock {

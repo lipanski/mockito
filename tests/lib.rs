@@ -1338,7 +1338,7 @@ fn test_missing_create_good() {
 }
 
 #[test]
-fn test_same_endpoint_responses() {
+fn test_same_endpoint_different_responses() {
     let mock_200 = mock("GET", "/hello").with_status(200).create();
     let mock_404 = mock("GET", "/hello").with_status(404).create();
     let mock_500 = mock("GET", "/hello").with_status(500).create();
@@ -1354,4 +1354,26 @@ fn test_same_endpoint_responses() {
     assert_eq!(response_200.0, "HTTP/1.1 200 OK\r\n");
     assert_eq!(response_404.0, "HTTP/1.1 404 Not Found\r\n");
     assert_eq!(response_500.0, "HTTP/1.1 500 Internal Server Error\r\n");
+}
+
+#[test]
+fn test_same_endpoint_different_responses_last_one_forever() {
+    let _mock_200 = mock("GET", "/hello").with_status(200).create();
+    let _mock_404 = mock("GET", "/hello").with_status(404).create();
+    let _mock_500 = mock("GET", "/hello")
+        .expect_at_least(1)
+        .with_status(500)
+        .create();
+
+    let response_200 = request("GET /hello", "");
+    let response_404 = request("GET /hello", "");
+    let response_500_1 = request("GET /hello", "");
+    let response_500_2 = request("GET /hello", "");
+    let response_500_3 = request("GET /hello", "");
+
+    assert_eq!(response_200.0, "HTTP/1.1 200 OK\r\n");
+    assert_eq!(response_404.0, "HTTP/1.1 404 Not Found\r\n");
+    assert_eq!(response_500_1.0, "HTTP/1.1 500 Internal Server Error\r\n");
+    assert_eq!(response_500_2.0, "HTTP/1.1 500 Internal Server Error\r\n");
+    assert_eq!(response_500_3.0, "HTTP/1.1 500 Internal Server Error\r\n");
 }
