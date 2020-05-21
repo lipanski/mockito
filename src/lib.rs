@@ -316,7 +316,7 @@
 //!
 //! let _m1 = mock("GET", "/hello")
 //!   .match_header("content-type", "application/json")
-//!   .with_body("{'hello': 'world'}")
+//!   .with_body(r#"{"hello": "world"}"#)
 //!   .create();
 //!
 //! let _m2 = mock("GET", "/hello")
@@ -337,7 +337,7 @@
 //!
 //! let _m = mock("GET", "/hello")
 //!   .match_header("content-type", Matcher::Regex(r".*json.*".to_string()))
-//!   .with_body("{'hello': 'world'}")
+//!   .with_body(r#"{"hello": "world"}"#)
 //!   .create();
 //! ```
 //!
@@ -413,7 +413,7 @@
 //!
 //! # fn main() {
 //! // Will match requests to POST / whenever the request body matches the json object
-//! let _m = mock("POST", "/").match_body(Matcher::Json(json!({"hello":"world"}))).create();
+//! let _m = mock("POST", "/").match_body(Matcher::Json(json!({"hello": "world"}))).create();
 //! # }
 //! ```
 //!
@@ -426,7 +426,7 @@
 //! // Will match requests to POST / whenever the request body matches the json object
 //! let _m = mock("POST", "/")
 //!     .match_body(
-//!        Matcher::JsonString("{\"hello\":\"world\"}".to_string())
+//!        Matcher::JsonString(r#"{"hello": "world"}"#.to_string())
 //!     )
 //!     .create();
 //! ```
@@ -446,7 +446,7 @@
 //!     .match_body(
 //!         Matcher::AnyOf(vec![
 //!             Matcher::Exact("hello=world".to_string()),
-//!             Matcher::JsonString("{\"hello\":\"world\"}".to_string()),
+//!             Matcher::JsonString(r#"{"hello": "world"}"#.to_string()),
 //!         ])
 //!      )
 //!     .create();
@@ -885,11 +885,11 @@ impl Mock {
     /// ```
     /// use mockito::mock;
     ///
-    /// let _m1 = mock("POST", "/").match_body("{'hello':'world'}").with_body("json").create();
+    /// let _m1 = mock("POST", "/").match_body(r#"{"hello": "world"}"#).with_body("json").create();
     /// let _m2 = mock("POST", "/").match_body("hello=world").with_body("form").create();
     ///
-    /// // Requests passing "{'hello':'world'}" inside the body will be responded with "json".
-    /// // Requests passing "hello=world" inside the body will be responded with "form".
+    /// // Requests passing `{"hello": "world"}` inside the body will be responded with "json".
+    /// // Requests passing `hello=world` inside the body will be responded with "form".
     /// ```
     ///
     pub fn match_body<M: Into<Matcher>>(mut self, body: M) -> Self {
