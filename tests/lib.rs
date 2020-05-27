@@ -862,6 +862,38 @@ fn test_display_mock_matching_headers_and_body() {
 }
 
 #[test]
+fn test_display_mock_matching_all_of_queries() {
+    let mock = mock("POST", "/")
+        .match_query(Matcher::AllOf(vec![
+            Matcher::Exact("query1".to_string()),
+            Matcher::UrlEncoded("key".to_string(), "val".to_string()),
+        ]))
+        .create();
+
+    assert_eq!(
+        "\r\nPOST /?(query1, key=val (urlencoded)) (all of)\r\n",
+        format!("{}", mock)
+    );
+}
+
+#[test]
+fn test_display_mock_matching_any_of_headers() {
+    let mock = mock("POST", "/")
+        .match_header(
+            "content-type",
+            Matcher::AnyOf(vec![
+                Matcher::Exact("type1".to_string()),
+                Matcher::Regex("type2".to_string()),
+            ]),
+        )
+        .create();
+
+    assert_eq!(
+        "\r\nPOST /\r\ncontent-type: (type1, type2 (regex)) (any of)\r\n",
+        format!("{}", mock)
+    );
+}
+#[test]
 fn test_assert_defaults_to_one_hit() {
     let mock = mock("GET", "/hello").create();
 
