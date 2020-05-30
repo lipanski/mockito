@@ -677,15 +677,15 @@ impl<'a> From<&'a str> for Matcher {
 
 impl fmt::Display for Matcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let join_matches = |matches: &[Matcher]| {
+        let join_matches = |matches: &[Self]| {
             matches
                 .iter()
-                .map(Matcher::to_string)
+                .map(Self::to_string)
                 .fold(String::new(), |acc, matcher| {
-                    if acc.len() > 0 {
-                        format!("{}, {}", acc, matcher)
+                    if acc.is_empty() {
+                        matcher
                     } else {
-                        format!("{}", matcher)
+                        format!("{}, {}", acc, matcher)
                     }
                 })
         };
@@ -1184,12 +1184,8 @@ impl fmt::Display for PathAndQueryMatcher {
     #[allow(deprecated)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PathAndQueryMatcher::Unified(matcher) => {
-                write!(f, "{}\r\n", &matcher)
-            }
-            PathAndQueryMatcher::Split(path, query) => {
-                write!(f, "{}?{}\r\n", &path, &query)
-            }
+            PathAndQueryMatcher::Unified(matcher) => write!(f, "{}\r\n", &matcher),
+            PathAndQueryMatcher::Split(path, query) => write!(f, "{}?{}\r\n", &path, &query),
         }
     }
 }
