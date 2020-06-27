@@ -25,8 +25,8 @@ serde_json = "1.0.17"
 difference = "2.0"
 colored = { version = "1.6", optional = true }
 log = "0.4.6"
-percent-encoding = "2.1.0"
 assert-json-diff = "1.0.3"
+serde_urlencoded = "0.6.1"
 
 [dev-dependencies]
 env_logger = "0.7"

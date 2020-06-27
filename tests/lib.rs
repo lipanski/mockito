@@ -1289,7 +1289,7 @@ fn test_match_partial_query_by_urlencoded_all_of() {
         ]))
         .create();
 
-    let (status_line, _, _) = request("GET /hello?hello=world&something=else&num%20ber=o%20ne", "");
+    let (status_line, _, _) = request("GET /hello?hello=world&something=else&num+ber=o%20ne", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
     let (status_line, _, _) = request("GET /hello?hello=world&something=else", "");
