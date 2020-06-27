@@ -753,15 +753,15 @@ impl Matcher {
                 let actual: serde_json::Value = serde_json::from_str(other).unwrap();
                 assert_json_include_no_panic(&actual, &expected).is_ok()
             }
-            Matcher::UrlEncoded(ref expected_field, ref expected_value) => serde_urlencoded::from_str::<HashMap<String, String>>(other)
-                .map(|params: HashMap<_, _>| {
-                    params
-                        .into_iter()
-                        .any(|(ref field, ref value)| {
+            Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
+                serde_urlencoded::from_str::<HashMap<String, String>>(other)
+                    .map(|params: HashMap<_, _>| {
+                        params.into_iter().any(|(ref field, ref value)| {
                             field == expected_field && value == expected_value
                         })
-                })
-                .unwrap_or(false),
+                    })
+                    .unwrap_or(false)
+            }
             Matcher::Any => true,
             Matcher::AnyOf(ref matchers) => matchers.iter().any(|m| m.matches_value(other)),
             Matcher::AllOf(ref matchers) => matchers.iter().all(|m| m.matches_value(other)),
