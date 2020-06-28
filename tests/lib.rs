@@ -1297,6 +1297,19 @@ fn test_match_partial_query_by_urlencoded_all_of() {
 }
 
 #[test]
+fn test_match_query_with_non_percent_url_escaping() {
+    let _m = mock("GET", "/hello")
+        .match_query(Matcher::AllOf(vec![
+            Matcher::UrlEncoded("num ber".into(), "o ne".into()),
+            Matcher::UrlEncoded("hello".into(), "world".into()),
+        ]))
+        .create();
+
+    let (status_line, _, _) = request("GET /hello?hello=world&something=else&num+ber=o+ne", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+}
+
+#[test]
 fn test_match_missing_query() {
     let _m = mock("GET", "/hello").match_query(Matcher::Missing).create();
 
