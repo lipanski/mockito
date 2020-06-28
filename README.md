@@ -3,7 +3,7 @@
   <p align="center">
     <a href="https://docs.rs/mockito"><img src="https://docs.rs/mockito/badge.svg"></a>
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/v/mockito.svg"></a>
-    <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.35.0-orange">
+    <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.36.0-orange">
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/d/mockito"></a>
     <a href="https://travis-ci.org/lipanski/mockito"><img src="https://travis-ci.org/lipanski/mockito.svg?branch=master"></a>
     <a href="https://ci.appveyor.com/project/lipanski/mockito"><img src="https://ci.appveyor.com/api/projects/status/github/lipanski/mockito?branch=master&svg=true"></a>
@@ -37,7 +37,7 @@ cargo test
 ...or run tests using a different toolchain:
 
 ```sh
-rustup run --install 1.35.0 cargo test
+rustup run --install 1.36.0 cargo test
 ```
 
 ...or run tests while disabling the default features (e.g. the colors):
@@ -86,7 +86,7 @@ cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nurs
 ...or run the linter using a different toolchain:
 
 ```sh
-rustup run --install 1.35.0 cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
+rustup run --install 1.36.0 cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
 ```
 
 ### Release
