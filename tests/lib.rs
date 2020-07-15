@@ -1422,3 +1422,15 @@ fn test_same_endpoint_different_responses_last_one_forever() {
     assert_eq!(response_500_2.0, "HTTP/1.1 500 Internal Server Error\r\n");
     assert_eq!(response_500_3.0, "HTTP/1.1 500 Internal Server Error\r\n");
 }
+
+#[test]
+fn test_matched_bool() {
+    let m = mock("GET", "/").create();
+
+    let (_, _, _) = request_with_body("GET /", "", "");
+    m.assert();
+    assert!(m.matched(), "matched method returns correctly");
+
+    let (_, _, _) = request_with_body("GET /", "", "");
+    assert!(!m.matched(), "matched method returns correctly");
+}
