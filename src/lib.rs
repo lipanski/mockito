@@ -224,6 +224,38 @@
 //!
 //! ```
 //!
+//! You can also use the `matched` method to return a boolean for whether the mock was called the
+//! correct number of times without panicking
+//!
+//! ## Example
+//!
+//! ```
+//! use std::net::TcpStream;
+//! use std::io::{Read, Write};
+//! use mockito::{mock, server_address};
+//!
+//! let mock = mock("GET", "/").create();
+//!
+//! {
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
+//!     stream.write_all("GET / HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
+//! }
+//!
+//! assert!(mock.matched());
+//!
+//! {
+//!     let mut stream = TcpStream::connect(server_address()).unwrap();
+//!     stream.write_all("GET / HTTP/1.1\r\n\r\n".as_bytes()).unwrap();
+//!     let mut response = String::new();
+//!     stream.read_to_string(&mut response).unwrap();
+//!     stream.flush().unwrap();
+//! }
+//! assert!(!mock.matched());
+//! ```
+//!
 //! # Matchers
 //!
 //! Mockito can match your request by method, path, query, headers or body.
@@ -1069,14 +1101,12 @@ impl Mock {
     /// Asserts that the expected amount of requests (defaults to 1 request) were performed.
     ///
     pub fn assert(&self) {
-        let mut opt_hits = None;
         let mut opt_message = None;
 
         {
             let state = server::STATE.lock().unwrap();
 
             if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
-                opt_hits = Some(remote_mock.hits);
                 let mut message = match (self.expected_hits_at_least, self.expected_hits_at_most) {
                     (Some(min), Some(max)) if min == max => format!(
                         "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
@@ -1114,18 +1144,29 @@ impl Mock {
             }
         }
 
-        match (opt_hits, opt_message) {
-            (Some(hits), Some(message)) => assert!(
-                match (self.expected_hits_at_least, self.expected_hits_at_most) {
-                    (Some(min), Some(max)) => hits >= min && hits <= max,
-                    (Some(min), None) => hits >= min,
-                    (None, Some(max)) => hits <= max,
-                    (None, None) => hits == 1,
-                },
-                "{}",
-                message
-            ),
+        match opt_message {
+            Some(message) => assert!(self.matched(), "{}", message),
             _ => panic!("Could not retrieve enough information about the remote mock."),
+        }
+    }
+
+    ///
+    /// Returns whether the expected amount of requests (defaults to 1) were performed.
+    ///
+    pub fn matched(&self) -> bool {
+        let state = server::STATE.lock().unwrap();
+
+        if let Some(remote_mock) = state.mocks.iter().find(|mock| mock.id == self.id) {
+            let hits = remote_mock.hits;
+
+            match (self.expected_hits_at_least, self.expected_hits_at_most) {
+                (Some(min), Some(max)) => hits >= min && hits <= max,
+                (Some(min), None) => hits >= min,
+                (None, Some(max)) => hits <= max,
+                (None, None) => hits == 1,
+            }
+        } else {
+            false
         }
     }
 
