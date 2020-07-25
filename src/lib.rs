@@ -12,7 +12,8 @@
 //!
 //! # Getting Started
 //!
-//! Using compiler flags, set the URL of your web client to address returned by `mockito::server_url()` or `mockito::server_address()`.
+//! Use `mockito::server_url()` or `mockito::server_address()` as the base URL for any mocked
+//! client in your tests. One way to do this is by using compiler flags:
 //!
 //! ## Example
 //!
@@ -20,11 +21,15 @@
 //! #[cfg(test)]
 //! use mockito;
 //!
-//! #[cfg(not(test))]
-//! let url = "https://api.twitter.com";
+//! fn main() {
+//!   #[cfg(not(test))]
+//!   let url = "https://api.twitter.com";
 //!
-//! #[cfg(test)]
-//! let url = &mockito::server_url();
+//!   #[cfg(test)]
+//!   let url = &mockito::server_url();
+//!
+//!   // Use url as the base URL for your client
+//! }
 //! ```
 //!
 //! Then start mocking:
