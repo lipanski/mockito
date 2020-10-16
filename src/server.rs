@@ -26,6 +26,7 @@ impl Mock {
     fn body_matches(&self, request: &Request) -> bool {
         self.body
             .matches_value(&String::from_utf8_lossy(&request.body))
+            || self.body.matches_binary_value(request.body.clone())
     }
 
     fn is_missing_hits(&self) -> bool {

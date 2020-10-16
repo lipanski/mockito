@@ -601,7 +601,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::{From, Into};
 use std::fmt;
+use std::fs::File;
 use std::io;
+use std::io::Read;
 use std::ops::Drop;
 use std::path::Path;
 use std::sync::Arc;
@@ -682,6 +684,8 @@ pub enum Matcher {
     /// Matches the exact path or header value. There's also an implementation of `From<&str>`
     /// to keep things simple and backwards compatible.
     Exact(String),
+    /// Matches the body content as a binary file
+    Binary(BinaryBody),
     /// Matches a path or header value by a regular expression.
     Regex(String),
     /// Matches a specified JSON body from a `serde_json::Value`
@@ -711,6 +715,24 @@ impl<'a> From<&'a str> for Matcher {
     }
 }
 
+impl From<&Path> for Matcher {
+    fn from(value: &Path) -> Self {
+        Matcher::Binary(BinaryBody::from_path(value).unwrap())
+    }
+}
+
+impl From<&mut File> for Matcher {
+    fn from(value: &mut File) -> Self {
+        Matcher::Binary(BinaryBody::from_file(value))
+    }
+}
+
+impl From<Vec<u8>> for Matcher {
+    fn from(value: Vec<u8>) -> Self {
+        Matcher::Binary(BinaryBody::from_bytes(value))
+    }
+}
+
 impl fmt::Display for Matcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let join_matches = |matches: &[Self]| {
@@ -728,6 +750,7 @@ impl fmt::Display for Matcher {
 
         let result = match self {
             Matcher::Exact(ref value) => value.to_string(),
+            Matcher::Binary(ref file) => format!("{} (binary)", file),
             Matcher::Regex(ref value) => format!("{} (regex)", value),
             Matcher::Json(ref json_obj) => format!("{} (json)", json_obj),
             Matcher::JsonString(ref value) => format!("{} (json)", value),
@@ -765,10 +788,18 @@ impl Matcher {
         }
     }
 
+    fn matches_binary_value(&self, binary: Vec<u8>) -> bool {
+        match self {
+            Matcher::Binary(ref file) => binary == file.content,
+            _ => false,
+        }
+    }
+
     #[allow(deprecated)]
     fn matches_value(&self, other: &str) -> bool {
         match self {
             Matcher::Exact(ref value) => value == other,
+            Matcher::Binary(_) => false,
             Matcher::Regex(ref regex) => Regex::new(regex).unwrap().is_match(other),
             Matcher::Json(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
@@ -822,6 +853,70 @@ impl PathAndQueryMatcher {
                 let query = parts.next().unwrap_or("");
 
                 path_matcher.matches_value(path) && query_matcher.matches_value(query)
+            }
+        }
+    }
+}
+
+///
+/// Represents a binary object the body should be matched against
+///
+#[derive(Debug, Clone)]
+pub struct BinaryBody {
+    path: Option<String>,
+    content: Vec<u8>,
+}
+
+impl BinaryBody {
+    /// Read the content from path and initialize a BinaryBody
+    pub fn from_path(path: &Path) -> Result<Self, io::Error> {
+        Ok(Self {
+            path: path.to_str().map(|p| p.to_string()),
+            content: std::fs::read(path)?,
+        })
+    }
+
+    /// Read the content from a &mut File and initialize a BinaryBody
+    pub fn from_file(file: &mut File) -> Self {
+        Self {
+            path: None,
+            content: get_content_from(file),
+        }
+    }
+
+    /// Instantiate the matcher directly passing the content
+    pub fn from_bytes(content: Vec<u8>) -> Self {
+        Self {
+            path: None,
+            content,
+        }
+    }
+}
+
+fn get_content_from(file: &mut File) -> Vec<u8> {
+    let mut filecontent: Vec<u8> = Vec::new();
+    file.read_to_end(&mut filecontent).unwrap();
+    filecontent
+}
+
+impl PartialEq for BinaryBody {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.path.as_ref(), other.path.as_ref()) {
+            (Some(p), Some(o)) => p == o,
+            _ => self.content == other.content,
+        }
+    }
+}
+
+impl fmt::Display for BinaryBody {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.path.as_ref() {
+            Some(filepath) => write!(f, "filepath: {}", filepath),
+            None => {
+                let len: usize = std::cmp::min(self.content.len(), 8);
+                // TODO: remove clone
+                let first_bytes: Vec<u8> = self.content.clone().into_iter().take(len).collect();
+                write!(f, "filecontent: {:?}", first_bytes)
             }
         }
     }
@@ -955,8 +1050,32 @@ impl Mock {
     /// let _m1 = mock("POST", "/").match_body(r#"{"hello": "world"}"#).with_body("json").create();
     /// let _m2 = mock("POST", "/").match_body("hello=world").with_body("form").create();
     ///
+    ///
     /// // Requests passing `{"hello": "world"}` inside the body will be responded with "json".
     /// // Requests passing `hello=world` inside the body will be responded with "form".
+    ///
+    /// // Create a temporary file
+    /// use std::env;
+    /// use std::fs::File;
+    /// use std::io::Write;
+    /// use std::path::Path;
+    /// use rand;
+    /// use rand::Rng;
+    ///
+    /// let random_bytes: Vec<u8> = (0..1024).map(|_| rand::random::<u8>()).collect();
+    ///
+    /// let mut tmp_file = env::temp_dir();
+    /// tmp_file.push("test_file.txt");
+    /// let mut f_write = File::create(tmp_file.clone()).unwrap();
+    /// f_write.write_all(random_bytes.as_slice()).unwrap();
+    /// let mut f_read = File::open(tmp_file.clone()).unwrap();
+    ///
+    ///
+    /// // the following are equivalent ways of defining a mock matching
+    /// // a binary payload
+    /// let _b1 = mock("POST", "/").match_body(tmp_file.as_path()).create();
+    /// let _b3 = mock("POST", "/").match_body(random_bytes).create();
+    /// let _b2 = mock("POST", "/").match_body(&mut f_read).create();
     /// ```
     ///
     pub fn match_body<M: Into<Matcher>>(mut self, body: M) -> Self {
@@ -1256,6 +1375,9 @@ impl fmt::Display for Mock {
             | Matcher::Regex(ref value) => {
                 formatted.push_str(value);
                 formatted.push_str("\r\n");
+            }
+            Matcher::Binary(_) => {
+                formatted.push_str("(binary)\r\n");
             }
             Matcher::Json(ref json_obj) | Matcher::PartialJson(ref json_obj) => {
                 formatted.push_str(&json_obj.to_string());
