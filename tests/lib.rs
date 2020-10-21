@@ -6,21 +6,46 @@ extern crate serde_json;
 use mockito::{mock, server_address, Matcher};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
+use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::mem;
 use std::net::{Shutdown, TcpStream};
+use std::path::Path;
 use std::str::FromStr;
 use std::thread;
 
-fn request_stream(version: &str, route: &str, headers: &str, body: &str) -> TcpStream {
+type Binary = Vec<u8>;
+
+fn request_stream<StrOrBytes: AsRef<[u8]>>(
+    version: &str,
+    route: &str,
+    headers: &str,
+    body: StrOrBytes,
+) -> TcpStream {
     let mut stream = TcpStream::connect(server_address()).unwrap();
-    let message = [route, " HTTP/", version, "\r\n", headers, "\r\n", body].join("");
-    stream.write_all(message.as_bytes()).unwrap();
+    let mut message: Binary = Vec::new();
+    let _ = [route, " HTTP/", version, "\r\n", headers, "\r\n"]
+        .join("")
+        .as_bytes()
+        .iter()
+        .map(|b| {
+            message.push(*b);
+        })
+        .collect::<()>();
+    let _ = body
+        .as_ref()
+        .iter()
+        .map(|b| {
+            message.push(*b);
+        })
+        .collect::<()>();
+
+    stream.write_all(&message).unwrap();
 
     stream
 }
 
-fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, String) {
+fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Binary) {
     let mut reader = BufReader::new(stream);
 
     let mut status_line = String::new();
@@ -49,13 +74,10 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
         headers.push(header_line.trim_end().to_string());
     }
 
-    let mut body = String::new();
+    let mut body: Binary = Vec::new();
     if !skip_body {
         if let Some(content_length) = content_length {
-            reader
-                .take(content_length)
-                .read_to_string(&mut body)
-                .unwrap();
+            reader.take(content_length).read_to_end(&mut body).unwrap();
         } else if is_chunked {
             let mut chunk_size_buf = String::new();
             loop {
@@ -73,7 +95,7 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
 
                 (&mut reader)
                     .take(chunk_size)
-                    .read_to_string(&mut body)
+                    .read_to_end(&mut body)
                     .unwrap();
 
                 chunk_size_buf.clear();
@@ -85,16 +107,28 @@ fn parse_stream(stream: TcpStream, skip_body: bool) -> (String, Vec<String>, Str
     (status_line, headers, body)
 }
 
-fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
+fn binary_request<StrOrBytes: AsRef<[u8]>>(
+    route: &str,
+    headers: &str,
+    body: StrOrBytes,
+) -> (String, Vec<String>, Binary) {
     parse_stream(
-        request_stream("1.1", route, headers, ""),
+        request_stream("1.1", route, headers, body),
         route.starts_with("HEAD"),
     )
 }
 
+fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
+    let (status, headers, body) = binary_request(route, headers, "");
+    let parsed_body: String = std::str::from_utf8(body.as_slice()).unwrap().to_string();
+    (status, headers, parsed_body)
+}
+
 fn request_with_body(route: &str, headers: &str, body: &str) -> (String, Vec<String>, String) {
     let headers = format!("{}content-length: {}\r\n", headers, body.len());
-    parse_stream(request_stream("1.1", route, &headers, body), false)
+    let (status, headers, body) = binary_request(route, &headers, body);
+    let parsed_body: String = std::str::from_utf8(body.as_slice()).unwrap().to_string();
+    (status, headers, parsed_body)
 }
 
 #[test]
@@ -285,6 +319,34 @@ fn test_match_body_not_matching() {
     let _m = mock("POST", "/").match_body("hello").create();
 
     let (status, _, _) = request_with_body("POST /", "", "bye");
+    assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
+}
+
+#[test]
+fn test_match_binary_body() {
+    let _m = mock("POST", "/")
+        .match_body(Path::new("./tests/files/test_payload.bin"))
+        .create();
+
+    let mut file_content: Binary = Vec::new();
+    fs::File::open("./tests/files/test_payload.bin")
+        .unwrap()
+        .read_to_end(&mut file_content)
+        .unwrap();
+    let content_length_header = format!("Content-Length: {}\r\n", file_content.len());
+    let (status, _, _) = binary_request("POST /", &content_length_header, file_content);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status);
+}
+
+#[test]
+fn test_does_not_match_binary_body() {
+    let _m = mock("POST", "/")
+        .match_body(Path::new("./tests/files/test_payload.bin"))
+        .create();
+
+    let file_content: Binary = (0..1024).map(|_| rand::random::<u8>()).collect();
+    let content_length_header = format!("Content-Length: {}\r\n", file_content.len());
+    let (status, _, _) = binary_request("POST /", &content_length_header, file_content);
     assert_eq!("HTTP/1.1 501 Mock Not Found\r\n", status);
 }
 
