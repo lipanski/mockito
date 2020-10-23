@@ -585,7 +585,6 @@
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-use serde_json;
 
 mod diff;
 mod request;
