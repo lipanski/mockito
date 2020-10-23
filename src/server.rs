@@ -29,6 +29,7 @@ impl Mock {
             || self.body.matches_binary_value(request.body.clone())
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn is_missing_hits(&self) -> bool {
         match (self.expected_hits_at_least, self.expected_hits_at_most) {
             (Some(_at_least), Some(at_most)) => self.hits < at_most,
@@ -144,8 +145,6 @@ fn handle_request(request: Request, stream: TcpStream) {
 }
 
 fn handle_match_mock(request: Request, stream: TcpStream) {
-    let found;
-
     let mut state = STATE.lock().unwrap();
 
     let mut matchings_mocks = state
@@ -154,27 +153,20 @@ fn handle_match_mock(request: Request, stream: TcpStream) {
         .filter(|mock| mock == &request)
         .collect::<Vec<_>>();
 
-    let mock = if let Some(mock_missing_hits) = matchings_mocks
-        .iter_mut()
-        .find(|mock| mock.is_missing_hits())
-    {
-        Some(mock_missing_hits)
-    } else {
-        matchings_mocks.last_mut()
+    let maybe_missing_hits = matchings_mocks.iter_mut().find(|m| m.is_missing_hits());
+
+    let mock = match maybe_missing_hits {
+        Some(m) => Some(m),
+        None => matchings_mocks.last_mut(),
     };
 
     if let Some(mock) = mock {
         debug!("Mock found");
-        found = true;
         mock.hits += 1;
         respond_with_mock(stream, request.version, mock, request.is_head());
     } else {
         debug!("Mock not found");
-        found = false;
         respond_with_mock_not_found(stream, request.version);
-    }
-
-    if !found {
         state.unmatched_requests.push(request);
     }
 }

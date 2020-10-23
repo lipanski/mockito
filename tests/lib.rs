@@ -1,5 +1,3 @@
-use rand;
-
 #[macro_use]
 extern crate serde_json;
 
@@ -1436,11 +1434,13 @@ fn test_missing_create_good() {
 
     // No warnings should occur
     testing_logger::validate(|captured_logs| {
-        let warnings = captured_logs
-            .iter()
-            .filter(|c| c.level == log::Level::Warn)
-            .collect::<Vec<&testing_logger::CapturedLog>>();
-        assert_eq!(warnings.len(), 0);
+        assert_eq!(
+            captured_logs
+                .iter()
+                .filter(|c| c.level == log::Level::Warn)
+                .count(),
+            0
+        );
     });
 }
 

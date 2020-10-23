@@ -24,14 +24,17 @@ impl Request {
         self.method == "HEAD"
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn is_ok(&self) -> bool {
         self.error.is_none()
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn is_err(&self) -> bool {
         self.error.is_some()
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn error(&self) -> Option<&String> {
         self.error.as_ref()
     }

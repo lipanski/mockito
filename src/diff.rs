@@ -1,5 +1,5 @@
 #[cfg(feature = "color")]
-use colored::*;
+use colored::Colorize;
 use difference::{Changeset, Difference};
 
 pub fn compare(expected: &str, actual: &str) -> String {
@@ -11,6 +11,8 @@ pub fn compare(expected: &str, actual: &str) -> String {
     let Changeset { diffs, .. } = Changeset::new(&clean_expected, &clean_actual, "\n");
 
     for i in 0..diffs.len() {
+        // this usage cannot panic inside a loop over the array length
+        #[allow(clippy::match_on_vec_items)]
         match diffs[i] {
             Difference::Same(ref x) => {
                 result.push_str(x);
