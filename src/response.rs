@@ -10,10 +10,12 @@ pub(crate) struct Response {
     pub body: Body,
 }
 
+type BodyFn = dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static;
+
 #[derive(Clone)]
 pub(crate) enum Body {
     Bytes(Vec<u8>),
-    Fn(Arc<dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static>),
+    Fn(Arc<BodyFn>),
 }
 
 impl fmt::Debug for Body {
@@ -29,7 +31,10 @@ impl PartialEq for Body {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Body::Bytes(ref a), Body::Bytes(ref b)) => a == b,
-            (Body::Fn(ref a), Body::Fn(ref b)) => Arc::ptr_eq(a, b),
+            (Body::Fn(ref a), Body::Fn(ref b)) => std::ptr::eq(
+                a.as_ref() as *const BodyFn as *const u8,
+                b.as_ref() as *const BodyFn as *const u8,
+            ),
             _ => false,
         }
     }
