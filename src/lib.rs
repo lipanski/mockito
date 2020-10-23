@@ -607,6 +607,7 @@ use std::io;
 use std::io::Read;
 use std::ops::Drop;
 use std::path::Path;
+use std::string::ToString;
 use std::sync::Arc;
 use std::sync::{LockResult, Mutex, MutexGuard};
 
@@ -716,6 +717,8 @@ impl<'a> From<&'a str> for Matcher {
     }
 }
 
+// we want the code to panic if the path is not readable
+#[allow(clippy::fallible_impl_from)]
 impl From<&Path> for Matcher {
     fn from(value: &Path) -> Self {
         Self::Binary(BinaryBody::from_path(value).unwrap())
@@ -787,7 +790,7 @@ impl Matcher {
         }
     }
 
-    fn matches_binary_value(&self, binary: Vec<u8>) -> bool {
+    fn matches_binary_value(&self, binary: &[u8]) -> bool {
         match self {
             Self::Binary(ref file) => binary == file.content,
             _ => false,
@@ -868,9 +871,13 @@ pub struct BinaryBody {
 
 impl BinaryBody {
     /// Read the content from path and initialize a `BinaryBody`
+    ///
+    /// # Errors
+    ///
+    /// The same resulting from a failed `std::fs::read`.
     pub fn from_path(path: &Path) -> Result<Self, io::Error> {
         Ok(Self {
-            path: path.to_str().map(|p| p.to_string()),
+            path: path.to_str().map(ToString::to_string),
             content: std::fs::read(path)?,
         })
     }
@@ -909,14 +916,12 @@ impl PartialEq for BinaryBody {
 
 impl fmt::Display for BinaryBody {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.path.as_ref() {
-            Some(filepath) => write!(f, "filepath: {}", filepath),
-            None => {
-                let len: usize = std::cmp::min(self.content.len(), 8);
-                // TODO: remove clone
-                let first_bytes: Vec<u8> = self.content.clone().into_iter().take(len).collect();
-                write!(f, "filecontent: {:?}", first_bytes)
-            }
+        if let Some(filepath) = self.path.as_ref() {
+            write!(f, "filepath: {}", filepath)
+        } else {
+            let len: usize = std::cmp::min(self.content.len(), 8);
+            let first_bytes: Vec<u8> = self.content.to_owned().into_iter().take(len).collect();
+            write!(f, "filecontent: {:?}", first_bytes)
         }
     }
 }

@@ -22,21 +22,15 @@ fn request_stream<StrOrBytes: AsRef<[u8]>>(
 ) -> TcpStream {
     let mut stream = TcpStream::connect(server_address()).unwrap();
     let mut message: Binary = Vec::new();
-    let _ = [route, " HTTP/", version, "\r\n", headers, "\r\n"]
+    for b in [route, " HTTP/", version, "\r\n", headers, "\r\n"]
         .join("")
         .as_bytes()
-        .iter()
-        .map(|b| {
-            message.push(*b);
-        })
-        .collect::<()>();
-    let _ = body
-        .as_ref()
-        .iter()
-        .map(|b| {
-            message.push(*b);
-        })
-        .collect::<()>();
+    {
+        message.push(*b);
+    }
+    for b in body.as_ref().iter() {
+        message.push(*b);
+    }
 
     stream.write_all(&message).unwrap();
 
