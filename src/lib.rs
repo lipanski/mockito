@@ -830,7 +830,7 @@ impl PathAndQueryMatcher {
 ///
 /// Stores information about a mocked request. Should be initialized via `mockito::mock()`.
 ///
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Mock {
     id: String,
     method: String,

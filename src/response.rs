@@ -3,7 +3,7 @@ use std::fmt;
 use std::io;
 use std::sync::Arc;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct Response {
     pub status: Status,
     pub headers: Vec<(String, String)>,
@@ -21,16 +21,6 @@ impl fmt::Debug for Body {
         match *self {
             Body::Bytes(ref b) => b.fmt(f),
             Body::Fn(_) => f.write_str("<callback>"),
-        }
-    }
-}
-
-impl PartialEq for Body {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Body::Bytes(ref a), Body::Bytes(ref b)) => a == b,
-            (Body::Fn(ref a), Body::Fn(ref b)) => Arc::ptr_eq(a, b),
-            _ => false,
         }
     }
 }
