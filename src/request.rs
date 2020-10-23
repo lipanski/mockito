@@ -6,8 +6,6 @@ use std::mem;
 use std::net::TcpStream;
 use std::str;
 
-use httparse;
-
 #[derive(Debug)]
 pub struct Request {
     pub version: (u8, u8),
@@ -166,7 +164,7 @@ impl<'a> From<&'a TcpStream> for Request {
                 .map_err(|e| {
                     request.error = Some(e.to_string());
                 })
-                .and_then(|status| match status {
+                .map(|status| match status {
                     httparse::Status::Complete(head_length) => {
                         if let Some(a @ 0..=1) = req.version {
                             request.version = (1, a);
@@ -195,10 +193,8 @@ impl<'a> From<&'a TcpStream> for Request {
                         }
 
                         request.is_parsed = true;
-
-                        Ok(())
                     }
-                    httparse::Status::Partial => Ok(()),
+                    httparse::Status::Partial => (),
                 });
         }
 
