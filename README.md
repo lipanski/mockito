@@ -13,7 +13,7 @@
 
 Get it on [crates.io](https://crates.io/crates/mockito/).
 
-Documentation available at <https://docs.rs/mockito>.
+Documentation is available at <https://docs.rs/mockito>.
 
 Before upgrading, make sure to check out the [changelog](https://github.com/lipanski/mockito/releases).
 

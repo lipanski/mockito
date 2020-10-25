@@ -759,7 +759,9 @@ impl fmt::Display for Matcher {
             Matcher::JsonString(ref value) => format!("{} (json)", value),
             Matcher::PartialJson(ref json_obj) => format!("{} (partial json)", json_obj),
             Matcher::PartialJsonString(ref value) => format!("{} (partial json)", value),
-            Matcher::UrlEncoded(ref field, ref value) => format!("{}={} (urlencoded)", field, value),
+            Matcher::UrlEncoded(ref field, ref value) => {
+                format!("{}={} (urlencoded)", field, value)
+            }
             Matcher::Any => "(any)".to_string(),
             Matcher::AnyOf(x) => format!("({}) (any of)", join_matches(x)),
             Matcher::AllOf(x) => format!("({}) (all of)", join_matches(x)),
