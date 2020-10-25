@@ -24,9 +24,10 @@ impl Mock {
     }
 
     fn body_matches(&self, request: &Request) -> bool {
-        self.body
-            .matches_value(&String::from_utf8_lossy(&request.body))
-            || self.body.matches_binary_value(&request.body)
+        let raw_body = &request.body;
+        let safe_body = &String::from_utf8_lossy(raw_body);
+
+        self.body.matches_value(safe_body) || self.body.matches_binary_value(raw_body)
     }
 
     #[allow(clippy::missing_const_for_fn)]

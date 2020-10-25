@@ -66,7 +66,7 @@ Some editors might provide a plugin to format your Rust code automatically.
 
 ### Linter
 
-Mockito uses [clippy](https://github.com/rust-lang/rust-clippy) as a linter.
+Mockito uses [clippy](https://github.com/rust-lang/rust-clippy) and it should be run always on the minimum supported Rust version, in order to ensure backwards compatibility.
 
 Install `clippy`:
 
@@ -74,16 +74,7 @@ Install `clippy`:
 rustup component add clippy-preview
 ```
 
-Run the linter:
-
-```sh
-# Touch a file to force cargo to rerun clippy on the project
-touch src/lib.rs
-
-cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
-```
-
-...or run the linter using a different toolchain:
+Run the linter on the minimum supported Rust version:
 
 ```sh
 rustup run --install 1.36.0 cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
