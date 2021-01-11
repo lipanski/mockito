@@ -797,6 +797,7 @@ fn test_all_of_missing_match_header() {
 fn test_large_utf8_body() {
     let mock_body: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
+        .map(char::from)
         .take(3 * 1024) // Must be larger than the request read buffer
         .collect();
 
