@@ -951,7 +951,11 @@ pub struct Mock {
 impl Mock {
     fn new<P: Into<Matcher>>(method: &str, path: P) -> Self {
         Self {
-            id: thread_rng().sample_iter(&Alphanumeric).take(24).collect(),
+            id: thread_rng()
+                .sample_iter(&Alphanumeric)
+                .map(char::from)
+                .take(24)
+                .collect(),
             method: method.to_owned().to_uppercase(),
             path: PathAndQueryMatcher::Unified(path.into()),
             headers: Vec::new(),
