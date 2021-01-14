@@ -712,7 +712,7 @@ pub enum Matcher {
 
 impl<'a> From<&'a str> for Matcher {
     fn from(value: &str) -> Self {
-        Matcher::Exact(value.to_string())
+        Self::Exact(value.to_string())
     }
 }
 
@@ -720,19 +720,19 @@ impl<'a> From<&'a str> for Matcher {
 impl From<&Path> for Matcher {
     fn from(value: &Path) -> Self {
         // We want the code to panic if the path is not readable.
-        Matcher::Binary(BinaryBody::from_path(value).unwrap())
+        Self::Binary(BinaryBody::from_path(value).unwrap())
     }
 }
 
 impl From<&mut File> for Matcher {
     fn from(value: &mut File) -> Self {
-        Matcher::Binary(BinaryBody::from_file(value))
+        Self::Binary(BinaryBody::from_file(value))
     }
 }
 
 impl From<Vec<u8>> for Matcher {
     fn from(value: Vec<u8>) -> Self {
-        Matcher::Binary(BinaryBody::from_bytes(value))
+        Self::Binary(BinaryBody::from_bytes(value))
     }
 }
 
@@ -752,20 +752,20 @@ impl fmt::Display for Matcher {
         };
 
         let result = match self {
-            Matcher::Exact(ref value) => value.to_string(),
-            Matcher::Binary(ref file) => format!("{} (binary)", file),
-            Matcher::Regex(ref value) => format!("{} (regex)", value),
-            Matcher::Json(ref json_obj) => format!("{} (json)", json_obj),
-            Matcher::JsonString(ref value) => format!("{} (json)", value),
-            Matcher::PartialJson(ref json_obj) => format!("{} (partial json)", json_obj),
-            Matcher::PartialJsonString(ref value) => format!("{} (partial json)", value),
-            Matcher::UrlEncoded(ref field, ref value) => {
+            Self::Exact(ref value) => value.to_string(),
+            Self::Binary(ref file) => format!("{} (binary)", file),
+            Self::Regex(ref value) => format!("{} (regex)", value),
+            Self::Json(ref json_obj) => format!("{} (json)", json_obj),
+            Self::JsonString(ref value) => format!("{} (json)", value),
+            Self::PartialJson(ref json_obj) => format!("{} (partial json)", json_obj),
+            Self::PartialJsonString(ref value) => format!("{} (partial json)", value),
+            Self::UrlEncoded(ref field, ref value) => {
                 format!("{}={} (urlencoded)", field, value)
             }
-            Matcher::Any => "(any)".to_string(),
-            Matcher::AnyOf(x) => format!("({}) (any of)", join_matches(x)),
-            Matcher::AllOf(x) => format!("({}) (all of)", join_matches(x)),
-            Matcher::Missing => "(missing)".to_string(),
+            Self::Any => "(any)".to_string(),
+            Self::AnyOf(x) => format!("({}) (any of)", join_matches(x)),
+            Self::AllOf(x) => format!("({}) (all of)", join_matches(x)),
+            Self::Missing => "(missing)".to_string(),
         };
         write!(f, "{}", result)
     }
@@ -774,15 +774,15 @@ impl fmt::Display for Matcher {
 impl Matcher {
     fn matches_values(&self, header_values: &[&str]) -> bool {
         match self {
-            Matcher::Missing => header_values.is_empty(),
+            Self::Missing => header_values.is_empty(),
             // AnyOf([…Missing…]) is handled here, but
             // AnyOf([Something]) is handled in the last block.
             // That's because Missing matches against all values at once,
             // but other matchers match against individual values.
-            Matcher::AnyOf(ref matchers) if header_values.is_empty() => {
+            Self::AnyOf(ref matchers) if header_values.is_empty() => {
                 matchers.iter().any(|m| m.matches_values(header_values))
             }
-            Matcher::AllOf(ref matchers) if header_values.is_empty() => {
+            Self::AllOf(ref matchers) if header_values.is_empty() => {
                 matchers.iter().all(|m| m.matches_values(header_values))
             }
             _ => {
@@ -793,7 +793,7 @@ impl Matcher {
 
     fn matches_binary_value(&self, binary: &[u8]) -> bool {
         match self {
-            Matcher::Binary(ref file) => binary == &*file.content,
+            Self::Binary(ref file) => binary == &*file.content,
             _ => false,
         }
     }
@@ -801,29 +801,29 @@ impl Matcher {
     #[allow(deprecated)]
     fn matches_value(&self, other: &str) -> bool {
         match self {
-            Matcher::Exact(ref value) => value == other,
-            Matcher::Binary(_) => false,
-            Matcher::Regex(ref regex) => Regex::new(regex).unwrap().is_match(other),
-            Matcher::Json(ref json_obj) => {
+            Self::Exact(ref value) => value == other,
+            Self::Binary(_) => false,
+            Self::Regex(ref regex) => Regex::new(regex).unwrap().is_match(other),
+            Self::Json(ref json_obj) => {
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 *json_obj == other
             }
-            Matcher::JsonString(ref value) => {
+            Self::JsonString(ref value) => {
                 let value: serde_json::Value = serde_json::from_str(value).unwrap();
                 let other: serde_json::Value = serde_json::from_str(other).unwrap();
                 value == other
             }
-            Matcher::PartialJson(ref json_obj) => {
+            Self::PartialJson(ref json_obj) => {
                 let actual: serde_json::Value = serde_json::from_str(other).unwrap();
                 let expected = json_obj.clone();
                 assert_json_include_no_panic(&actual, &expected).is_ok()
             }
-            Matcher::PartialJsonString(ref value) => {
+            Self::PartialJsonString(ref value) => {
                 let expected: serde_json::Value = serde_json::from_str(value).unwrap();
                 let actual: serde_json::Value = serde_json::from_str(other).unwrap();
                 assert_json_include_no_panic(&actual, &expected).is_ok()
             }
-            Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
+            Self::UrlEncoded(ref expected_field, ref expected_value) => {
                 serde_urlencoded::from_str::<HashMap<String, String>>(other)
                     .map(|params: HashMap<_, _>| {
                         params.into_iter().any(|(ref field, ref value)| {
@@ -832,10 +832,10 @@ impl Matcher {
                     })
                     .unwrap_or(false)
             }
-            Matcher::Any => true,
-            Matcher::AnyOf(ref matchers) => matchers.iter().any(|m| m.matches_value(other)),
-            Matcher::AllOf(ref matchers) => matchers.iter().all(|m| m.matches_value(other)),
-            Matcher::Missing => other.is_empty(),
+            Self::Any => true,
+            Self::AnyOf(ref matchers) => matchers.iter().any(|m| m.matches_value(other)),
+            Self::AllOf(ref matchers) => matchers.iter().all(|m| m.matches_value(other)),
+            Self::Missing => other.is_empty(),
         }
     }
 }
@@ -849,8 +849,8 @@ enum PathAndQueryMatcher {
 impl PathAndQueryMatcher {
     fn matches_value(&self, other: &str) -> bool {
         match self {
-            PathAndQueryMatcher::Unified(matcher) => matcher.matches_value(other),
-            PathAndQueryMatcher::Split(ref path_matcher, ref query_matcher) => {
+            Self::Unified(matcher) => matcher.matches_value(other),
+            Self::Split(ref path_matcher, ref query_matcher) => {
                 let mut parts = other.splitn(2, '?');
                 let path = parts.next().unwrap();
                 let query = parts.next().unwrap_or("");
@@ -893,6 +893,7 @@ impl BinaryBody {
 
     /// Instantiate the matcher directly passing the content
     #[allow(clippy::missing_const_for_fn)]
+    #[must_use]
     pub fn from_bytes(content: Vec<u8>) -> Self {
         Self {
             path: None,
@@ -1104,6 +1105,7 @@ impl Mock {
     /// let _m = mock("GET", "/").with_status(201);
     /// ```
     ///
+    #[must_use]
     pub fn with_status(mut self, status: usize) -> Self {
         self.response.status = status.into();
 
@@ -1121,6 +1123,7 @@ impl Mock {
     /// let _m = mock("GET", "/").with_header("content-type", "application/json");
     /// ```
     ///
+    #[must_use]
     pub fn with_header(mut self, field: &str, value: &str) -> Self {
         self.response
             .headers
@@ -1190,6 +1193,7 @@ impl Mock {
     /// Defaults to 1 request.
     ///
     #[allow(clippy::missing_const_for_fn)]
+    #[must_use]
     pub fn expect(mut self, hits: usize) -> Self {
         self.expected_hits_at_least = Some(hits);
         self.expected_hits_at_most = Some(hits);
@@ -1200,6 +1204,7 @@ impl Mock {
     /// Sets the minimum amount of requests that this mock is supposed to receive.
     /// This is only enforced when calling the `assert` method.
     ///
+    #[must_use]
     pub fn expect_at_least(mut self, hits: usize) -> Self {
         self.expected_hits_at_least = Some(hits);
         if self.expected_hits_at_most.is_some()
@@ -1214,6 +1219,7 @@ impl Mock {
     /// Sets the maximum amount of requests that this mock is supposed to receive.
     /// This is only enforced when calling the `assert` method.
     ///
+    #[must_use]
     pub fn expect_at_most(mut self, hits: usize) -> Self {
         self.expected_hits_at_most = Some(hits);
         if self.expected_hits_at_least.is_some()
@@ -1281,6 +1287,7 @@ impl Mock {
     ///
     /// Returns whether the expected amount of requests (defaults to 1) were performed.
     ///
+    #[must_use]
     pub fn matched(&self) -> bool {
         let state = server::STATE.lock().unwrap();
 
@@ -1358,8 +1365,8 @@ impl fmt::Display for PathAndQueryMatcher {
     #[allow(clippy::write_with_newline)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PathAndQueryMatcher::Unified(matcher) => write!(f, "{}\r\n", &matcher),
-            PathAndQueryMatcher::Split(path, query) => write!(f, "{}?{}\r\n", &path, &query),
+            Self::Unified(matcher) => write!(f, "{}\r\n", &matcher),
+            Self::Split(path, query) => write!(f, "{}?{}\r\n", &path, &query),
         }
     }
 }
@@ -1371,7 +1378,7 @@ impl fmt::Display for Mock {
 
         formatted.push_str("\r\n");
         formatted.push_str(&self.method);
-        formatted.push_str(" ");
+        formatted.push(' ');
         formatted.push_str(&self.path.to_string());
 
         for &(ref key, ref value) in &self.headers {
@@ -1398,7 +1405,7 @@ impl fmt::Display for Mock {
             }
             Matcher::UrlEncoded(ref field, ref value) => {
                 formatted.push_str(field);
-                formatted.push_str("=");
+                formatted.push('=');
                 formatted.push_str(value);
             }
             Matcher::Missing => formatted.push_str("(missing)\r\n"),

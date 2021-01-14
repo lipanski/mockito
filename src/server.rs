@@ -75,6 +75,7 @@ lazy_static! {
 /// Can be used with `std::net::TcpStream`.
 ///
 /// The server will be started if necessary.
+#[must_use]
 pub fn address() -> SocketAddr {
     try_start();
 
@@ -87,6 +88,7 @@ pub fn address() -> SocketAddr {
 /// A local `http://…` URL of the server.
 ///
 /// The server will be started if necessary.
+#[must_use]
 pub fn url() -> String {
     format!("http://{}", address())
 }

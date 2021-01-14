@@ -1,5 +1,5 @@
 #[cfg(feature = "color")]
-use colored::*;
+use colored::Colorize;
 use difference::{Changeset, Difference};
 
 pub fn compare(expected: &str, actual: &str) -> String {
