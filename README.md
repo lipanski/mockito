@@ -77,7 +77,7 @@ rustup component add clippy-preview
 Run the linter on the minimum supported Rust version:
 
 ```sh
-rustup run --install 1.42.0 cargo clippy --lib --tests --all-features -- -D clippy::pedantic -D clippy::nursery
+rustup run --install 1.42.0 cargo clippy --lib --tests --all-features -- -W clippy::pedantic -W clippy::nursery
 ```
 
 ### Release
