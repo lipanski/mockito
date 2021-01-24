@@ -799,6 +799,7 @@ fn test_large_utf8_body() {
         .sample_iter(&Alphanumeric)
         .map(char::from)
         .take(3 * 1024) // Must be larger than the request read buffer
+        .map(char::from)
         .collect();
 
     let _m = mock("GET", "/").with_body(&mock_body).create();
