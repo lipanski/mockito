@@ -637,7 +637,7 @@ pub const SERVER_URL: &str = "http://127.0.0.1:1234";
 
 pub use crate::server::address as server_address;
 pub use crate::server::url as server_url;
-use assert_json_diff::assert_json_include_no_panic;
+use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 
 ///
 /// Initializes a mock for the provided `method` and `path`.
@@ -800,6 +800,7 @@ impl Matcher {
 
     #[allow(deprecated)]
     fn matches_value(&self, other: &str) -> bool {
+        let compare_json_config = assert_json_diff::Config::new(CompareMode::Inclusive);
         match self {
             Matcher::Exact(ref value) => value == other,
             Matcher::Binary(_) => false,
@@ -816,12 +817,12 @@ impl Matcher {
             Matcher::PartialJson(ref json_obj) => {
                 let actual: serde_json::Value = serde_json::from_str(other).unwrap();
                 let expected = json_obj.clone();
-                assert_json_include_no_panic(&actual, &expected).is_ok()
+                assert_json_matches_no_panic(&actual, &expected, compare_json_config).is_ok()
             }
             Matcher::PartialJsonString(ref value) => {
                 let expected: serde_json::Value = serde_json::from_str(value).unwrap();
                 let actual: serde_json::Value = serde_json::from_str(other).unwrap();
-                assert_json_include_no_panic(&actual, &expected).is_ok()
+                assert_json_matches_no_panic(&actual, &expected, compare_json_config).is_ok()
             }
             Matcher::UrlEncoded(ref expected_field, ref expected_value) => {
                 serde_urlencoded::from_str::<HashMap<String, String>>(other)
