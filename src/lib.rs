@@ -923,7 +923,7 @@ impl fmt::Display for BinaryBody {
             write!(f, "filepath: {}", filepath)
         } else {
             let len: usize = std::cmp::min(self.content.len(), 8);
-            let first_bytes: Vec<u8> = self.content.to_owned().into_iter().take(len).collect();
+            let first_bytes: Vec<u8> = self.content.iter().copied().take(len).collect();
             write!(f, "filecontent: {:?}", first_bytes)
         }
     }
@@ -1372,7 +1372,7 @@ impl fmt::Display for Mock {
 
         formatted.push_str("\r\n");
         formatted.push_str(&self.method);
-        formatted.push_str(" ");
+        formatted.push(' ');
         formatted.push_str(&self.path.to_string());
 
         for &(ref key, ref value) in &self.headers {
@@ -1399,7 +1399,7 @@ impl fmt::Display for Mock {
             }
             Matcher::UrlEncoded(ref field, ref value) => {
                 formatted.push_str(field);
-                formatted.push_str("=");
+                formatted.push('=');
                 formatted.push_str(value);
             }
             Matcher::Missing => formatted.push_str("(missing)\r\n"),
