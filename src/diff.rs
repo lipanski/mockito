@@ -1,6 +1,6 @@
 #[cfg(feature = "color")]
 use colored::*;
-use difference::{Changeset, Difference};
+use similar::{Change, ChangeTag, TextDiff};
 
 pub fn compare(expected: &str, actual: &str) -> String {
     let mut result = String::new();
@@ -8,62 +8,53 @@ pub fn compare(expected: &str, actual: &str) -> String {
     let clean_expected = expected.replace("\r\n", "\n");
     let clean_actual = actual.replace("\r\n", "\n");
 
-    let Changeset { diffs, .. } = Changeset::new(&clean_expected, &clean_actual, "\n");
-
-    for i in 0..diffs.len() {
-        match diffs[i] {
-            Difference::Same(ref x) => {
+    let mut last: Option<Change<_>> = None;
+    for diff in TextDiff::from_lines(&clean_expected, &clean_actual).iter_all_changes() {
+        let x = diff.value();
+        match diff.tag() {
+            ChangeTag::Equal => {
                 result.push_str(x);
-                result.push('\n');
             }
-            Difference::Add(ref x) => {
-                if let Difference::Rem(ref y) = diffs[i - 1] {
-                    let Changeset { diffs, .. } = Changeset::new(y, x, " ");
-                    for (i, change) in diffs.iter().enumerate() {
-                        match change {
-                            Difference::Same(ref z) => {
+            ChangeTag::Insert => {
+                if let Some((y, ChangeTag::Delete)) = last.map(|d| (d.value(), d.tag())) {
+                    for change in TextDiff::from_words(y, x).iter_all_changes() {
+                        match change.tag() {
+                            ChangeTag::Equal => {
+                                let z = change.value();
                                 #[cfg(feature = "color")]
                                 result.push_str(&z.green().to_string());
                                 #[cfg(not(feature = "color"))]
-                                result.push_str(&z);
-
-                                if i < diffs.len() - 1 {
-                                    result.push(' ');
-                                }
+                                result.push_str(z);
                             }
-                            Difference::Add(ref z) => {
+                            ChangeTag::Insert => {
+                                let z = change.value();
                                 #[cfg(feature = "color")]
                                 result.push_str(&z.white().on_green().to_string());
                                 #[cfg(not(feature = "color"))]
-                                result.push_str(&z);
-
-                                if i < diffs.len() - 1 {
-                                    result.push(' ');
-                                }
+                                result.push_str(z);
                             }
                             _ => (),
                         }
                     }
-                    result.push('\n');
                 } else {
                     #[cfg(feature = "color")]
                     result.push_str(&x.bright_green().to_string());
                     #[cfg(not(feature = "color"))]
-                    result.push_str(&x);
-
-                    result.push('\n');
+                    result.push_str(x);
                 }
             }
-            Difference::Rem(ref x) => {
+            ChangeTag::Delete => {
                 #[cfg(feature = "color")]
                 result.push_str(&x.red().to_string());
                 #[cfg(not(feature = "color"))]
-                result.push_str(&x);
-
-                result.push('\n');
+                result.push_str(x);
             }
         }
+
+        last = Some(diff);
     }
+
+    result.push('\n');
 
     result
 }

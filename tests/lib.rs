@@ -1127,7 +1127,7 @@ fn test_assert_panics_with_too_many_requests() {
 
 #[test]
 #[should_panic(
-    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\u{1b}[0m\n\n\n"
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;37m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\n\n"
 )]
 #[cfg(feature = "color")]
 fn test_assert_with_last_unmatched_request() {
@@ -1154,7 +1154,7 @@ fn test_assert_with_last_unmatched_request() {
 
 #[test]
 #[should_panic(
-    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\u{1b}[0m\n\u{1b}[32mGET\u{1b}[0m \u{1b}[42;37m/bye\nauthorization: 1234\naccept: text\u{1b}[0m\n\n\n"
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;37m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\u{1b}[92mauthorization: 1234\n\u{1b}[0m\u{1b}[92maccept: text\n\u{1b}[0m\n\n"
 )]
 #[cfg(feature = "color")]
 fn test_assert_with_last_unmatched_request_and_headers() {
