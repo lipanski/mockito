@@ -1492,3 +1492,12 @@ fn test_matched_bool() {
     let (_, _, _) = request_with_body("GET /", "", "");
     assert!(!m.matched(), "matched method returns correctly");
 }
+
+#[test]
+fn test_invalid_header_field_name() {
+    let _m = mock("GET", "/").create();
+
+    let (uppercase_status_line, _, body) = request("GET /", "Bad Header: something\r\n");
+    assert_eq!("HTTP/1.1 422 Mock Error\r\n", uppercase_status_line);
+    assert_eq!(body, httparse::Error::HeaderName.to_string())
+}
