@@ -166,6 +166,7 @@ impl<'a> From<&'a TcpStream> for Request {
                 .parse(&all_buf)
                 .map_err(|e| {
                     request.error = Some(e.to_string());
+                    request.is_parsed = true;
                 })
                 .map(|status| match status {
                     httparse::Status::Complete(head_length) => {
