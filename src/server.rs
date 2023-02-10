@@ -1,266 +1,363 @@
-use crate::response::{Body, Chunked};
-use crate::{Mock, Request, SERVER_ADDRESS_INTERNAL};
-use std::fmt::Display;
-use std::io;
-use std::io::Write;
-use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::sync::mpsc;
-use std::sync::Mutex;
+use crate::command::Command;
+use crate::mock::InnerMock;
+use crate::request::Request;
+use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
+use crate::server_pool::SERVER_POOL;
+use crate::{Error, ErrorKind, Matcher, Mock};
+use futures::stream::{self, StreamExt};
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request as HyperRequest, Response, Server as HyperServer, StatusCode};
+use std::net::{SocketAddr, TcpListener};
+use std::ops::DerefMut;
+use std::sync::Arc;
 use std::thread;
+use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::sync::Mutex;
+use tokio::task::LocalSet;
 
-impl Mock {
+#[derive(Clone, Debug)]
+pub(crate) struct RemoteMock {
+    pub(crate) inner: InnerMock,
+}
+
+impl RemoteMock {
+    pub(crate) fn new(inner: InnerMock) -> Self {
+        RemoteMock { inner }
+    }
+
+    async fn matches(&self, other: &mut Request) -> bool {
+        self.method_matches(other)
+            && self.path_matches(other)
+            && self.headers_match(other)
+            && self.body_matches(other).await
+    }
+
     fn method_matches(&self, request: &Request) -> bool {
-        self.method == request.method
+        self.inner.method.as_str() == request.method()
     }
 
     fn path_matches(&self, request: &Request) -> bool {
-        self.path.matches_value(&request.path)
+        self.inner.path.matches_value(request.path_and_query())
     }
 
     fn headers_match(&self, request: &Request) -> bool {
-        self.headers.iter().all(|&(ref field, ref expected)| {
-            expected.matches_values(&request.find_header_values(field))
-        })
+        self.inner
+            .headers
+            .iter()
+            .all(|&(ref field, ref expected)| expected.matches_values(&request.header(field)))
     }
 
-    fn body_matches(&self, request: &Request) -> bool {
-        let raw_body = &request.body;
-        let safe_body = &String::from_utf8_lossy(raw_body);
+    async fn body_matches(&self, request: &mut Request) -> bool {
+        let body = request.read_body().await;
+        let safe_body = &String::from_utf8_lossy(body);
 
-        self.body.matches_value(safe_body) || self.body.matches_binary_value(raw_body)
+        self.inner.body.matches_value(safe_body) || self.inner.body.matches_binary_value(body)
     }
 
     #[allow(clippy::missing_const_for_fn)]
     fn is_missing_hits(&self) -> bool {
-        match (self.expected_hits_at_least, self.expected_hits_at_most) {
-            (Some(_at_least), Some(at_most)) => self.hits < at_most,
-            (Some(at_least), None) => self.hits < at_least,
-            (None, Some(at_most)) => self.hits < at_most,
-            (None, None) => self.hits < 1,
+        match (
+            self.inner.expected_hits_at_least,
+            self.inner.expected_hits_at_most,
+        ) {
+            (Some(_at_least), Some(at_most)) => self.inner.hits < at_most,
+            (Some(at_least), None) => self.inner.hits < at_least,
+            (None, Some(at_most)) => self.inner.hits < at_most,
+            (None, None) => self.inner.hits < 1,
         }
     }
 }
 
-impl<'a> PartialEq<Request> for &'a mut Mock {
-    fn eq(&self, other: &Request) -> bool {
-        self.method_matches(other)
-            && self.path_matches(other)
-            && self.headers_match(other)
-            && self.body_matches(other)
-    }
-}
-
-pub struct State {
-    pub listening_addr: Option<SocketAddr>,
-    pub mocks: Vec<Mock>,
-    pub unmatched_requests: Vec<Request>,
+#[derive(Debug)]
+pub(crate) struct State {
+    pub(crate) mocks: Vec<RemoteMock>,
+    pub(crate) unmatched_requests: Vec<Request>,
 }
 
 impl State {
-    #[allow(clippy::missing_const_for_fn)]
     fn new() -> Self {
-        Self {
-            listening_addr: None,
-            mocks: Vec::new(),
-            unmatched_requests: Vec::new(),
+        State {
+            mocks: vec![],
+            unmatched_requests: vec![],
         }
     }
 }
 
-lazy_static! {
-    pub static ref STATE: Mutex<State> = Mutex::new(State::new());
-}
-
-/// Address and port of the local server.
-/// Can be used with `std::net::TcpStream`.
 ///
-/// The server will be started if necessary.
-pub fn address() -> SocketAddr {
-    try_start();
-
-    let state = STATE.lock().map(|state| state.listening_addr);
-    state
-        .expect("state lock")
-        .expect("server should be listening")
-}
-
-/// A local `http://…` URL of the server.
+/// One instance of the mock server.
 ///
-/// The server will be started if necessary.
-pub fn url() -> String {
-    format!("http://{}", address())
+/// Mockito uses a server pool to manage running servers. Once the pool reaches capacity,
+/// new requests will have to wait for a free server. The size of the server pool
+/// is set to 100.
+///
+/// Most of the times, you should initialize new servers with `Server::new`, which fetches
+/// the next available instance from the pool:
+///
+/// ```
+/// let mut server = mockito::Server::new();
+/// ```
+///
+/// If for any reason you'd like to bypass the server pool, you can use `Server::new_with_port`:
+///
+/// ```
+/// let mut server = mockito::Server::new_with_port(0);
+/// ```
+///
+#[derive(Debug)]
+pub struct Server {
+    address: String,
+    state: Arc<Mutex<State>>,
+    sender: Sender<Command>,
 }
 
-pub fn try_start() {
-    let mut state = STATE.lock().unwrap();
-
-    if state.listening_addr.is_some() {
-        return;
+impl Server {
+    ///
+    /// Fetches a new mock server from the server pool.
+    ///
+    /// This method will panic on failure.
+    ///
+    /// If for any reason you'd like to bypass the server pool, you can use `Server::new_with_port`:
+    ///
+    #[track_caller]
+    pub fn new() -> impl DerefMut<Target = Server> {
+        Server::try_new().unwrap()
     }
 
-    let (tx, rx) = mpsc::channel();
+    ///
+    /// Same as `Server::new` but async.
+    ///
+    pub async fn new_async() -> impl DerefMut<Target = Server> {
+        SERVER_POOL.get().await.unwrap()
+    }
 
-    thread::spawn(move || {
-        let res = TcpListener::bind(SERVER_ADDRESS_INTERNAL).or_else(|err| {
-            warn!("{}", err);
-            TcpListener::bind("127.0.0.1:0")
+    ///
+    /// Same as `Server::new` but won't panic on failure.
+    ///
+    pub(crate) fn try_new() -> Result<impl DerefMut<Target = Server>, Error> {
+        crate::RUNTIME.block_on(async { Server::try_new_async().await })
+    }
+
+    ///
+    /// Same as `Server::try_new` but async.
+    ///
+    pub(crate) async fn try_new_async() -> Result<impl DerefMut<Target = Server>, Error> {
+        SERVER_POOL
+            .get()
+            .await
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))
+    }
+
+    ///
+    /// Starts a new server on a given port. If the port is set to `0`, a random available
+    /// port will be assigned. Note that **this call bypasses the server pool**.
+    ///
+    /// This method will panic on failure.
+    ///
+    #[track_caller]
+    pub fn new_with_port(port: u16) -> Server {
+        Server::try_new_with_port(port).unwrap()
+    }
+
+    ///
+    /// Same as `Server::try_new_with_port_async` but async.
+    ///
+    pub async fn new_with_port_async(port: u16) -> Server {
+        Server::try_new_with_port_async(port).await.unwrap()
+    }
+
+    ///
+    /// Same as `Server::new_with_port` but won't panic on failure.
+    ///
+    pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
+        crate::RUNTIME.block_on(async { Server::try_new_with_port_async(port).await })
+    }
+
+    ///
+    /// Same as `Server::try_new_with_port` but async.
+    ///
+    pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
+        let state = Arc::new(Mutex::new(State::new()));
+        let address = SocketAddr::from(([127, 0, 0, 1], port));
+
+        let listener = TcpListener::bind(address)
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+
+        let address = listener
+            .local_addr()
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+
+        let mutex = state.clone();
+        let service = make_service_fn(move |_conn| {
+            let mutex = mutex.clone();
+            async move {
+                Ok::<_, Error>(service_fn(move |request: HyperRequest<Body>| {
+                    handle_request(request, mutex.clone())
+                }))
+            }
         });
-        let (listener, addr) = match res {
-            Ok(listener) => {
-                let addr = listener.local_addr().unwrap();
-                tx.send(Some(addr)).unwrap();
-                (listener, addr)
-            }
-            Err(err) => {
-                error!("{}", err);
-                tx.send(None).unwrap();
-                return;
-            }
+
+        let server = HyperServer::from_tcp(listener)
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?
+            .serve(service);
+
+        thread::spawn(move || LocalSet::new().block_on(&crate::RUNTIME, server));
+
+        let (sender, receiver) = mpsc::channel(32);
+
+        let mut server = Server {
+            address: address.to_string(),
+            state,
+            sender,
         };
 
-        debug!("Server is listening at {}", addr);
-        for stream in listener.incoming() {
-            if let Ok(stream) = stream {
-                let request = Request::from(&stream);
-                debug!("Request received: {}", request);
-                if request.is_ok() {
-                    handle_request(request, stream);
-                } else {
-                    let message = request
-                        .error()
-                        .map_or("Could not parse the request.", |err| err.as_str());
-                    debug!("Could not parse request because: {}", message);
-                    respond_with_error(stream, request.version, message);
-                }
-            } else {
-                debug!("Could not read from stream");
+        server.accept_commands(receiver).await;
+
+        Ok(server)
+    }
+
+    ///
+    /// Initializes a mock with the given HTTP `method` and `path`.
+    ///
+    /// The mock is enabled on the server only after calling the `Mock::create` method.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// let mut s = mockito::Server::new();
+    ///
+    /// let _m1 = s.mock("GET", "/");
+    /// let _m2 = s.mock("POST", "/users");
+    /// let _m3 = s.mock("DELETE", "/users?id=1");
+    /// ```
+    ///
+    pub fn mock<P: Into<Matcher>>(&mut self, method: &str, path: P) -> Mock {
+        Mock::new(self.sender.clone(), method, path)
+    }
+
+    ///
+    /// The URL of the mock server (including the protocol).
+    ///
+    pub fn url(&self) -> String {
+        format!("http://{}", self.address)
+    }
+
+    ///
+    /// The host and port of the mock server.
+    /// Can be used with `std::net::TcpStream`.
+    ///
+    pub fn host_with_port(&self) -> String {
+        self.address.clone()
+    }
+
+    ///
+    /// Removes all the mocks stored on the server.
+    ///
+    pub fn reset(&mut self) {
+        futures::executor::block_on(async { self.reset_async().await })
+    }
+
+    ///
+    /// Same as `Server::reset` but async.
+    ///
+    pub async fn reset_async(&mut self) {
+        let state = self.state.clone();
+        let mut state = state.lock().await;
+        state.mocks.clear();
+        state.unmatched_requests.clear();
+    }
+
+    async fn accept_commands(&mut self, mut receiver: Receiver<Command>) {
+        let state = self.state.clone();
+        tokio::spawn(async move {
+            while let Some(cmd) = receiver.recv().await {
+                let state = state.lock().await;
+                Command::handle(cmd, state).await;
             }
+        });
+
+        log::debug!("Server is accepting commands");
+    }
+}
+
+async fn handle_request(
+    hyper_request: HyperRequest<Body>,
+    state: Arc<Mutex<State>>,
+) -> Result<Response<Body>, Error> {
+    let mut request = Request::new(hyper_request);
+    log::debug!("Request received: {}", request.to_string().await);
+
+    let mutex = state.clone();
+    let mut state = mutex.lock().await;
+
+    let mut mocks_stream = stream::iter(&mut state.mocks);
+    let mut matching_mocks: Vec<&mut RemoteMock> = vec![];
+
+    while let Some(mock) = mocks_stream.next().await {
+        if mock.matches(&mut request).await {
+            matching_mocks.push(mock);
         }
-    });
+    }
 
-    state.listening_addr = rx.recv().ok().and_then(|addr| addr);
-}
-
-fn handle_request(request: Request, stream: TcpStream) {
-    handle_match_mock(request, stream);
-}
-
-fn handle_match_mock(request: Request, stream: TcpStream) {
-    let mut state = STATE.lock().unwrap();
-
-    let mut matchings_mocks = state
-        .mocks
-        .iter_mut()
-        .filter(|mock| mock == &request)
-        .collect::<Vec<_>>();
-
-    let maybe_missing_hits = matchings_mocks.iter_mut().find(|m| m.is_missing_hits());
+    let maybe_missing_hits = matching_mocks.iter_mut().find(|m| m.is_missing_hits());
 
     let mock = match maybe_missing_hits {
         Some(m) => Some(m),
-        None => matchings_mocks.last_mut(),
+        None => matching_mocks.last_mut(),
     };
 
     if let Some(mock) = mock {
-        debug!("Mock found");
-        mock.hits += 1;
-        respond_with_mock(stream, request.version, mock, request.is_head());
+        log::debug!("Mock found");
+        mock.inner.hits += 1;
+        respond_with_mock(request, mock).await
     } else {
-        debug!("Mock not found");
-        respond_with_mock_not_found(stream, request.version);
+        log::debug!("Mock not found");
         state.unmatched_requests.push(request);
+        respond_with_mock_not_found()
     }
 }
 
-fn respond(
-    stream: TcpStream,
-    version: (u8, u8),
-    status: impl Display,
-    headers: Option<&Vec<(String, String)>>,
-    body: Option<&str>,
-) {
-    let body = body.map(|s| Body::Bytes(s.as_bytes().to_owned()));
-    if let Err(e) = respond_bytes(stream, version, status, headers, body.as_ref()) {
-        eprintln!("warning: Mock response write error: {}", e);
-    }
-}
+async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
+    let status: StatusCode = mock.inner.response.status;
+    let mut response = Response::builder().status(status);
 
-fn respond_bytes(
-    mut stream: TcpStream,
-    version: (u8, u8),
-    status: impl Display,
-    headers: Option<&Vec<(String, String)>>,
-    body: Option<&Body>,
-) -> io::Result<()> {
-    let mut response = Vec::from(format!("HTTP/{}.{} {}\r\n", version.0, version.1, status));
-    let mut has_content_length_header = false;
-
-    if let Some(headers) = headers {
-        for &(ref key, ref value) in headers {
-            response.extend(key.as_bytes());
-            response.extend(b": ");
-            response.extend(value.as_bytes());
-            response.extend(b"\r\n");
-        }
-
-        has_content_length_header = headers.iter().any(|(key, _)| key == "content-length");
+    for (name, value) in mock.inner.response.headers.iter() {
+        response = response.header(name, value);
     }
 
-    match body {
-        Some(Body::Bytes(bytes)) => {
-            if !has_content_length_header {
-                response.extend(format!("content-length: {}\r\n", bytes.len()).as_bytes());
+    let body = if request.method() != "HEAD" {
+        match &mock.inner.response.body {
+            ResponseBody::Bytes(bytes) => {
+                if !request.has_header("content-length") {
+                    response = response.header("content-length", bytes.len());
+                }
+                Body::from(bytes.clone())
+            }
+            ResponseBody::Fn(body_fn) => {
+                let mut chunked = ResponseChunked::new();
+                body_fn(&mut chunked)
+                    .map_err(|_| Error::new(ErrorKind::ResponseBodyFailure))
+                    .unwrap();
+                chunked.finish();
+
+                Body::wrap_stream(chunked)
             }
         }
-        Some(Body::Fn(_)) => {
-            response.extend(b"transfer-encoding: chunked\r\n");
-        }
-        None => {}
-    };
-    response.extend(b"\r\n");
-    stream.write_all(&response)?;
-    match body {
-        Some(Body::Bytes(bytes)) => {
-            stream.write_all(bytes)?;
-        }
-        Some(Body::Fn(cb)) => {
-            let mut chunked = Chunked::new(&mut stream);
-            cb(&mut chunked)?;
-            chunked.finish()?;
-        }
-        None => {}
-    };
-    stream.flush()
-}
-
-fn respond_with_mock(stream: TcpStream, version: (u8, u8), mock: &Mock, skip_body: bool) {
-    let body = if skip_body {
-        None
     } else {
-        Some(&mock.response.body)
+        Body::empty()
     };
 
-    if let Err(e) = respond_bytes(
-        stream,
-        version,
-        &mock.response.status,
-        Some(&mock.response.headers),
-        body,
-    ) {
-        eprintln!("warning: Mock response write error: {}", e);
-    }
+    let response: Response<Body> = response
+        .body(body)
+        .map_err(|err| Error::new_with_context(ErrorKind::ResponseFailure, err))?;
+
+    Ok(response)
 }
 
-fn respond_with_mock_not_found(stream: TcpStream, version: (u8, u8)) {
-    respond(
-        stream,
-        version,
-        "501 Mock Not Found",
-        Some(&vec![("content-length".into(), "0".into())]),
-        None,
-    );
-}
+fn respond_with_mock_not_found() -> Result<Response<Body>, Error> {
+    let response: Response<Body> = Response::builder()
+        .status(StatusCode::NOT_IMPLEMENTED)
+        .body(Body::empty())
+        .map_err(|err| Error::new_with_context(ErrorKind::ResponseFailure, err))?;
 
-fn respond_with_error(stream: TcpStream, version: (u8, u8), message: &str) {
-    respond(stream, version, "422 Mock Error", None, Some(message));
+    Ok(response)
 }

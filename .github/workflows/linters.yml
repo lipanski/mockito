@@ -1,0 +1,37 @@
+name: Linters
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  rustfmt:
+    name: Run rustfmt on the minimum supported toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.65.0
+          profile: minimal
+          components: clippy, rustfmt
+          override: true
+      - name: Run rustfmt
+        run: cargo fmt -- --check
+  clippy:
+    name: Run clippy on the minimum supported toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.65.0
+          profile: minimal
+          components: clippy, rustfmt
+          override: true
+      - name: Run clippy
+        run: cargo clippy-mockito

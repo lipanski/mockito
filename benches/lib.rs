@@ -2,14 +2,15 @@
 
 extern crate test;
 
-use mockito::{mock, reset, server_address};
+use mockito::Server;
+use std::fmt::Display;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::str::FromStr;
 use test::Bencher;
 
-fn request_stream(route: &str, headers: &str) -> TcpStream {
-    let mut stream = TcpStream::connect(server_address()).unwrap();
+fn request_stream(host: impl Display, route: &str, headers: &str) -> TcpStream {
+    let mut stream = TcpStream::connect(host.to_string()).unwrap();
     let message = [route, " HTTP/1.1\r\n", headers, "\r\n"].join("");
     stream.write_all(message.as_bytes()).unwrap();
 
@@ -49,27 +50,27 @@ fn parse_stream(stream: TcpStream) -> (String, Vec<String>, String) {
     (status_line, headers, body)
 }
 
-fn request(route: &str, headers: &str) -> (String, Vec<String>, String) {
-    parse_stream(request_stream(route, headers))
+fn request(host: impl Display, route: &str, headers: &str) -> (String, Vec<String>, String) {
+    parse_stream(request_stream(host, route, headers))
 }
 
 #[bench]
 fn bench_create_simple_mock(b: &mut Bencher) {
-    reset();
+    let mut s = Server::new();
 
     b.iter(|| {
-        let _m = mock("GET", "/").with_body("test").create();
+        let _m = s.mock("GET", "/").with_body("test").create();
     })
 }
 
 #[bench]
 fn bench_match_simple_mock(b: &mut Bencher) {
-    reset();
+    let mut s = Server::new();
 
-    let _m = mock("GET", "/").with_body("test").create();
+    let _m = s.mock("GET", "/").with_body("test").create();
 
     b.iter(|| {
-        let (status_line, _, _) = request("GET /", "");
+        let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
         assert!(status_line.starts_with("HTTP/1.1 200"));
     })
 }

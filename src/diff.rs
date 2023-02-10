@@ -22,6 +22,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
                             ChangeTag::Equal => {
                                 let z = change.value();
                                 #[cfg(feature = "color")]
+                                #[allow(clippy::unnecessary_to_owned)]
                                 result.push_str(&z.green().to_string());
                                 #[cfg(not(feature = "color"))]
                                 result.push_str(z);
@@ -29,6 +30,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
                             ChangeTag::Insert => {
                                 let z = change.value();
                                 #[cfg(feature = "color")]
+                                #[allow(clippy::unnecessary_to_owned)]
                                 result.push_str(&z.white().on_green().to_string());
                                 #[cfg(not(feature = "color"))]
                                 result.push_str(z);
@@ -38,6 +40,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
                     }
                 } else {
                     #[cfg(feature = "color")]
+                    #[allow(clippy::unnecessary_to_owned)]
                     result.push_str(&x.bright_green().to_string());
                     #[cfg(not(feature = "color"))]
                     result.push_str(x);
@@ -45,6 +48,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
             }
             ChangeTag::Delete => {
                 #[cfg(feature = "color")]
+                #[allow(clippy::unnecessary_to_owned)]
                 result.push_str(&x.red().to_string());
                 #[cfg(not(feature = "color"))]
                 result.push_str(x);
