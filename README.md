@@ -100,7 +100,7 @@ fn test_something() {
 Write **async** tests:
 
 ```rust
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_simple_route_mock_async() {
     let mut server = Server::new_async().await;
     let _m1 = server.mock("GET", "/a").with_body("aaa").create_async();

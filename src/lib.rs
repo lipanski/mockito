@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 #![doc(
-    html_logo_url = "https://raw.githubusercontent.com/lipanski/mockito/master/docs/logo-black.png"
+    html_logo_url = "https://raw.githubusercontent.com/lipanski/mockito/master/docs/logo-black-100.png"
 )]
 
 //!
@@ -100,7 +100,7 @@
 //! ```
 //! #[cfg(test)]
 //! mod tests {
-//!   #[tokio::test(flavor = "multi_thread")]
+//!   #[tokio::test]
 //!   async fn test_something() {
 //!     let mut server = Server::new_async().await;
 //!     let _m1 = server.mock("GET", "/a").with_body("aaa").create_async();
