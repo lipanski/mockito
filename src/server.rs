@@ -12,6 +12,7 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 use tokio::task::LocalSet;
 
@@ -108,6 +109,7 @@ pub struct Server {
     address: String,
     state: Arc<Mutex<State>>,
     sender: Sender<Command>,
+    _shutdown_sender: oneshot::Sender<()>,
 }
 
 impl Server {
@@ -196,9 +198,14 @@ impl Server {
             }
         });
 
+        let (_shutdown_sender, shutdown_receiver) = oneshot::channel();
+
         let server = HyperServer::from_tcp(listener)
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?
-            .serve(service);
+            .serve(service)
+            .with_graceful_shutdown(async {
+                shutdown_receiver.await.ok();
+            });
 
         thread::spawn(move || LocalSet::new().block_on(&crate::RUNTIME, server));
 
@@ -208,6 +215,7 @@ impl Server {
             address: address.to_string(),
             state,
             sender,
+            _shutdown_sender,
         };
 
         server.accept_commands(receiver).await;
