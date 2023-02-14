@@ -516,8 +516,8 @@ impl Drop for Mock {
         let sender = self.sender.clone();
         let id = self.inner.id.clone();
 
-        futures::executor::block_on(async move {
-            Command::remove_mock(&sender, id).await;
+        crate::RUNTIME.spawn_blocking(move || {
+            Command::remove_mock(&sender, id);
         });
 
         log::debug!("Mock::drop() called for {}", self);

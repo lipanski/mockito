@@ -47,7 +47,8 @@ impl Command {
         response_receiver.await.unwrap()
     }
 
-    pub(crate) async fn remove_mock(sender: &Sender<Command>, mock_id: String) -> bool {
+    /// This method has to be sync since it's called from Drop.
+    pub(crate) fn remove_mock(sender: &Sender<Command>, mock_id: String) -> bool {
         let (response_sender, response_receiver) = oneshot::channel();
 
         let cmd = Command::RemoveMock {
@@ -55,8 +56,8 @@ impl Command {
             response_sender,
         };
 
-        let _ = sender.send(cmd).await;
-        response_receiver.await.unwrap_or(false)
+        let _ = sender.blocking_send(cmd);
+        response_receiver.blocking_recv().unwrap_or(false)
     }
 
     pub(crate) async fn get_last_unmatched_request(sender: &Sender<Command>) -> Option<String> {

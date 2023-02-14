@@ -14,7 +14,6 @@ use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::sync::oneshot;
 use tokio::sync::Mutex;
-use tokio::task::LocalSet;
 
 #[derive(Clone, Debug)]
 pub(crate) struct RemoteMock {
@@ -207,7 +206,7 @@ impl Server {
                 shutdown_receiver.await.ok();
             });
 
-        thread::spawn(move || LocalSet::new().block_on(&crate::RUNTIME, server));
+        thread::spawn(move || crate::RUNTIME.block_on(server));
 
         let (sender, receiver) = mpsc::channel(32);
 
@@ -261,7 +260,7 @@ impl Server {
     /// Removes all the mocks stored on the server.
     ///
     pub fn reset(&mut self) {
-        futures::executor::block_on(async { self.reset_async().await })
+        crate::RUNTIME.block_on(async { self.reset_async().await });
     }
 
     ///
