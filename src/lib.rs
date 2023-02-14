@@ -10,10 +10,10 @@
 //! # Features
 //!
 //! - Support for HTTP1/2
-//! - Multi-threaded
+//! - Run your tests in parallel
 //! - Various request matchers (Regex, JSON etc.)
 //! - Mock multiple hosts at the same time
-//! - Sync and async interface
+//! - Sync and async interfaces
 //! - Simple, intuitive API
 //! - An awesome logo
 //!
@@ -95,7 +95,7 @@
 //! }
 //! ```
 //!
-//! Write **async** tests:
+//! Write **async** tests (make sure to use the `_async` methods!):
 //!
 //! ```
 //! #[cfg(test)]
@@ -103,10 +103,14 @@
 //!   #[tokio::test]
 //!   async fn test_something() {
 //!     let mut server = Server::new_async().await;
-//!     let _m1 = server.mock("GET", "/a").with_body("aaa").create_async();
-//!     let _m2 = server.mock("GET", "/b").with_body("bbb").create_async();
+//!     let m1 = server.mock("GET", "/a").with_body("aaa").create_async().await;
+//!     let m2 = server.mock("GET", "/b").with_body("bbb").create_async().await;
 //!
-//!     let (_m1, _m2) = futures::join!(_m1, _m2);
+//!     let (m1, m2) = futures::join!(m1, m2);
+//!
+//!     // You can use `Mock::assert_async` to verify that your mock was called
+//!     // m1.assert_async().await;
+//!     // m2.assert_async().await;
 //!   }
 //! }
 //! ```
@@ -134,6 +138,22 @@
 //!
 //! // Requests to GET /long will be mocked til here
 //! ```
+//!
+//! # Async
+//!
+//! Mockito comes with both a sync and an async interface.
+//!
+//! In order to write async tests, you'll need to use the `_async` methods:
+//!
+//! - `Server::new_async`
+//! - `Mock::create_async`
+//! - `Mock::assert_async`
+//! - `Mock::matched_async`
+//! - `Server::reset_async`
+//!
+//! ...otherwise your tests will not compile and you'll see this error: `Cannot start a runtime from within a runtime`.
+//!
+//! When using tokio, prefer the single-threaded runtime over the multi-threaded one.
 //!
 //! # Matchers
 //!
@@ -629,31 +649,6 @@
 //!
 //! ```sh
 //! RUST_LOG=mockito=debug cargo test
-//! ```
-//!
-//! # Sharing the server with other threads
-//!
-//! If you ever need to share the mock server with another thread, make sure to wrap it inside
-//! a Mutex or it might not get cleaned properly:
-//!
-//! ## Example
-//!
-//! ```
-//! use std::sync::{Arc, Mutex};
-//! use std::thread;
-//!
-//! let mut s = mockito::Server::new();
-//! let host = s.host_with_port();
-//! let _mock_outside_thread = s.mock("GET", "/").with_body("outside").create();
-//!
-//! let server_mutex = Arc::new(Mutex::new(s));
-//! let server_clone = server_mutex.clone();
-//! let process = thread::spawn(move || {
-//!     let mut s = server_clone.lock().unwrap();
-//!     let _mock_inside_thread = s.mock("GET", "/").with_body("inside").create();
-//! });
-//!
-//! process.join().unwrap();
 //! ```
 //!
 pub use error::{Error, ErrorKind};

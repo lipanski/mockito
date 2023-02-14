@@ -17,10 +17,10 @@ or offline work. Mockito runs a local pool of HTTP servers which create, deliver
 ## Features
 
 - Support for HTTP1/2
-- Multi-threaded
+- Run your tests in parallel
 - Various request matchers (Regex, JSON etc.)
 - Mock multiple hosts at the same time
-- Sync and async interface
+- Sync and async interfaces
 - Simple, intuitive API
 - An awesome logo
 
@@ -97,16 +97,20 @@ fn test_something() {
 }
 ```
 
-Write **async** tests:
+Write **async** tests (make sure to use the `_async` methods!):
 
 ```rust
 #[tokio::test]
 async fn test_simple_route_mock_async() {
     let mut server = Server::new_async().await;
-    let _m1 = server.mock("GET", "/a").with_body("aaa").create_async();
-    let _m2 = server.mock("GET", "/b").with_body("bbb").create_async();
+    let m1 = server.mock("GET", "/a").with_body("aaa").create_async().await;
+    let m2 = server.mock("GET", "/b").with_body("bbb").create_async().await;
 
-    let (_m1, _m2) = futures::join!(_m1, _m2);
+    let (m1, m2) = futures::join!(m1, m2);
+
+    // You can use `Mock::assert_async` to verify that your mock was called
+    // m1.assert_async().await;
+    // m2.assert_async().await;
 }
 ```
 
