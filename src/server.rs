@@ -189,8 +189,7 @@ impl Server {
 
         let mutex = state.clone();
         let server = async move {
-            loop {
-                let (stream, _) = listener.accept().await.unwrap();
+            while let Ok((stream, _)) = listener.accept().await {
                 let mutex = mutex.clone();
 
                 tokio::spawn(async move {
