@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate serde_json;
 
-use hyper::{body::Buf, client::conn, Body, Version};
 use mockito::{Matcher, Server};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
@@ -133,52 +132,6 @@ fn request_with_body<S: Display>(
     let (status, headers, body) = binary_request(host, route, &headers, body);
     let parsed_body: String = std::str::from_utf8(body.as_slice()).unwrap().to_string();
     (status, headers, parsed_body)
-}
-
-async fn hyper_request(
-    host: &str,
-    version: &str,
-    method: &str,
-    uri: &str,
-    body: Option<String>,
-) -> (u16, Vec<(String, String)>, String) {
-    use tokio::net::TcpStream;
-
-    let version = match version {
-        "1.0" => Version::HTTP_10,
-        "1.1" => Version::HTTP_11,
-        "2.0" => Version::HTTP_2,
-        _ => panic!("unrecognized version"),
-    };
-
-    let target_stream = TcpStream::connect(host)
-        .await
-        .map_err(|_err| -> Result<TcpStream, String> {
-            Err(format!("couldn't connect to {}", host))
-        })
-        .unwrap();
-    let (mut request_sender, connection) =
-        conn::Builder::new().handshake(target_stream).await.unwrap();
-    tokio::task::spawn(async move { connection.await });
-
-    let body = body.map_or_else(Body::empty, Body::from);
-    let req = hyper::Request::builder()
-        .method(method)
-        .uri(uri)
-        .version(version)
-        .body(body)
-        .unwrap();
-
-    let mut response = request_sender.send_request(req).await.unwrap();
-
-    let status = response.status().as_u16();
-
-    let raw_body = response.body_mut();
-    let mut buf = hyper::body::aggregate(raw_body).await.unwrap();
-    let body_bytes = buf.copy_to_bytes(buf.remaining()).to_vec();
-    let body = String::from_utf8_lossy(&body_bytes).to_string();
-
-    (status, vec![], body)
 }
 
 #[test]
@@ -1944,10 +1897,19 @@ async fn test_http2_requests_async() {
     let mut s = Server::new_async().await;
     let m1 = s.mock("GET", "/").with_body("test").create_async().await;
 
-    let (status, _headers, body) =
-        hyper_request(&s.host_with_port(), "2.0", "GET", "/", None).await;
-    assert_eq!(200, status);
-    assert_eq!("test", body);
+    let response = reqwest::Client::builder()
+        .http2_prior_knowledge()
+        .build()
+        .unwrap()
+        .get(s.url())
+        .version(reqwest::Version::HTTP_2)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(200, response.status());
+    assert_eq!(reqwest::Version::HTTP_2, response.version());
+    assert_eq!("test", response.text().await.unwrap());
 
     m1.assert_async().await;
 }
@@ -1961,23 +1923,73 @@ async fn test_simple_route_mock_async() {
         .create_async()
         .await;
 
-    let (status, _headers, body) =
-        hyper_request(&s.host_with_port(), "1.1", "GET", "/hello", None).await;
-    assert_eq!(200, status);
-    assert_eq!("world", body);
+    let response = reqwest::Client::new()
+        .get(format!("{}/hello", s.url()))
+        .version(reqwest::Version::HTTP_11)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(200, response.status());
+    assert_eq!("world", response.text().await.unwrap());
 }
 
 #[tokio::test]
-async fn test_two_route_mocks_async() {
+async fn test_several_route_mocks_async() {
     let mut s = Server::new_async().await;
-    let _m1 = s.mock("GET", "/a").with_body("aaa").create_async();
-    let _m2 = s.mock("GET", "/b").with_body("bbb").create_async();
+    let m1 = s.mock("GET", "/a").with_body("aaa").create_async();
+    let m2 = s.mock("GET", "/b").with_body("bbb").create_async();
+    let m3 = s.mock("GET", "/c").with_body("ccc").create_async();
+    let m4 = s.mock("GET", "/d").with_body("ddd").create_async();
 
-    let (_m1, _m2) = futures::join!(_m1, _m2);
+    let (m1, m2, m3, m4) = futures::join!(m1, m2, m3, m4);
 
-    let (_, _, body_a) = hyper_request(&s.host_with_port(), "1.1", "GET", "/a", None).await;
-    assert_eq!("aaa", body_a);
+    let response_a = reqwest::Client::new()
+        .get(format!("{}/a", s.url()))
+        .version(reqwest::Version::HTTP_11)
+        .send();
 
-    let (_, _, body_b) = hyper_request(&s.host_with_port(), "1.1", "GET", "/b", None).await;
-    assert_eq!("bbb", body_b);
+    let response_b = reqwest::Client::new()
+        .get(format!("{}/b", s.url()))
+        .version(reqwest::Version::HTTP_11)
+        .send();
+
+    let response_c = reqwest::Client::new()
+        .get(format!("{}/c", s.url()))
+        .version(reqwest::Version::HTTP_11)
+        .send();
+
+    let response_d = reqwest::Client::new()
+        .get(format!("{}/d", s.url()))
+        .version(reqwest::Version::HTTP_11)
+        .send();
+
+    let (response_a, response_b, response_c, response_d) =
+        futures::join!(response_a, response_b, response_c, response_d);
+
+    assert_eq!("aaa", response_a.unwrap().text().await.unwrap());
+    assert_eq!("bbb", response_b.unwrap().text().await.unwrap());
+    assert_eq!("ccc", response_c.unwrap().text().await.unwrap());
+    assert_eq!("ddd", response_d.unwrap().text().await.unwrap());
+
+    m1.assert_async().await;
+    m2.assert_async().await;
+    m3.assert_async().await;
+    m4.assert_async().await;
+}
+
+#[tokio::test]
+async fn test_match_body_asnyc() {
+    let mut s = Server::new_async().await;
+    let _m = s.mock("POST", "/").match_body("hello").create_async().await;
+
+    let response = reqwest::Client::new()
+        .post(s.url())
+        .version(reqwest::Version::HTTP_11)
+        .body("hello")
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(200, response.status());
 }
