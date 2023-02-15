@@ -5,14 +5,14 @@ use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
 use crate::server_pool::SERVER_POOL;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use futures::stream::{self, StreamExt};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request as HyperRequest, Response, Server as HyperServer, StatusCode};
-use std::net::{SocketAddr, TcpListener};
+use hyper::server::conn::Http;
+use hyper::service::service_fn;
+use hyper::{Body, Request as HyperRequest, Response, StatusCode};
+use std::net::SocketAddr;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 
 #[derive(Clone, Debug)]
@@ -108,7 +108,6 @@ pub struct Server {
     address: String,
     state: Arc<Mutex<State>>,
     sender: Sender<Command>,
-    _shutdown_sender: oneshot::Sender<()>,
 }
 
 impl Server {
@@ -180,7 +179,8 @@ impl Server {
         let state = Arc::new(Mutex::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
 
-        let listener = TcpListener::bind(address)
+        let listener = tokio::net::TcpListener::bind(address)
+            .await
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let address = listener
@@ -188,23 +188,24 @@ impl Server {
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let mutex = state.clone();
-        let service = make_service_fn(move |_conn| {
-            let mutex = mutex.clone();
-            async move {
-                Ok::<_, Error>(service_fn(move |request: HyperRequest<Body>| {
-                    handle_request(request, mutex.clone())
-                }))
+        let server = async move {
+            loop {
+                let (stream, _) = listener.accept().await.unwrap();
+                let mutex = mutex.clone();
+
+                tokio::spawn(async move {
+                    Http::new()
+                        .serve_connection(
+                            stream,
+                            service_fn(move |request: HyperRequest<Body>| {
+                                handle_request(request, mutex.clone())
+                            }),
+                        )
+                        .await
+                        .unwrap();
+                });
             }
-        });
-
-        let (_shutdown_sender, shutdown_receiver) = oneshot::channel();
-
-        let server = HyperServer::from_tcp(listener)
-            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?
-            .serve(service)
-            .with_graceful_shutdown(async {
-                shutdown_receiver.await.ok();
-            });
+        };
 
         thread::spawn(move || crate::RUNTIME.block_on(server));
 
@@ -214,7 +215,6 @@ impl Server {
             address: address.to_string(),
             state,
             sender,
-            _shutdown_sender,
         };
 
         server.accept_commands(receiver).await;
