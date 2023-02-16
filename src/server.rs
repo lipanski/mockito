@@ -2,10 +2,7 @@ use crate::command::Command;
 use crate::mock::InnerMock;
 use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
-use crate::server_pool::ServerPool;
-use crate::server_pool::SERVER_POOL;
 use crate::{Error, ErrorKind, Matcher, Mock};
-use deadpool::managed::Object as PoolObject;
 use futures::stream::{self, StreamExt};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
@@ -131,7 +128,7 @@ impl Server {
     /// Same as `Server::new` but async.
     ///
     pub async fn new_async() -> ServerGuard {
-        let server = SERVER_POOL.get().await.unwrap();
+        let server = Server::new_with_port_async(0).await;
         ServerGuard::new(server)
     }
 
@@ -146,8 +143,7 @@ impl Server {
     /// Same as `Server::try_new` but async.
     ///
     pub(crate) async fn try_new_async() -> Result<ServerGuard, Error> {
-        let server = SERVER_POOL
-            .get()
+        let server = Server::try_new_with_port_async(0)
             .await
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
         Ok(ServerGuard::new(server))
@@ -279,6 +275,7 @@ impl Server {
         state.unmatched_requests.clear();
     }
 
+    #[allow(dead_code)]
     pub(crate) fn busy(&self) -> bool {
         let state = self.state.clone();
         let locked = state.try_lock().is_err();
@@ -304,15 +301,17 @@ impl Server {
     }
 }
 
+type GuardType = Server;
+
 ///
 /// A handle around a pooled `Server` object which dereferences to `Server`.
 ///
 pub struct ServerGuard {
-    server: PoolObject<ServerPool>,
+    server: GuardType,
 }
 
 impl ServerGuard {
-    pub(crate) fn new(mut server: PoolObject<ServerPool>) -> ServerGuard {
+    pub(crate) fn new(mut server: GuardType) -> ServerGuard {
         server.set_busy(true);
         ServerGuard { server }
     }
@@ -322,13 +321,13 @@ impl Deref for ServerGuard {
     type Target = Server;
 
     fn deref(&self) -> &Self::Target {
-        self.server.deref()
+        &self.server
     }
 }
 
 impl DerefMut for ServerGuard {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.server.deref_mut()
+        &mut self.server
     }
 }
 

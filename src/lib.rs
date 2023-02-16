@@ -669,7 +669,6 @@ mod mock;
 mod request;
 mod response;
 mod server;
-mod server_pool;
 
 lazy_static! {
     pub(crate) static ref RUNTIME: Runtime = tokio::runtime::Builder::new_current_thread()

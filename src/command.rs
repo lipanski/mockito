@@ -20,6 +20,7 @@ pub(crate) enum Command {
     GetLastUnmatchedRequest {
         response_sender: oneshot::Sender<Option<String>>,
     },
+    #[allow(dead_code)]
     Noop,
 }
 
