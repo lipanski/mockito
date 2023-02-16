@@ -280,7 +280,11 @@ impl Server {
     }
 
     pub(crate) fn busy(&self) -> bool {
-        self.busy
+        let state = self.state.clone();
+        let locked = state.try_lock().is_err();
+        let sender_busy = self.sender.try_send(Command::Noop).is_err();
+
+        self.busy || locked || sender_busy
     }
 
     pub(crate) fn set_busy(&mut self, busy: bool) {

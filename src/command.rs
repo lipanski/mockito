@@ -20,6 +20,7 @@ pub(crate) enum Command {
     GetLastUnmatchedRequest {
         response_sender: oneshot::Sender<Option<String>>,
     },
+    Noop,
 }
 
 impl Command {
@@ -115,6 +116,7 @@ impl Command {
 
                 let _send = response_sender.send(label);
             }
+            Command::Noop => {}
         }
     }
 }
