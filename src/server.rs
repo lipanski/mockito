@@ -2,14 +2,16 @@ use crate::command::Command;
 use crate::mock::InnerMock;
 use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
+use crate::server_pool::ServerPool;
 use crate::server_pool::SERVER_POOL;
 use crate::{Error, ErrorKind, Matcher, Mock};
+use deadpool::managed::Object as PoolObject;
 use futures::stream::{self, StreamExt};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::{Body, Request as HyperRequest, Response, StatusCode};
 use std::net::SocketAddr;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
@@ -108,6 +110,7 @@ pub struct Server {
     address: String,
     state: Arc<Mutex<State>>,
     sender: Sender<Command>,
+    busy: bool,
 }
 
 impl Server {
@@ -118,33 +121,36 @@ impl Server {
     ///
     /// If for any reason you'd like to bypass the server pool, you can use `Server::new_with_port`:
     ///
+    #[allow(clippy::new_ret_no_self)]
     #[track_caller]
-    pub fn new() -> impl DerefMut<Target = Server> {
+    pub fn new() -> ServerGuard {
         Server::try_new().unwrap()
     }
 
     ///
     /// Same as `Server::new` but async.
     ///
-    pub async fn new_async() -> impl DerefMut<Target = Server> {
-        SERVER_POOL.get().await.unwrap()
+    pub async fn new_async() -> ServerGuard {
+        let server = SERVER_POOL.get().await.unwrap();
+        ServerGuard::new(server)
     }
 
     ///
     /// Same as `Server::new` but won't panic on failure.
     ///
-    pub(crate) fn try_new() -> Result<impl DerefMut<Target = Server>, Error> {
+    pub(crate) fn try_new() -> Result<ServerGuard, Error> {
         crate::RUNTIME.block_on(async { Server::try_new_async().await })
     }
 
     ///
     /// Same as `Server::try_new` but async.
     ///
-    pub(crate) async fn try_new_async() -> Result<impl DerefMut<Target = Server>, Error> {
-        SERVER_POOL
+    pub(crate) async fn try_new_async() -> Result<ServerGuard, Error> {
+        let server = SERVER_POOL
             .get()
             .await
-            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+        Ok(ServerGuard::new(server))
     }
 
     ///
@@ -214,6 +220,7 @@ impl Server {
             address: address.to_string(),
             state,
             sender,
+            busy: true,
         };
 
         server.accept_commands(receiver).await;
@@ -272,6 +279,14 @@ impl Server {
         state.unmatched_requests.clear();
     }
 
+    pub(crate) fn busy(&self) -> bool {
+        self.busy
+    }
+
+    pub(crate) fn set_busy(&mut self, busy: bool) {
+        self.busy = busy;
+    }
+
     async fn accept_commands(&mut self, mut receiver: Receiver<Command>) {
         let state = self.state.clone();
         tokio::spawn(async move {
@@ -282,6 +297,40 @@ impl Server {
         });
 
         log::debug!("Server is accepting commands");
+    }
+}
+
+///
+/// A handle around a pooled `Server` object which dereferences to `Server`.
+///
+pub struct ServerGuard {
+    server: PoolObject<ServerPool>,
+}
+
+impl ServerGuard {
+    pub(crate) fn new(mut server: PoolObject<ServerPool>) -> ServerGuard {
+        server.set_busy(true);
+        ServerGuard { server }
+    }
+}
+
+impl Deref for ServerGuard {
+    type Target = Server;
+
+    fn deref(&self) -> &Self::Target {
+        self.server.deref()
+    }
+}
+
+impl DerefMut for ServerGuard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.server.deref_mut()
+    }
+}
+
+impl Drop for ServerGuard {
+    fn drop(&mut self) {
+        self.server.set_busy(false);
     }
 }
 
