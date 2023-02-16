@@ -1,7 +1,7 @@
-use crate::Error;
 use crate::Server;
+use crate::{Error, ErrorKind};
 use async_trait::async_trait;
-use deadpool::managed::{self, Pool};
+use deadpool::managed::{self, Pool, RecycleError};
 use lazy_static::lazy_static;
 
 const DEFAULT_POOL_SIZE: usize = 100;
@@ -32,6 +32,10 @@ impl managed::Manager for ServerPool {
     }
 
     async fn recycle(&self, server: &mut Server) -> managed::RecycleResult<Error> {
+        if server.busy() {
+            return Err(RecycleError::Backend(Error::new(ErrorKind::ServerBusy)));
+        }
+
         server.reset_async().await;
         Ok(())
     }

@@ -394,6 +394,7 @@ impl Mock {
     ///
     /// Asserts that the expected amount of requests (defaults to 1 request) were performed.
     ///
+    #[track_caller]
     pub fn assert(&self) {
         crate::RUNTIME.block_on(async { self.assert_async().await })
     }
@@ -402,57 +403,56 @@ impl Mock {
     /// Same as `Mock::assert` but async.
     ///
     pub async fn assert_async(&self) {
-        let mut opt_message = None;
+        if let Some(hits) = Command::get_mock_hits(&self.sender, self.inner.id.clone()).await {
+            let mut message = match (
+                self.inner.expected_hits_at_least,
+                self.inner.expected_hits_at_most,
+            ) {
+                (Some(min), Some(max)) if min == max => format!(
+                    "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
+                    min, self, hits
+                ),
+                (Some(min), Some(max)) => format!(
+                    "\n> Expected between {} and {} request(s) to:\n{}\n...but received {}\n\n",
+                    min, max, self, hits
+                ),
+                (Some(min), None) => format!(
+                    "\n> Expected at least {} request(s) to:\n{}\n...but received {}\n\n",
+                    min, self, hits
+                ),
+                (None, Some(max)) => format!(
+                    "\n> Expected at most {} request(s) to:\n{}\n...but received {}\n\n",
+                    max, self, hits
+                ),
+                (None, None) => format!(
+                    "\n> Expected 1 request(s) to:\n{}\n...but received {}\n\n",
+                    self, hits
+                ),
+            };
 
-        {
-            let hits = Command::get_mock_hits(&self.sender, self.inner.id.clone()).await;
+            if let Some(last_request) = Command::get_last_unmatched_request(&self.sender).await {
+                message.push_str(&format!(
+                    "> The last unmatched request was:\n{}\n",
+                    last_request
+                ));
 
-            if let Some(hits) = hits {
-                let mut message = match (
-                    self.inner.expected_hits_at_least,
-                    self.inner.expected_hits_at_most,
-                ) {
-                    (Some(min), Some(max)) if min == max => format!(
-                        "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
-                        min, self, hits
-                    ),
-                    (Some(min), Some(max)) => format!(
-                        "\n> Expected between {} and {} request(s) to:\n{}\n...but received {}\n\n",
-                        min, max, self, hits
-                    ),
-                    (Some(min), None) => format!(
-                        "\n> Expected at least {} request(s) to:\n{}\n...but received {}\n\n",
-                        min, self, hits
-                    ),
-                    (None, Some(max)) => format!(
-                        "\n> Expected at most {} request(s) to:\n{}\n...but received {}\n\n",
-                        max, self, hits
-                    ),
-                    (None, None) => format!(
-                        "\n> Expected 1 request(s) to:\n{}\n...but received {}\n\n",
-                        self, hits
-                    ),
-                };
-
-                if let Some(last_request) = Command::get_last_unmatched_request(&self.sender).await
-                {
-                    message.push_str(&format!(
-                        "> The last unmatched request was:\n{}\n",
-                        last_request
-                    ));
-
-                    let difference = diff::compare(&self.to_string(), &last_request);
-                    message.push_str(&format!("> Difference:\n{}\n", difference));
-                }
-
-                opt_message = Some(message);
+                let difference = diff::compare(&self.to_string(), &last_request);
+                message.push_str(&format!("> Difference:\n{}\n", difference));
             }
-        }
 
-        if let Some(message) = opt_message {
-            assert!(self.matched_async().await, "{}", message)
+            let matched = match (
+                self.inner.expected_hits_at_least,
+                self.inner.expected_hits_at_most,
+            ) {
+                (Some(min), Some(max)) => hits >= min && hits <= max,
+                (Some(min), None) => hits >= min,
+                (None, Some(max)) => hits <= max,
+                (None, None) => hits == 1,
+            };
+
+            assert!(matched, "{}", message)
         } else {
-            panic!("Could not retrieve enough information about the remote mock.")
+            panic!("could not retrieve enough information about the remote mock")
         }
     }
 

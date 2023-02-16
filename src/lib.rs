@@ -657,7 +657,7 @@ use lazy_static::lazy_static;
 pub use legacy::{mock, reset, server_address, server_url};
 pub use matcher::Matcher;
 pub use mock::Mock;
-pub use server::Server;
+pub use server::{Server, ServerGuard};
 use tokio::runtime::Runtime;
 
 mod command;
@@ -669,7 +669,6 @@ mod mock;
 mod request;
 mod response;
 mod server;
-mod server_pool;
 
 lazy_static! {
     pub(crate) static ref RUNTIME: Runtime = tokio::runtime::Builder::new_current_thread()

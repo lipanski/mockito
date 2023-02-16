@@ -48,6 +48,8 @@ impl ErrorTrait for Error {}
 pub enum ErrorKind {
     /// The server is not running
     ServerFailure,
+    /// The server is busy
+    ServerBusy,
     /// Could not deliver a response
     ResponseFailure,
     /// The status code is invalid or out of range
@@ -64,6 +66,7 @@ impl ErrorKind {
     fn description(&self) -> &'static str {
         match self {
             ErrorKind::ServerFailure => "the server is not running",
+            ErrorKind::ServerBusy => "the server is busy",
             ErrorKind::ResponseFailure => "could not deliver a response",
             ErrorKind::InvalidStatusCode => "invalid status code",
             ErrorKind::RequestBodyFailure => "failed to read the request body",

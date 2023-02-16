@@ -2,17 +2,16 @@ use crate::command::Command;
 use crate::mock::InnerMock;
 use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
-use crate::server_pool::SERVER_POOL;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use futures::stream::{self, StreamExt};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request as HyperRequest, Response, Server as HyperServer, StatusCode};
-use std::net::{SocketAddr, TcpListener};
-use std::ops::DerefMut;
+use hyper::server::conn::Http;
+use hyper::service::service_fn;
+use hyper::{Body, Request as HyperRequest, Response, StatusCode};
+use std::net::SocketAddr;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio::sync::oneshot;
 use tokio::sync::Mutex;
 
 #[derive(Clone, Debug)]
@@ -108,7 +107,7 @@ pub struct Server {
     address: String,
     state: Arc<Mutex<State>>,
     sender: Sender<Command>,
-    _shutdown_sender: oneshot::Sender<()>,
+    busy: bool,
 }
 
 impl Server {
@@ -119,33 +118,35 @@ impl Server {
     ///
     /// If for any reason you'd like to bypass the server pool, you can use `Server::new_with_port`:
     ///
+    #[allow(clippy::new_ret_no_self)]
     #[track_caller]
-    pub fn new() -> impl DerefMut<Target = Server> {
+    pub fn new() -> ServerGuard {
         Server::try_new().unwrap()
     }
 
     ///
     /// Same as `Server::new` but async.
     ///
-    pub async fn new_async() -> impl DerefMut<Target = Server> {
-        SERVER_POOL.get().await.unwrap()
+    pub async fn new_async() -> ServerGuard {
+        let server = Server::new_with_port_async(0).await;
+        ServerGuard::new(server)
     }
 
     ///
     /// Same as `Server::new` but won't panic on failure.
     ///
-    pub(crate) fn try_new() -> Result<impl DerefMut<Target = Server>, Error> {
+    pub(crate) fn try_new() -> Result<ServerGuard, Error> {
         crate::RUNTIME.block_on(async { Server::try_new_async().await })
     }
 
     ///
     /// Same as `Server::try_new` but async.
     ///
-    pub(crate) async fn try_new_async() -> Result<impl DerefMut<Target = Server>, Error> {
-        SERVER_POOL
-            .get()
+    pub(crate) async fn try_new_async() -> Result<ServerGuard, Error> {
+        let server = Server::try_new_with_port_async(0)
             .await
-            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+        Ok(ServerGuard::new(server))
     }
 
     ///
@@ -180,7 +181,8 @@ impl Server {
         let state = Arc::new(Mutex::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
 
-        let listener = TcpListener::bind(address)
+        let listener = tokio::net::TcpListener::bind(address)
+            .await
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let address = listener
@@ -188,23 +190,23 @@ impl Server {
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let mutex = state.clone();
-        let service = make_service_fn(move |_conn| {
-            let mutex = mutex.clone();
-            async move {
-                Ok::<_, Error>(service_fn(move |request: HyperRequest<Body>| {
-                    handle_request(request, mutex.clone())
-                }))
+        let server = async move {
+            while let Ok((stream, _)) = listener.accept().await {
+                let mutex = mutex.clone();
+
+                tokio::spawn(async move {
+                    Http::new()
+                        .serve_connection(
+                            stream,
+                            service_fn(move |request: HyperRequest<Body>| {
+                                handle_request(request, mutex.clone())
+                            }),
+                        )
+                        .await
+                        .unwrap();
+                });
             }
-        });
-
-        let (_shutdown_sender, shutdown_receiver) = oneshot::channel();
-
-        let server = HyperServer::from_tcp(listener)
-            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?
-            .serve(service)
-            .with_graceful_shutdown(async {
-                shutdown_receiver.await.ok();
-            });
+        };
 
         thread::spawn(move || crate::RUNTIME.block_on(server));
 
@@ -214,7 +216,7 @@ impl Server {
             address: address.to_string(),
             state,
             sender,
-            _shutdown_sender,
+            busy: true,
         };
 
         server.accept_commands(receiver).await;
@@ -273,6 +275,19 @@ impl Server {
         state.unmatched_requests.clear();
     }
 
+    #[allow(dead_code)]
+    pub(crate) fn busy(&self) -> bool {
+        let state = self.state.clone();
+        let locked = state.try_lock().is_err();
+        let sender_busy = self.sender.try_send(Command::Noop).is_err();
+
+        self.busy || locked || sender_busy
+    }
+
+    pub(crate) fn set_busy(&mut self, busy: bool) {
+        self.busy = busy;
+    }
+
     async fn accept_commands(&mut self, mut receiver: Receiver<Command>) {
         let state = self.state.clone();
         tokio::spawn(async move {
@@ -283,6 +298,42 @@ impl Server {
         });
 
         log::debug!("Server is accepting commands");
+    }
+}
+
+type GuardType = Server;
+
+///
+/// A handle around a pooled `Server` object which dereferences to `Server`.
+///
+pub struct ServerGuard {
+    server: GuardType,
+}
+
+impl ServerGuard {
+    pub(crate) fn new(mut server: GuardType) -> ServerGuard {
+        server.set_busy(true);
+        ServerGuard { server }
+    }
+}
+
+impl Deref for ServerGuard {
+    type Target = Server;
+
+    fn deref(&self) -> &Self::Target {
+        &self.server
+    }
+}
+
+impl DerefMut for ServerGuard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.server
+    }
+}
+
+impl Drop for ServerGuard {
+    fn drop(&mut self) {
+        self.server.set_busy(false);
     }
 }
 
