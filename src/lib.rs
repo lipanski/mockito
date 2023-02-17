@@ -9,11 +9,13 @@
 //!
 //! # Features
 //!
-//! - Support for HTTP1/2
-//! - Run your tests in parallel
-//! - Various request matchers (Regex, JSON etc.)
-//! - Mock multiple hosts at the same time
-//! - Sync and async interfaces
+//! - Supports HTTP1/2
+//! - Runs your tests in parallel
+//! - Comes with a wide range of request matchers (Regex, JSON, query parameters etc.)
+//! - Checks that a mock was called (spy)
+//! - Mocks multiple hosts at the same time
+//! - Exposes sync and async interfaces
+//! - Prints out the last unmatched request in case of errors
 //! - Simple, intuitive API
 //! - An awesome logo
 //!
@@ -611,23 +613,6 @@
 //! s.reset();
 //!
 //! // Nothing is mocked at this point
-//! ```
-//!
-//! Or you can use `std::mem::drop` to remove a single mock without having to wait for its scope to end:
-//!
-//! ## Example
-//!
-//! ```
-//! use std::mem;
-//!
-//! let mut s = mockito::Server::new();
-//! let m = s.mock("GET", "/hello").create();
-//!
-//! // Requests to GET /hello are mocked
-//!
-//! mem::drop(m);
-//!
-//! // Still in the scope of `m`, but requests to GET /hello aren't mocked any more
 //! ```
 //!
 //! # Debug

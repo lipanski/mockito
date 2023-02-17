@@ -720,21 +720,6 @@ fn test_going_out_of_context_doesnt_remove_other_mocks() {
 }
 
 #[test]
-fn test_explicitly_calling_drop_removes_the_mock() {
-    let mut s = Server::new();
-    let host = s.host_with_port();
-    let mock = s.mock("GET", "/").create();
-
-    let (status_line, _, _) = request(&host, "GET /", "");
-    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
-
-    mem::drop(mock);
-
-    let (dropped_status_line, _, _) = request(&s.host_with_port(), "GET /", "");
-    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", dropped_status_line);
-}
-
-#[test]
 fn test_regex_match_path() {
     let mut s = Server::new();
     let _m1 = s

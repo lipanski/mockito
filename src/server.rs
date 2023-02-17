@@ -161,7 +161,7 @@ impl Server {
     }
 
     ///
-    /// Same as `Server::try_new_with_port_async` but async.
+    /// Same as `Server::new_with_port` but async.
     ///
     pub async fn new_with_port_async(port: u16) -> Server {
         Server::try_new_with_port_async(port).await.unwrap()

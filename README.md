@@ -16,11 +16,13 @@ or offline work. Mockito runs a local pool of HTTP servers which create, deliver
 
 ## Features
 
-- Support for HTTP1/2
-- Run your tests in parallel
-- Various request matchers (Regex, JSON etc.)
-- Mock multiple hosts at the same time
-- Sync and async interfaces
+- Supports HTTP1/2
+- Runs your tests in parallel
+- Comes with a wide range of request matchers (Regex, JSON, query parameters etc.)
+- Checks that a mock was called (spy)
+- Mocks multiple hosts at the same time
+- Exposes sync and async interfaces
+- Prints out the last unmatched request in case of errors
 - Simple, intuitive API
 - An awesome logo
 
