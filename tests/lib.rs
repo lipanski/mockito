@@ -7,7 +7,6 @@ use rand::Rng;
 use std::fmt::Display;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::mem;
 use std::net::TcpStream;
 use std::path::Path;
 use std::str::FromStr;
