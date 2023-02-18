@@ -12,7 +12,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 #[derive(Clone, Debug)]
 pub(crate) struct RemoteMock {
@@ -105,7 +105,7 @@ impl State {
 #[derive(Debug)]
 pub struct Server {
     address: String,
-    state: Arc<Mutex<State>>,
+    state: Arc<RwLock<State>>,
     sender: Sender<Command>,
     busy: bool,
 }
@@ -178,7 +178,7 @@ impl Server {
     /// Same as `Server::try_new_with_port` but async.
     ///
     pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
-        let state = Arc::new(Mutex::new(State::new()));
+        let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
 
         let listener = tokio::net::TcpListener::bind(address)
@@ -270,7 +270,7 @@ impl Server {
     ///
     pub async fn reset_async(&mut self) {
         let state = self.state.clone();
-        let mut state = state.lock().await;
+        let mut state = state.write().await;
         state.mocks.clear();
         state.unmatched_requests.clear();
     }
@@ -278,7 +278,7 @@ impl Server {
     #[allow(dead_code)]
     pub(crate) fn busy(&self) -> bool {
         let state = self.state.clone();
-        let locked = state.try_lock().is_err();
+        let locked = state.try_read().is_err();
         let sender_busy = self.sender.try_send(Command::Noop).is_err();
 
         self.busy || locked || sender_busy
@@ -292,7 +292,7 @@ impl Server {
         let state = self.state.clone();
         tokio::spawn(async move {
             while let Some(cmd) = receiver.recv().await {
-                let state = state.lock().await;
+                let state = state.clone();
                 Command::handle(cmd, state).await;
             }
         });
@@ -339,13 +339,13 @@ impl Drop for ServerGuard {
 
 async fn handle_request(
     hyper_request: HyperRequest<Body>,
-    state: Arc<Mutex<State>>,
+    state: Arc<RwLock<State>>,
 ) -> Result<Response<Body>, Error> {
     let mut request = Request::new(hyper_request);
     log::debug!("Request received: {}", request.to_string().await);
 
     let mutex = state.clone();
-    let mut state = mutex.lock().await;
+    let mut state = mutex.write().await;
 
     let mut mocks_stream = stream::iter(&mut state.mocks);
     let mut matching_mocks: Vec<&mut RemoteMock> = vec![];

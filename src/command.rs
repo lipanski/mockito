@@ -1,7 +1,8 @@
 use crate::server::{RemoteMock, State};
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
-use tokio::sync::MutexGuard;
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub(crate) enum Command {
@@ -71,12 +72,13 @@ impl Command {
         response_receiver.await.unwrap_or(None)
     }
 
-    pub async fn handle(cmd: Command, mut state: MutexGuard<'_, State>) {
+    pub async fn handle(cmd: Command, state: Arc<RwLock<State>>) {
         match cmd {
             Command::CreateMock {
                 remote_mock,
                 response_sender,
             } => {
+                let mut state = state.write().await;
                 state.mocks.push(remote_mock);
 
                 let _send = response_sender.send(true);
@@ -85,6 +87,7 @@ impl Command {
                 mock_id,
                 response_sender,
             } => {
+                let state = state.read().await;
                 let hits: Option<usize> = state
                     .mocks
                     .iter()
@@ -97,6 +100,7 @@ impl Command {
                 mock_id,
                 response_sender,
             } => {
+                let mut state = state.write().await;
                 if let Some(pos) = state
                     .mocks
                     .iter()
@@ -108,11 +112,13 @@ impl Command {
                 let _send = response_sender.send(true);
             }
             Command::GetLastUnmatchedRequest { response_sender } => {
+                let mut state = state.write().await;
                 let last_unmatched_request = state.unmatched_requests.last_mut();
 
-                let label = match last_unmatched_request {
-                    Some(req) => Some(req.to_string().await),
-                    None => None,
+                let label = if let Some(req) = last_unmatched_request {
+                    Some(req.to_string().await)
+                } else {
+                    None
                 };
 
                 let _send = response_sender.send(label);
