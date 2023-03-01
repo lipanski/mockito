@@ -2,13 +2,13 @@ use crate::command::Command;
 use crate::mock::InnerMock;
 use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
+use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use futures::stream::{self, StreamExt};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::{Body, Request as HyperRequest, Response, StatusCode};
 use std::net::SocketAddr;
-use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc::{self, Receiver, Sender};
@@ -107,7 +107,6 @@ pub struct Server {
     address: String,
     state: Arc<RwLock<State>>,
     sender: Sender<Command>,
-    busy: bool,
 }
 
 impl Server {
@@ -128,8 +127,7 @@ impl Server {
     /// Same as `Server::new` but async.
     ///
     pub async fn new_async() -> ServerGuard {
-        let server = Server::new_with_port_async(0).await;
-        ServerGuard::new(server)
+        crate::server_pool::SERVER_POOL.get().await.unwrap()
     }
 
     ///
@@ -143,10 +141,7 @@ impl Server {
     /// Same as `Server::try_new` but async.
     ///
     pub(crate) async fn try_new_async() -> Result<ServerGuard, Error> {
-        let server = Server::try_new_with_port_async(0)
-            .await
-            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
-        Ok(ServerGuard::new(server))
+        crate::server_pool::SERVER_POOL.get().await
     }
 
     ///
@@ -195,15 +190,14 @@ impl Server {
                 let mutex = mutex.clone();
 
                 tokio::spawn(async move {
-                    Http::new()
+                    let _ = Http::new()
                         .serve_connection(
                             stream,
                             service_fn(move |request: HyperRequest<Body>| {
                                 handle_request(request, mutex.clone())
                             }),
                         )
-                        .await
-                        .unwrap();
+                        .await;
                 });
             }
         };
@@ -216,7 +210,6 @@ impl Server {
             address: address.to_string(),
             state,
             sender,
-            busy: true,
         };
 
         server.accept_commands(receiver).await;
@@ -275,19 +268,6 @@ impl Server {
         state.unmatched_requests.clear();
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn busy(&self) -> bool {
-        let state = self.state.clone();
-        let locked = state.try_read().is_err();
-        let sender_busy = self.sender.try_send(Command::Noop).is_err();
-
-        self.busy || locked || sender_busy
-    }
-
-    pub(crate) fn set_busy(&mut self, busy: bool) {
-        self.busy = busy;
-    }
-
     async fn accept_commands(&mut self, mut receiver: Receiver<Command>) {
         let state = self.state.clone();
         tokio::spawn(async move {
@@ -298,42 +278,6 @@ impl Server {
         });
 
         log::debug!("Server is accepting commands");
-    }
-}
-
-type GuardType = Server;
-
-///
-/// A handle around a pooled `Server` object which dereferences to `Server`.
-///
-pub struct ServerGuard {
-    server: GuardType,
-}
-
-impl ServerGuard {
-    pub(crate) fn new(mut server: GuardType) -> ServerGuard {
-        server.set_busy(true);
-        ServerGuard { server }
-    }
-}
-
-impl Deref for ServerGuard {
-    type Target = Server;
-
-    fn deref(&self) -> &Self::Target {
-        &self.server
-    }
-}
-
-impl DerefMut for ServerGuard {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.server
-    }
-}
-
-impl Drop for ServerGuard {
-    fn drop(&mut self) {
-        self.server.set_busy(false);
     }
 }
 

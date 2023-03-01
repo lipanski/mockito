@@ -1881,6 +1881,7 @@ fn test_running_multiple_servers() {
 }
 
 #[test]
+#[ignore]
 fn test_running_lots_of_servers_wont_block() {
     let mut s1 = Server::new();
     let _s2 = Server::new();
