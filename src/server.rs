@@ -374,7 +374,10 @@ async fn handle_request(
     }
 }
 
-async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
+async fn respond_with_mock(
+    mut request: Request,
+    mock: &RemoteMock,
+) -> Result<Response<Body>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
 
@@ -390,7 +393,7 @@ async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Respon
                 }
                 Body::from(bytes.clone())
             }
-            ResponseBody::Fn(body_fn) => {
+            ResponseBody::FnWithWriter(body_fn) => {
                 let mut chunked = ResponseChunked::new();
                 body_fn(&mut chunked)
                     .map_err(|_| Error::new(ErrorKind::ResponseBodyFailure))
@@ -398,6 +401,14 @@ async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Respon
                 chunked.finish();
 
                 Body::wrap_stream(chunked)
+            }
+            ResponseBody::FnWithRequest(body_fn) => {
+                // Make sure to read the request body so that `Request::body` can
+                // return it, if needed
+                request.read_body().await;
+
+                let bytes = body_fn(&request);
+                Body::from(bytes)
             }
         }
     } else {

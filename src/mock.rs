@@ -3,6 +3,7 @@ use crate::diff;
 use crate::matcher::{Matcher, PathAndQueryMatcher};
 use crate::response::{Body, Response};
 use crate::server::RemoteMock;
+use crate::Request;
 use crate::{Error, ErrorKind};
 use hyper::StatusCode;
 use rand::distributions::Alphanumeric;
@@ -323,9 +324,41 @@ impl Mock {
     ///
     pub fn with_body_from_fn(
         mut self,
-        cb: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
+        callback: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
     ) -> Self {
-        self.inner.response.body = Body::Fn(Arc::new(cb));
+        self.inner.response.body = Body::FnWithWriter(Arc::new(callback));
+        self
+    }
+
+    ///
+    /// Sets the body of the mock response dynamically while exposing the request object.
+    ///
+    /// You can use this method to provide a custom reponse body for every incoming request.
+    ///
+    /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
+    /// Use `move` closures and `Arc` to share any data.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// let mut s = mockito::Server::new();
+    ///
+    /// let _m = s.mock("GET", mockito::Matcher::Any).with_body_from_request(|request| {
+    ///     if request.path() == "/bob" {
+    ///         "hello bob".into()
+    ///     } else if request.path() == "/alice" {
+    ///         "hello alice".into()
+    ///     } else {
+    ///         "hello world".into()
+    ///     }
+    /// });
+    /// ```
+    ///
+    pub fn with_body_from_request(
+        mut self,
+        callback: impl Fn(&Request) -> Vec<u8> + Send + Sync + 'static,
+    ) -> Self {
+        self.inner.response.body = Body::FnWithRequest(Arc::new(callback));
         self
     }
 
