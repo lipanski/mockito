@@ -241,10 +241,10 @@
 //! ## Example
 //!
 //! ```
-//! use mockito::mock;
+//! let mut s = mockito::Server::new();
 //!
 //! // This will perform a full match against the query part
-//! let _m = mock("GET", "/test?hello=world").create();
+//! let _m = s.mock("GET", "/test?hello=world").create();
 //! ```
 //!
 //! # Matching by header
