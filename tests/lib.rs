@@ -636,6 +636,49 @@ fn test_mock_with_fn_body() {
 }
 
 #[test]
+fn test_mock_with_body_from_request() {
+    let mut s = Server::new();
+    let _m = s
+        .mock("GET", Matcher::Any)
+        .with_body_from_request(|request| {
+            if request.path() == "/world" {
+                "hello world".into()
+            } else {
+                "just hello".into()
+            }
+        })
+        .create();
+
+    let (_, _, body) = request(&s.host_with_port(), "GET /world", "");
+    assert_eq!("hello world", body);
+
+    let (_, _, body) = request(&s.host_with_port(), "GET /", "");
+    assert_eq!("just hello", body);
+}
+
+#[test]
+fn test_mock_with_body_from_request_body() {
+    let mut s = Server::new();
+    let _m = s
+        .mock("GET", "/")
+        .with_body_from_request(|request| {
+            let body = std::str::from_utf8(request.body().unwrap()).unwrap();
+            if body == "test" {
+                "test".into()
+            } else {
+                "not a test".into()
+            }
+        })
+        .create();
+
+    let (_, _, body) = request_with_body(&s.host_with_port(), "GET /", "", "test");
+    assert_eq!("test", body);
+
+    let (_, _, body) = request_with_body(&s.host_with_port(), "GET /", "", "something else");
+    assert_eq!("not a test", body);
+}
+
+#[test]
 fn test_mock_with_header() {
     let mut s = Server::new();
     let _m = s

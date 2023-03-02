@@ -1,3 +1,4 @@
+use crate::Request;
 use core::task::Poll;
 use futures::stream::Stream;
 use hyper::StatusCode;
@@ -13,19 +14,22 @@ pub(crate) struct Response {
     pub body: Body,
 }
 
-type BodyFn = dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static;
+type BodyFnWithWriter = dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static;
+type BodyFnWithRequest = dyn Fn(&Request) -> Vec<u8> + Send + Sync + 'static;
 
 #[derive(Clone)]
 pub(crate) enum Body {
     Bytes(Vec<u8>),
-    Fn(Arc<BodyFn>),
+    FnWithWriter(Arc<BodyFnWithWriter>),
+    FnWithRequest(Arc<BodyFnWithRequest>),
 }
 
 impl fmt::Debug for Body {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Body::Bytes(ref b) => b.fmt(f),
-            Body::Fn(_) => f.write_str("<callback>"),
+            Body::FnWithWriter(_) => f.write_str("<callback>"),
+            Body::FnWithRequest(_) => f.write_str("<callback>"),
         }
     }
 }
@@ -34,9 +38,13 @@ impl PartialEq for Body {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Body::Bytes(ref a), Body::Bytes(ref b)) => a == b,
-            (Body::Fn(ref a), Body::Fn(ref b)) => std::ptr::eq(
-                a.as_ref() as *const BodyFn as *const u8,
-                b.as_ref() as *const BodyFn as *const u8,
+            (Body::FnWithWriter(ref a), Body::FnWithWriter(ref b)) => std::ptr::eq(
+                a.as_ref() as *const BodyFnWithWriter as *const u8,
+                b.as_ref() as *const BodyFnWithWriter as *const u8,
+            ),
+            (Body::FnWithRequest(ref a), Body::FnWithRequest(ref b)) => std::ptr::eq(
+                a.as_ref() as *const BodyFnWithRequest as *const u8,
+                b.as_ref() as *const BodyFnWithRequest as *const u8,
             ),
             _ => false,
         }
