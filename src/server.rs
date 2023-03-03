@@ -11,6 +11,7 @@ use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::sync::Mutex;
 
@@ -380,6 +381,9 @@ async fn respond_with_mock(
 ) -> Result<Response<Body>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
+
+    // Delay response if needed
+    tokio::time::sleep(mock.inner.delay.unwrap_or(Duration::ZERO)).await;
 
     for (name, value) in mock.inner.response.headers.iter() {
         response = response.header(name, value);

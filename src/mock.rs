@@ -16,6 +16,7 @@ use std::path::Path;
 use std::string::ToString;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
+use tokio::time::Duration;
 
 #[derive(Clone, Debug)]
 pub struct InnerMock {
@@ -25,6 +26,7 @@ pub struct InnerMock {
     pub(crate) headers: Vec<(String, Matcher)>,
     pub(crate) body: Matcher,
     pub(crate) response: Response,
+    pub(crate) delay: Option<Duration>,
     pub(crate) hits: usize,
     pub(crate) expected_hits_at_least: Option<usize>,
     pub(crate) expected_hits_at_most: Option<usize>,
@@ -113,6 +115,7 @@ impl Mock {
             headers: Vec::new(),
             body: Matcher::Any,
             response: Response::default(),
+            delay: None,
             hits: 0,
             expected_hits_at_least: None,
             expected_hits_at_most: None,
@@ -249,6 +252,14 @@ impl Mock {
     pub fn match_body<M: Into<Matcher>>(mut self, body: M) -> Self {
         self.inner.body = body.into();
 
+        self
+    }
+
+    ///
+    /// Sets a fixed for the mock. If set, responses will be delayed instead of responded
+    /// straightaway.
+    pub fn with_delay(mut self, delay: Duration) -> Self {
+        self.inner.delay = Some(delay);
         self
     }
 
