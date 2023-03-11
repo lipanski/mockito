@@ -432,9 +432,13 @@ impl Mock {
         let mutex = self.state.clone();
         let state = mutex.blocking_read();
         if let Some(hits) = state.get_mock_hits(self.inner.id.clone()) {
-            let last_request = state.get_last_unmatched_request();
-            let message = self.build_assert_message(hits, last_request);
             let matched = self.matched_hits(hits);
+            let message = if !matched {
+                let last_request = state.get_last_unmatched_request();
+                self.build_assert_message(hits, last_request)
+            } else {
+                String::default()
+            };
 
             assert!(matched, "{}", message)
         } else {
@@ -449,9 +453,13 @@ impl Mock {
         let mutex = self.state.clone();
         let state = mutex.read().await;
         if let Some(hits) = state.get_mock_hits(self.inner.id.clone()) {
-            let last_request = state.get_last_unmatched_request();
-            let message = self.build_assert_message(hits, last_request);
             let matched = self.matched_hits(hits);
+            let message = if !matched {
+                let last_request = state.get_last_unmatched_request();
+                self.build_assert_message(hits, last_request)
+            } else {
+                String::default()
+            };
 
             assert!(matched, "{}", message)
         } else {

@@ -93,17 +93,14 @@ impl State {
             .position(|remote_mock| remote_mock.inner.id == mock_id)
         {
             self.mocks.remove(pos);
+            return true;
         }
 
-        true
+        false
     }
 
     pub(crate) fn get_last_unmatched_request(&self) -> Option<String> {
-        if let Some(req) = self.unmatched_requests.last() {
-            Some(req.to_string())
-        } else {
-            None
-        }
+        self.unmatched_requests.last().map(|req| req.formatted())
     }
 }
 
@@ -345,7 +342,7 @@ async fn handle_request(
 ) -> Result<Response<Body>, Error> {
     let mut request = Request::new(hyper_request);
     request.read_body().await;
-    log::debug!("Request received: {}", request.to_string());
+    log::debug!("Request received: {}", request.formatted());
 
     let mutex = state.clone();
     let mut state = mutex.write().await;
@@ -377,10 +374,7 @@ async fn handle_request(
     }
 }
 
-async fn respond_with_mock(
-    mut request: Request,
-    mock: &RemoteMock,
-) -> Result<Response<Body>, Error> {
+async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
 
@@ -406,10 +400,6 @@ async fn respond_with_mock(
                 Body::wrap_stream(chunked)
             }
             ResponseBody::FnWithRequest(body_fn) => {
-                // Make sure to read the request body so that `Request::body` can
-                // return it, if needed
-                request.read_body().await;
-
                 let bytes = body_fn(&request);
                 Body::from(bytes)
             }

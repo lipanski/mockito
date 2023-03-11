@@ -78,7 +78,7 @@ impl Request {
         self.body.as_ref().unwrap()
     }
 
-    pub(crate) fn to_string(&self) -> String {
+    pub(crate) fn formatted(&self) -> String {
         let mut formatted = format!(
             "\r\n{} {}\r\n",
             &self.inner.method(),
