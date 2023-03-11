@@ -143,33 +143,34 @@ impl Server {
     ///
     #[allow(clippy::new_ret_no_self)]
     #[track_caller]
-    pub fn new() -> Server {
+    pub fn new() -> ServerGuard {
         Server::try_new().unwrap()
     }
 
     ///
     /// Same as `Server::new` but async.
     ///
-    pub async fn new_async() -> Server {
+    pub async fn new_async() -> ServerGuard {
         Server::try_new_async().await.unwrap()
-        // crate::server_pool::SERVER_POOL.get().await.unwrap()
     }
 
     ///
     /// Same as `Server::new` but won't panic on failure.
     ///
-    pub(crate) fn try_new() -> Result<Server, Error> {
-        Server::try_new_with_port(0)
+    #[track_caller]
+    pub(crate) fn try_new() -> Result<ServerGuard, Error> {
+        futures::executor::block_on(async { Server::try_new_async().await })
     }
 
     ///
     /// Same as `Server::try_new` but async.
     ///
-    pub(crate) async fn try_new_async() -> Result<Server, Error> {
-        // crate::server_pool::SERVER_POOL.get().await
-        let server = Server::try_new_with_port_async(0)
+    pub(crate) async fn try_new_async() -> Result<ServerGuard, Error> {
+        let server = crate::server_pool::SERVER_POOL
+            .get_async()
             .await
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+
         Ok(server)
     }
 
@@ -194,6 +195,7 @@ impl Server {
     ///
     /// Same as `Server::new_with_port` but won't panic on failure.
     ///
+    #[track_caller]
     pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));

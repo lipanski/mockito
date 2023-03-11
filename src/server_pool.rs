@@ -46,9 +46,11 @@ impl DerefMut for ServerGuard {
 
 impl Drop for ServerGuard {
     fn drop(&mut self) {
-        if let Some(server) = self.server.take() {
-            SERVER_POOL.recycle(server);
-        }
+        futures::executor::block_on(async {
+            if let Some(server) = self.server.take() {
+                SERVER_POOL.recycle_async(server).await;
+            }
+        });
     }
 }
 
@@ -72,7 +74,7 @@ impl ServerPool {
         }
     }
 
-    pub(crate) async fn get(&'static self) -> Result<ServerGuard, Error> {
+    pub(crate) async fn get_async(&'static self) -> Result<ServerGuard, Error> {
         let permit = self
             .semaphore
             .acquire()
@@ -94,10 +96,10 @@ impl ServerPool {
         }
     }
 
-    fn recycle(&'static self, mut server: Server) {
-        server.reset();
+    async fn recycle_async(&'static self, mut server: Server) {
+        server.reset_async().await;
         let state_mutex = self.state.clone();
-        let mut state = state_mutex.blocking_lock();
+        let mut state = state_mutex.lock().await;
         state.push_back(server);
     }
 }

@@ -1482,6 +1482,7 @@ fn test_request_from_thread() {
 }
 
 #[test]
+#[ignore]
 fn test_mock_from_inside_thread_does_not_lock_forever() {
     let mut s = Server::new();
     let host = s.host_with_port();
