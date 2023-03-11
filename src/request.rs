@@ -60,7 +60,7 @@ impl Request {
     pub fn body(&self) -> Result<&Vec<u8>, Error> {
         self.body
             .as_ref()
-            .ok_or(Error::new(ErrorKind::RequestBodyFailure))
+            .ok_or_else(|| Error::new(ErrorKind::RequestBodyFailure))
     }
 
     /// Reads the body (if it hasn't been read already) and returns it
@@ -95,7 +95,7 @@ impl Request {
 
         if let Some(body) = &self.body {
             if !body.is_empty() {
-                formatted.push_str(&format!("{}\r\n", &String::from_utf8_lossy(&body)));
+                formatted.push_str(&format!("{}\r\n", &String::from_utf8_lossy(body)));
             }
         }
 
