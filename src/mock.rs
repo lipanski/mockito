@@ -319,15 +319,26 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_body_from_fn(|w| w.write_all(b"hello world"));
+    /// let _m = s.mock("GET", "/").with_chunked_body(|w| w.write_all(b"hello world"));
     /// ```
     ///
-    pub fn with_body_from_fn(
+    pub fn with_chunked_body(
         mut self,
         callback: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
     ) -> Self {
         self.inner.response.body = Body::FnWithWriter(Arc::new(callback));
         self
+    }
+
+    ///
+    /// **DEPRECATED:** Replaced by `Mock::with_chunked_body`.
+    ///
+    #[deprecated(since = "1.0.0", note = "Use `Mock::with_chunked_body` instead")]
+    pub fn with_body_from_fn(
+        self,
+        callback: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
+    ) -> Self {
+        self.with_chunked_body(callback)
     }
 
     ///

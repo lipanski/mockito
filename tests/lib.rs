@@ -625,7 +625,7 @@ fn test_mock_with_fn_body() {
     let mut s = Server::new();
     let _m = s
         .mock("GET", "/")
-        .with_body_from_fn(|w| {
+        .with_chunked_body(|w| {
             w.write_all(b"hel")?;
             w.write_all(b"lo")
         })
