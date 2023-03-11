@@ -22,9 +22,10 @@ or offline work. Mockito runs a local pool of HTTP servers which create, deliver
 - Checks that a mock was called (spy)
 - Mocks multiple hosts at the same time
 - Exposes sync and async interfaces
-- Prints out the last unmatched request in case of errors
+- Prints out a colored diff of the last unmatched request in case of errors
 - Simple, intuitive API
 - An awesome logo
+
 
 The full documentation is available at <https://docs.rs/mockito>.
 
@@ -59,6 +60,10 @@ fn test_something() {
     m.assert();
 }
 ```
+
+If `Mock::assert` fails, a colored diff of the last unmatched request is displayed:
+
+![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 
 Use **matchers** to handle requests to the same endpoint in a different way:
 

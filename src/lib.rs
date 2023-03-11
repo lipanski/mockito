@@ -15,7 +15,7 @@
 //! - Checks that a mock was called (spy)
 //! - Mocks multiple hosts at the same time
 //! - Exposes sync and async interfaces
-//! - Prints out the last unmatched request in case of errors
+//! - Prints out a colored diff of the last unmatched request in case of errors
 //! - Simple, intuitive API
 //! - An awesome logo
 //!
@@ -51,6 +51,10 @@
 //!   }
 //! }
 //! ```
+//!
+//! If `Mock::assert` fails, a colored diff of the last unmatched request is displayed:
+//!
+//! ![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 //!
 //! Use **matchers** to handle requests to the same endpoint in a different way:
 //!
@@ -153,9 +157,12 @@
 //! - `Mock::matched_async`
 //! - `Server::reset_async`
 //!
-//! ...otherwise your tests will not compile and you'll see this error: `Cannot start a runtime from within a runtime`.
+//! ...otherwise your tests will not compile and you'll see the following error:
 //!
-//! When using tokio, prefer the single-threaded runtime over the multi-threaded one.
+//! ```text
+//! Cannot block the current thread from within a runtime.
+//! This happens because a function attempted to block the current thread while the thread is being used to drive asynchronous tasks.
+//! ```
 //!
 //! # Matchers
 //!
@@ -531,7 +538,9 @@
 //!
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
-//! a missing or incomplete mock. A colored diff is also displayed.
+//! a missing or incomplete mock. A colored diff is also displayed:
+//!
+//! ![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 //!
 //! Color output is enabled by default, but can be toggled with the `color` feature flag.
 //!
