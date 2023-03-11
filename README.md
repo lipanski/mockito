@@ -6,7 +6,6 @@
     <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.65.0-orange">
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/d/mockito"></a>
     <a href="https://github.com/lipanski/mockito/actions/workflows/tests.yml/?branch=master"><img src="https://github.com/lipanski/mockito/actions/workflows/tests.yml/badge.svg?branch=master"></a>
-    <a href="https://ci.appveyor.com/project/lipanski/mockito"><img src="https://ci.appveyor.com/api/projects/status/github/lipanski/mockito?branch=master&svg=true"></a>
   </p>
   <p align="center"><em>HTTP mocking for Rust!</em></p>
 </p>
