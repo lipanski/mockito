@@ -647,7 +647,6 @@
 //!
 pub use error::{Error, ErrorKind};
 #[allow(deprecated)]
-pub use legacy::{mock, reset, server_address, server_url};
 pub use matcher::Matcher;
 pub use mock::Mock;
 pub use request::Request;
@@ -656,7 +655,6 @@ pub use server_pool::ServerGuard;
 
 mod diff;
 mod error;
-mod legacy;
 mod matcher;
 mod mock;
 mod request;
