@@ -58,6 +58,10 @@ jobs:
     name: Test on Windows
     runs-on: windows-latest
     steps:
+    # The Windows runners have autocrlf enabled by default
+    # which causes failures for some of the line-ending sensitive tests
+    - name: disable git eol translation
+      run: git config --global core.autocrlf false
     - uses: actions/checkout@v3
     - name: Install Rustup using win.rustup.rs
       run: |
