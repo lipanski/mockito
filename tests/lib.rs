@@ -1482,22 +1482,28 @@ fn test_request_from_thread() {
 }
 
 #[test]
-#[ignore]
 fn test_mock_from_inside_thread_does_not_lock_forever() {
-    let mut s = Server::new();
-    let host = s.host_with_port();
-    let _mock_outside_thread = s.mock("GET", "/").with_body("outside").create();
+    let server = Arc::new(Mutex::new(Server::new()));
+    let host;
+    let _mock_outside_thread;
 
-    let server_mutex = Arc::new(Mutex::new(s));
-    let server_clone = server_mutex;
+    {
+        let s1_mutex = server.clone();
+        let mut s1 = s1_mutex.lock().unwrap();
+        host = s1.host_with_port();
+        _mock_outside_thread = s1.mock("GET", "/").with_body("outside").create();
+    }
+
+    let s2_mutex = server.clone();
     let process = thread::spawn(move || {
-        let mut s = server_clone.lock().unwrap();
-        let _mock_inside_thread = s.mock("GET", "/").with_body("inside").create();
+        let mut s2 = s2_mutex.lock().unwrap();
+        let _mock_inside_thread = s2.mock("GET", "/").with_body("inside").create();
     });
 
     process.join().unwrap();
 
-    let (_, _, body) = request(&host, "GET /", "");
+    let (status_line, _, body) = request(&host, "GET /", "");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
     assert_eq!("outside", body);
 }
 
