@@ -54,3 +54,25 @@ jobs:
       - name: Test
         run: cargo test --no-default-features
 
+  test-windows:
+    name: Test on Windows
+    runs-on: windows-latest
+    steps:
+    # The Windows runners have autocrlf enabled by default
+    # which causes failures for some of rustfmt's line-ending sensitive tests
+    - name: disable git eol translation
+      run: git config --global core.autocrlf false
+    - name: checkout
+      uses: actions/checkout@v3
+    - name: Install Rustup using win.rustup.rs
+      run: |
+        # Disable the download progress bar which can cause perf issues
+        $ProgressPreference = "SilentlyContinue"
+        Invoke-WebRequest https://win.rustup.rs/ -OutFile rustup-init.exe
+        .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc --default-toolchain=none
+        del rustup-init.exe
+        rustup target add x86_64-pc-windows-msvc
+      shell: powershell
+    - name: Build and Test
+      shell: cmd
+      run: ci\build_and_test.bat
