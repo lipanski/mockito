@@ -10,7 +10,10 @@ use hyper::{Body, Request as HyperRequest, Response, StatusCode};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::thread;
-use tokio::sync::RwLock;
+use tokio::net::TcpListener;
+use tokio::runtime;
+use tokio::sync::{oneshot, RwLock};
+use tokio::task::{spawn_local, LocalSet};
 
 #[derive(Clone, Debug)]
 pub(crate) struct RemoteMock {
@@ -196,8 +199,8 @@ impl Server {
     pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = tokio::sync::oneshot::channel::<String>();
-        let runtime = tokio::runtime::Builder::new_current_thread()
+        let (address_sender, address_receiver) = oneshot::channel::<String>();
+        let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("Cannot build local tokio runtime");
@@ -205,9 +208,7 @@ impl Server {
         let state_clone = state.clone();
         thread::spawn(move || {
             let server = Server::bind_server(address, address_sender, state_clone);
-            tokio::task::LocalSet::new()
-                .block_on(&runtime, server)
-                .unwrap();
+            LocalSet::new().block_on(&runtime, server).unwrap();
         });
 
         let address = address_receiver
@@ -225,8 +226,8 @@ impl Server {
     pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = tokio::sync::oneshot::channel::<String>();
-        let runtime = tokio::runtime::Builder::new_current_thread()
+        let (address_sender, address_receiver) = oneshot::channel::<String>();
+        let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("Cannot build local tokio runtime");
@@ -234,9 +235,7 @@ impl Server {
         let state_clone = state.clone();
         thread::spawn(move || {
             let server = Server::bind_server(address, address_sender, state_clone);
-            tokio::task::LocalSet::new()
-                .block_on(&runtime, server)
-                .unwrap();
+            LocalSet::new().block_on(&runtime, server).unwrap();
         });
 
         let address = address_receiver
@@ -250,10 +249,10 @@ impl Server {
 
     async fn bind_server(
         address: SocketAddr,
-        address_sender: tokio::sync::oneshot::Sender<String>,
+        address_sender: oneshot::Sender<String>,
         state: Arc<RwLock<State>>,
     ) -> Result<(), Error> {
-        let listener = tokio::net::TcpListener::bind(address)
+        let listener = TcpListener::bind(address)
             .await
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
@@ -266,7 +265,7 @@ impl Server {
         while let Ok((stream, _)) = listener.accept().await {
             let mutex = state.clone();
 
-            tokio::task::spawn_local(async move {
+            spawn_local(async move {
                 let _ = Http::new()
                     .serve_connection(
                         stream,
