@@ -60,7 +60,7 @@ impl Request {
     pub fn body(&self) -> Result<&Vec<u8>, Error> {
         self.body
             .as_ref()
-            .ok_or(Error::new(ErrorKind::RequestBodyFailure))
+            .ok_or_else(|| Error::new(ErrorKind::RequestBodyFailure))
     }
 
     /// Reads the body (if it hasn't been read already) and returns it
@@ -78,8 +78,7 @@ impl Request {
         self.body.as_ref().unwrap()
     }
 
-    #[allow(clippy::wrong_self_convention)]
-    pub(crate) async fn to_string(&mut self) -> String {
+    pub(crate) fn formatted(&self) -> String {
         let mut formatted = format!(
             "\r\n{} {}\r\n",
             &self.inner.method(),
@@ -94,10 +93,10 @@ impl Request {
             ));
         }
 
-        let body = self.read_body().await;
-
-        if !body.is_empty() {
-            formatted.push_str(&format!("{}\r\n", &String::from_utf8_lossy(body)));
+        if let Some(body) = &self.body {
+            if !body.is_empty() {
+                formatted.push_str(&format!("{}\r\n", &String::from_utf8_lossy(body)));
+            }
         }
 
         formatted

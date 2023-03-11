@@ -50,6 +50,8 @@ pub enum ErrorKind {
     ServerFailure,
     /// The server is busy
     ServerBusy,
+    /// A lock can't be bypassed
+    Deadlock,
     /// Could not deliver a response
     ResponseFailure,
     /// The status code is invalid or out of range
@@ -67,6 +69,7 @@ impl ErrorKind {
         match self {
             ErrorKind::ServerFailure => "the server is not running",
             ErrorKind::ServerBusy => "the server is busy",
+            ErrorKind::Deadlock => "a lock can't be bypassed",
             ErrorKind::ResponseFailure => "could not deliver a response",
             ErrorKind::InvalidStatusCode => "invalid status code",
             ErrorKind::RequestBodyFailure => "failed to read the request body",

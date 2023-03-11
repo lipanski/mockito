@@ -637,16 +637,14 @@
 //! ```
 //!
 pub use error::{Error, ErrorKind};
-use lazy_static::lazy_static;
 #[allow(deprecated)]
 pub use legacy::{mock, reset, server_address, server_url};
 pub use matcher::Matcher;
 pub use mock::Mock;
 pub use request::Request;
-pub use server::{Server, ServerGuard};
-use tokio::runtime::Runtime;
+pub use server::Server;
+pub use server_pool::ServerGuard;
 
-mod command;
 mod diff;
 mod error;
 mod legacy;
@@ -655,10 +653,4 @@ mod mock;
 mod request;
 mod response;
 mod server;
-
-lazy_static! {
-    pub(crate) static ref RUNTIME: Runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("couldn't start tokio runtime");
-}
+mod server_pool;

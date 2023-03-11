@@ -1,8 +1,8 @@
-use crate::command::Command;
 use crate::diff;
 use crate::matcher::{Matcher, PathAndQueryMatcher};
 use crate::response::{Body, Response};
 use crate::server::RemoteMock;
+use crate::server::State;
 use crate::Request;
 use crate::{Error, ErrorKind};
 use hyper::StatusCode;
@@ -15,7 +15,7 @@ use std::ops::Drop;
 use std::path::Path;
 use std::string::ToString;
 use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::RwLock;
 
 #[derive(Clone, Debug)]
 pub struct InnerMock {
@@ -94,14 +94,14 @@ impl PartialEq for InnerMock {
 ///
 #[derive(Debug)]
 pub struct Mock {
-    sender: Sender<Command>,
+    state: Arc<RwLock<State>>,
     inner: InnerMock,
     /// Used to warn of mocks missing a `.create()` call. See issue #112
     created: bool,
 }
 
 impl Mock {
-    pub(crate) fn new<P: Into<Matcher>>(sender: Sender<Command>, method: &str, path: P) -> Mock {
+    pub(crate) fn new<P: Into<Matcher>>(state: Arc<RwLock<State>>, method: &str, path: P) -> Mock {
         let inner = InnerMock {
             id: thread_rng()
                 .sample_iter(&Alphanumeric)
@@ -119,7 +119,7 @@ impl Mock {
         };
 
         Self {
-            sender,
+            state,
             inner,
             created: false,
         }
@@ -429,58 +429,36 @@ impl Mock {
     ///
     #[track_caller]
     pub fn assert(&self) {
-        crate::RUNTIME.block_on(async { self.assert_async().await })
+        let mutex = self.state.clone();
+        let state = mutex.blocking_read();
+        if let Some(hits) = state.get_mock_hits(self.inner.id.clone()) {
+            let matched = self.matched_hits(hits);
+            let message = if !matched {
+                let last_request = state.get_last_unmatched_request();
+                self.build_assert_message(hits, last_request)
+            } else {
+                String::default()
+            };
+
+            assert!(matched, "{}", message)
+        } else {
+            panic!("could not retrieve enough information about the remote mock")
+        }
     }
 
     ///
     /// Same as `Mock::assert` but async.
     ///
     pub async fn assert_async(&self) {
-        if let Some(hits) = Command::get_mock_hits(&self.sender, self.inner.id.clone()).await {
-            let mut message = match (
-                self.inner.expected_hits_at_least,
-                self.inner.expected_hits_at_most,
-            ) {
-                (Some(min), Some(max)) if min == max => format!(
-                    "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
-                    min, self, hits
-                ),
-                (Some(min), Some(max)) => format!(
-                    "\n> Expected between {} and {} request(s) to:\n{}\n...but received {}\n\n",
-                    min, max, self, hits
-                ),
-                (Some(min), None) => format!(
-                    "\n> Expected at least {} request(s) to:\n{}\n...but received {}\n\n",
-                    min, self, hits
-                ),
-                (None, Some(max)) => format!(
-                    "\n> Expected at most {} request(s) to:\n{}\n...but received {}\n\n",
-                    max, self, hits
-                ),
-                (None, None) => format!(
-                    "\n> Expected 1 request(s) to:\n{}\n...but received {}\n\n",
-                    self, hits
-                ),
-            };
-
-            if let Some(last_request) = Command::get_last_unmatched_request(&self.sender).await {
-                message.push_str(&format!(
-                    "> The last unmatched request was:\n{}\n",
-                    last_request
-                ));
-
-                let difference = diff::compare(&self.to_string(), &last_request);
-                message.push_str(&format!("> Difference:\n{}\n", difference));
-            }
-
-            let matched = match (
-                self.inner.expected_hits_at_least,
-                self.inner.expected_hits_at_most,
-            ) {
-                (Some(min), Some(max)) => hits >= min && hits <= max,
-                (Some(min), None) => hits >= min,
-                (None, Some(max)) => hits <= max,
-                (None, None) => hits == 1,
+        let mutex = self.state.clone();
+        let state = mutex.read().await;
+        if let Some(hits) = state.get_mock_hits(self.inner.id.clone()) {
+            let matched = self.matched_hits(hits);
+            let message = if !matched {
+                let last_request = state.get_last_unmatched_request();
+                self.build_assert_message(hits, last_request)
+            } else {
+                String::default()
             };
 
             assert!(matched, "{}", message)
@@ -493,26 +471,26 @@ impl Mock {
     /// Returns whether the expected amount of requests (defaults to 1) were performed.
     ///
     pub fn matched(&self) -> bool {
-        crate::RUNTIME.block_on(async { self.matched_async().await })
+        let mutex = self.state.clone();
+        let state = mutex.blocking_read();
+        let Some(hits) = state.get_mock_hits(self.inner.id.clone()) else {
+            return false;
+        };
+
+        self.matched_hits(hits)
     }
 
     ///
     /// Same as `Mock::matched` but async.
     ///
     pub async fn matched_async(&self) -> bool {
-        let Some(hits) = Command::get_mock_hits(&self.sender, self.inner.id.clone()).await else {
+        let mutex = self.state.clone();
+        let state = mutex.read().await;
+        let Some(hits) = state.get_mock_hits(self.inner.id.clone()) else {
             return false;
         };
 
-        match (
-            self.inner.expected_hits_at_least,
-            self.inner.expected_hits_at_most,
-        ) {
-            (Some(min), Some(max)) => hits >= min && hits <= max,
-            (Some(min), None) => hits >= min,
-            (None, Some(max)) => hits <= max,
-            (None, None) => hits == 1,
-        }
+        self.matched_hits(hits)
     }
 
     ///
@@ -527,8 +505,15 @@ impl Mock {
     /// ```
     ///
     #[must_use]
-    pub fn create(self) -> Mock {
-        crate::RUNTIME.block_on(async { self.create_async().await })
+    pub fn create(mut self) -> Mock {
+        let remote_mock = RemoteMock::new(self.inner.clone());
+        let state = self.state.clone();
+        let mut state = state.blocking_write();
+        state.mocks.push(remote_mock);
+
+        self.created = true;
+
+        self
     }
 
     ///
@@ -536,28 +521,81 @@ impl Mock {
     ///
     pub async fn create_async(mut self) -> Mock {
         let remote_mock = RemoteMock::new(self.inner.clone());
-        let created = Command::create_mock(&self.sender, remote_mock).await;
+        let state = self.state.clone();
+        let mut state = state.write().await;
+        state.mocks.push(remote_mock);
 
-        self.created = created;
+        self.created = true;
 
         self
+    }
+
+    fn matched_hits(&self, hits: usize) -> bool {
+        match (
+            self.inner.expected_hits_at_least,
+            self.inner.expected_hits_at_most,
+        ) {
+            (Some(min), Some(max)) => hits >= min && hits <= max,
+            (Some(min), None) => hits >= min,
+            (None, Some(max)) => hits <= max,
+            (None, None) => hits == 1,
+        }
+    }
+
+    fn build_assert_message(&self, hits: usize, last_request: Option<String>) -> String {
+        let mut message = match (
+            self.inner.expected_hits_at_least,
+            self.inner.expected_hits_at_most,
+        ) {
+            (Some(min), Some(max)) if min == max => format!(
+                "\n> Expected {} request(s) to:\n{}\n...but received {}\n\n",
+                min, self, hits
+            ),
+            (Some(min), Some(max)) => format!(
+                "\n> Expected between {} and {} request(s) to:\n{}\n...but received {}\n\n",
+                min, max, self, hits
+            ),
+            (Some(min), None) => format!(
+                "\n> Expected at least {} request(s) to:\n{}\n...but received {}\n\n",
+                min, self, hits
+            ),
+            (None, Some(max)) => format!(
+                "\n> Expected at most {} request(s) to:\n{}\n...but received {}\n\n",
+                max, self, hits
+            ),
+            (None, None) => format!(
+                "\n> Expected 1 request(s) to:\n{}\n...but received {}\n\n",
+                self, hits
+            ),
+        };
+
+        if let Some(last_request) = last_request {
+            message.push_str(&format!(
+                "> The last unmatched request was:\n{}\n",
+                last_request
+            ));
+
+            let difference = diff::compare(&self.to_string(), &last_request);
+            message.push_str(&format!("> Difference:\n{}\n", difference));
+        }
+
+        message
     }
 }
 
 impl Drop for Mock {
     fn drop(&mut self) {
-        let sender = self.sender.clone();
-        let id = self.inner.id.clone();
+        futures::executor::block_on(async {
+            let mutex = self.state.clone();
+            let mut state = mutex.write().await;
+            state.remove_mock(self.inner.id.clone());
 
-        crate::RUNTIME.spawn_blocking(move || {
-            Command::remove_mock(&sender, id);
-        });
+            log::debug!("Mock::drop() called for {}", self);
 
-        log::debug!("Mock::drop() called for {}", self);
-
-        if !self.created {
-            log::warn!("Missing .create() call on mock {}", self);
-        }
+            if !self.created {
+                log::warn!("Missing .create() call on mock {}", self);
+            }
+        })
     }
 }
 
