@@ -1,4 +1,3 @@
-use crate::command::Command;
 use crate::mock::InnerMock;
 use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
@@ -11,7 +10,6 @@ use hyper::{Body, Request as HyperRequest, Response, StatusCode};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::thread;
-use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::sync::RwLock;
 
 #[derive(Clone, Debug)]
@@ -80,6 +78,33 @@ impl State {
             unmatched_requests: vec![],
         }
     }
+
+    pub(crate) fn get_mock_hits(&self, mock_id: String) -> Option<usize> {
+        self.mocks
+            .iter()
+            .find(|remote_mock| remote_mock.inner.id == mock_id)
+            .map(|remote_mock| remote_mock.inner.hits)
+    }
+
+    pub(crate) fn remove_mock(&mut self, mock_id: String) -> bool {
+        if let Some(pos) = self
+            .mocks
+            .iter()
+            .position(|remote_mock| remote_mock.inner.id == mock_id)
+        {
+            self.mocks.remove(pos);
+        }
+
+        true
+    }
+
+    pub(crate) fn get_last_unmatched_request(&self) -> Option<String> {
+        if let Some(req) = self.unmatched_requests.last() {
+            Some(req.to_string())
+        } else {
+            None
+        }
+    }
 }
 
 ///
@@ -106,7 +131,6 @@ impl State {
 pub struct Server {
     address: String,
     state: Arc<RwLock<State>>,
-    sender: Sender<Command>,
 }
 
 impl Server {
@@ -119,29 +143,34 @@ impl Server {
     ///
     #[allow(clippy::new_ret_no_self)]
     #[track_caller]
-    pub fn new() -> ServerGuard {
+    pub fn new() -> Server {
         Server::try_new().unwrap()
     }
 
     ///
     /// Same as `Server::new` but async.
     ///
-    pub async fn new_async() -> ServerGuard {
-        crate::server_pool::SERVER_POOL.get().await.unwrap()
+    pub async fn new_async() -> Server {
+        Server::try_new_async().await.unwrap()
+        // crate::server_pool::SERVER_POOL.get().await.unwrap()
     }
 
     ///
     /// Same as `Server::new` but won't panic on failure.
     ///
-    pub(crate) fn try_new() -> Result<ServerGuard, Error> {
-        crate::RUNTIME.block_on(async { Server::try_new_async().await })
+    pub(crate) fn try_new() -> Result<Server, Error> {
+        Server::try_new_with_port(0)
     }
 
     ///
     /// Same as `Server::try_new` but async.
     ///
-    pub(crate) async fn try_new_async() -> Result<ServerGuard, Error> {
-        crate::server_pool::SERVER_POOL.get().await
+    pub(crate) async fn try_new_async() -> Result<Server, Error> {
+        // crate::server_pool::SERVER_POOL.get().await
+        let server = Server::try_new_with_port_async(0)
+            .await
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+        Ok(server)
     }
 
     ///
@@ -166,7 +195,29 @@ impl Server {
     /// Same as `Server::new_with_port` but won't panic on failure.
     ///
     pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
-        crate::RUNTIME.block_on(async { Server::try_new_with_port_async(port).await })
+        let state = Arc::new(RwLock::new(State::new()));
+        let address = SocketAddr::from(([127, 0, 0, 1], port));
+        let (address_sender, address_receiver) = tokio::sync::oneshot::channel::<String>();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Cannot build local tokio runtime");
+
+        let state_clone = state.clone();
+        thread::spawn(move || {
+            let server = Server::bind_server(address, address_sender, state_clone);
+            tokio::task::LocalSet::new()
+                .block_on(&runtime, server)
+                .unwrap();
+        });
+
+        let address = address_receiver
+            .blocking_recv()
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+
+        let server = Server { address, state };
+
+        Ok(server)
     }
 
     ///
@@ -175,7 +226,34 @@ impl Server {
     pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
+        let (address_sender, address_receiver) = tokio::sync::oneshot::channel::<String>();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Cannot build local tokio runtime");
 
+        let state_clone = state.clone();
+        thread::spawn(move || {
+            let server = Server::bind_server(address, address_sender, state_clone);
+            tokio::task::LocalSet::new()
+                .block_on(&runtime, server)
+                .unwrap();
+        });
+
+        let address = address_receiver
+            .await
+            .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
+
+        let server = Server { address, state };
+
+        Ok(server)
+    }
+
+    async fn bind_server(
+        address: SocketAddr,
+        address_sender: tokio::sync::oneshot::Sender<String>,
+        state: Arc<RwLock<State>>,
+    ) -> Result<(), Error> {
         let listener = tokio::net::TcpListener::bind(address)
             .await
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
@@ -184,37 +262,24 @@ impl Server {
             .local_addr()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
-        let mutex = state.clone();
-        let server = async move {
-            while let Ok((stream, _)) = listener.accept().await {
-                let mutex = mutex.clone();
+        address_sender.send(address.to_string()).unwrap();
 
-                tokio::spawn(async move {
-                    let _ = Http::new()
-                        .serve_connection(
-                            stream,
-                            service_fn(move |request: HyperRequest<Body>| {
-                                handle_request(request, mutex.clone())
-                            }),
-                        )
-                        .await;
-                });
-            }
-        };
+        while let Ok((stream, _)) = listener.accept().await {
+            let mutex = state.clone();
 
-        thread::spawn(move || crate::RUNTIME.block_on(server));
+            tokio::task::spawn_local(async move {
+                let _ = Http::new()
+                    .serve_connection(
+                        stream,
+                        service_fn(move |request: HyperRequest<Body>| {
+                            handle_request(request, mutex.clone())
+                        }),
+                    )
+                    .await;
+            });
+        }
 
-        let (sender, receiver) = mpsc::channel(32);
-
-        let mut server = Server {
-            address: address.to_string(),
-            state,
-            sender,
-        };
-
-        server.accept_commands(receiver).await;
-
-        Ok(server)
+        Ok(())
     }
 
     ///
@@ -233,7 +298,7 @@ impl Server {
     /// ```
     ///
     pub fn mock<P: Into<Matcher>>(&mut self, method: &str, path: P) -> Mock {
-        Mock::new(self.sender.clone(), method, path)
+        Mock::new(self.state.clone(), method, path)
     }
 
     ///
@@ -255,7 +320,10 @@ impl Server {
     /// Removes all the mocks stored on the server.
     ///
     pub fn reset(&mut self) {
-        crate::RUNTIME.block_on(async { self.reset_async().await });
+        let state = self.state.clone();
+        let mut state = state.blocking_write();
+        state.mocks.clear();
+        state.unmatched_requests.clear();
     }
 
     ///
@@ -267,18 +335,6 @@ impl Server {
         state.mocks.clear();
         state.unmatched_requests.clear();
     }
-
-    async fn accept_commands(&mut self, mut receiver: Receiver<Command>) {
-        let state = self.state.clone();
-        tokio::spawn(async move {
-            while let Some(cmd) = receiver.recv().await {
-                let state = state.clone();
-                Command::handle(cmd, state).await;
-            }
-        });
-
-        log::debug!("Server is accepting commands");
-    }
 }
 
 async fn handle_request(
@@ -286,7 +342,8 @@ async fn handle_request(
     state: Arc<RwLock<State>>,
 ) -> Result<Response<Body>, Error> {
     let mut request = Request::new(hyper_request);
-    log::debug!("Request received: {}", request.to_string().await);
+    request.read_body().await;
+    log::debug!("Request received: {}", request.to_string());
 
     let mutex = state.clone();
     let mut state = mutex.write().await;

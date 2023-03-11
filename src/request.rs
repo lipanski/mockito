@@ -78,8 +78,7 @@ impl Request {
         self.body.as_ref().unwrap()
     }
 
-    #[allow(clippy::wrong_self_convention)]
-    pub(crate) async fn to_string(&mut self) -> String {
+    pub(crate) fn to_string(&self) -> String {
         let mut formatted = format!(
             "\r\n{} {}\r\n",
             &self.inner.method(),
@@ -94,10 +93,10 @@ impl Request {
             ));
         }
 
-        let body = self.read_body().await;
-
-        if !body.is_empty() {
-            formatted.push_str(&format!("{}\r\n", &String::from_utf8_lossy(body)));
+        if let Some(body) = &self.body {
+            if !body.is_empty() {
+                formatted.push_str(&format!("{}\r\n", &String::from_utf8_lossy(&body)));
+            }
         }
 
         formatted

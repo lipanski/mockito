@@ -47,9 +47,7 @@ impl DerefMut for ServerGuard {
 impl Drop for ServerGuard {
     fn drop(&mut self) {
         if let Some(server) = self.server.take() {
-            crate::RUNTIME.spawn_blocking(move || {
-                SERVER_POOL.recycle(server);
-            });
+            SERVER_POOL.recycle(server);
         }
     }
 }
