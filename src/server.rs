@@ -7,7 +7,9 @@ use futures::stream::{self, StreamExt};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::{Body, Request as HyperRequest, Response, StatusCode};
+use std::fmt;
 use std::net::SocketAddr;
+use std::ops::Drop;
 use std::sync::Arc;
 use std::thread;
 use tokio::net::TcpListener;
@@ -332,6 +334,21 @@ impl Server {
         let mut state = state.write().await;
         state.mocks.clear();
         state.unmatched_requests.clear();
+    }
+}
+
+impl Drop for Server {
+    fn drop(&mut self) {
+        futures::executor::block_on(async {
+            log::debug!("Server::drop() called for {}", self);
+            self.reset_async().await;
+        });
+    }
+}
+
+impl fmt::Display for Server {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&format!("server {}", self.host_with_port()))
     }
 }
 

@@ -45,7 +45,7 @@ fn test_something() {
     let url = server.url();
 
     // Create a mock
-    let m = server.mock("GET", "/hello")
+    let mock = server.mock("GET", "/hello")
       .with_status(201)
       .with_header("content-type", "text/plain")
       .with_header("x-api-key", "1234")
@@ -56,7 +56,7 @@ fn test_something() {
     // `content-type: text/plain` header and the body "world".
 
     // You can use `Mock::assert` to verify that your mock was called
-    m.assert();
+    mock.assert();
 }
 ```
 
@@ -71,7 +71,7 @@ Use **matchers** to handle requests to the same endpoint in a different way:
 fn test_something() {
     let mut server = mockito::Server::new();
 
-    let m1 = server.mock("GET", "/greetings")
+    server.mock("GET", "/greetings")
       .match_header("content-type", "application/json")
       .match_body(mockito::Matcher::PartialJsonString(
           "{\"greeting\": \"hello\"}".to_string(),
@@ -79,7 +79,7 @@ fn test_something() {
       .with_body("hello json")
       .create();
 
-    let m2 = server.mock("GET", "/greetings")
+    server.mock("GET", "/greetings")
       .match_header("content-type", "application/text")
       .match_body(mockito::Matcher::Regex("greeting=hello".to_string()))
       .with_body("hello text")
