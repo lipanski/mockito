@@ -15,7 +15,7 @@
 //! - Checks that a mock was called (spy)
 //! - Mocks multiple hosts at the same time
 //! - Exposes sync and async interfaces
-//! - Prints out the last unmatched request in case of errors
+//! - Prints out a colored diff of the last unmatched request in case of errors
 //! - Simple, intuitive API
 //! - An awesome logo
 //!
@@ -36,7 +36,7 @@
 //!     let url = server.url();
 //!
 //!     // Create a mock
-//!     let _m = server.mock("GET", "/hello")
+//!     let mock = server.mock("GET", "/hello")
 //!       .with_status(201)
 //!       .with_header("content-type", "text/plain")
 //!       .with_header("x-api-key", "1234")
@@ -47,10 +47,14 @@
 //!     // `content-type: text/plain` header and the body "world".
 //!
 //!     // You can use `Mock::assert` to verify that your mock was called
-//!     // m.assert();
+//!     // mock.assert();
 //!   }
 //! }
 //! ```
+//!
+//! If `Mock::assert` fails, a colored diff of the last unmatched request is displayed:
+//!
+//! ![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 //!
 //! Use **matchers** to handle requests to the same endpoint in a different way:
 //!
@@ -61,7 +65,7 @@
 //!   fn test_something() {
 //!     let mut server = mockito::Server::new();
 //!
-//!     let m1 = server.mock("GET", "/greetings")
+//!     server.mock("GET", "/greetings")
 //!       .match_header("content-type", "application/json")
 //!       .match_body(mockito::Matcher::PartialJsonString(
 //!           "{\"greeting\": \"hello\"}".to_string(),
@@ -69,7 +73,7 @@
 //!       .with_body("hello json")
 //!       .create();
 //!
-//!     let m2 = server.mock("GET", "/greetings")
+//!     server.mock("GET", "/greetings")
 //!       .match_header("content-type", "application/text")
 //!       .match_body(mockito::Matcher::Regex("greeting=hello".to_string()))
 //!       .with_body("hello text")
@@ -119,27 +123,25 @@
 //!
 //! # Lifetime
 //!
-//! Just like any Rust object, a mock is available only through its lifetime. You'll want to assign
-//! the mocks to variables in order to extend and control their lifetime.
-//!
-//! Avoid using the underscore matcher when creating your mocks, as in `let _ = mock("GET", "/")`.
-//! This will end your mock's lifetime immediately. You can still use the underscore to prefix your variable
-//! names in an assignment, but don't limit it to just this one character.
-//!
-//! ## Example
+//! A mock is available only throughout the lifetime of the server. Once the server goes
+//! out of scope, all mocks defined on that server are removed:
 //!
 //! ```
-//! let mut s = mockito::Server::new();
-//! let _m1 = s.mock("GET", "/long").with_body("hello").create();
+//! let address;
 //!
 //! {
-//!     let _m2 = s.mock("GET", "/short").with_body("hi").create();
+//!     let mut s = mockito::Server::new();
+//!     address = s.host_with_port();
 //!
-//!     // Requests to GET /short will be mocked til here
+//!     s.mock("GET", "/").with_body("hi").create();
+//!
+//!     // Requests to `address` will be responded with "hi" til here
 //! }
 //!
-//! // Requests to GET /long will be mocked til here
+//! // Requests to `address` will fail as of this point
 //! ```
+//!
+//! You can remove individual mocks earlier by calling `Mock::remove`.
 //!
 //! # Async
 //!
@@ -151,11 +153,15 @@
 //! - `Mock::create_async`
 //! - `Mock::assert_async`
 //! - `Mock::matched_async`
+//! - `Mock::remove_async`
 //! - `Server::reset_async`
 //!
-//! ...otherwise your tests will not compile and you'll see this error: `Cannot start a runtime from within a runtime`.
+//! ...otherwise your tests will not compile and you'll see the following error:
 //!
-//! When using tokio, prefer the single-threaded runtime over the multi-threaded one.
+//! ```text
+//! Cannot block the current thread from within a runtime.
+//! This happens because a function attempted to block the current thread while the thread is being used to drive asynchronous tasks.
+//! ```
 //!
 //! # Matchers
 //!
@@ -175,7 +181,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Matched only calls to GET /hello
-//! let _m = s.mock("GET", "/hello").create();
+//! s.mock("GET", "/hello").create();
 //! ```
 //!
 //! You can also match the path partially, by using a regular expression:
@@ -186,7 +192,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match calls to GET /hello/1 and GET /hello/2
-//! let _m = s.mock("GET",
+//! s.mock("GET",
 //!     mockito::Matcher::Regex(r"^/hello/(1|2)$".to_string())
 //!   ).create();
 //! ```
@@ -199,7 +205,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match any GET request
-//! let _m = s.mock("GET", mockito::Matcher::Any).create();
+//! s.mock("GET", mockito::Matcher::Any).create();
 //! ```
 //!
 //! # Matching by query
@@ -214,13 +220,13 @@
 //!
 //! // This will match requests containing the URL-encoded
 //! // query parameter `greeting=good%20day`
-//! let _m1 = s.mock("GET", "/test")
+//! s.mock("GET", "/test")
 //!   .match_query(mockito::Matcher::UrlEncoded("greeting".into(), "good day".into()))
 //!   .create();
 //!
 //! // This will match requests containing the URL-encoded
 //! // query parameters `hello=world` and `greeting=good%20day`
-//! let _m2 = s.mock("GET", "/test")
+//! s.mock("GET", "/test")
 //!   .match_query(mockito::Matcher::AllOf(vec![
 //!     mockito::Matcher::UrlEncoded("hello".into(), "world".into()),
 //!     mockito::Matcher::UrlEncoded("greeting".into(), "good day".into())
@@ -228,7 +234,7 @@
 //!   .create();
 //!
 //! // You can achieve similar results with the regex matcher
-//! let _m3 = s.mock("GET", "/test")
+//! s.mock("GET", "/test")
 //!   .match_query(mockito::Matcher::Regex("hello=world".into()))
 //!   .create();
 //! ```
@@ -244,7 +250,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // This will perform a full match against the query part
-//! let _m = s.mock("GET", "/test?hello=world").create();
+//! s.mock("GET", "/test?hello=world").create();
 //! ```
 //!
 //! # Matching by header
@@ -256,12 +262,12 @@
 //! ```
 //! let mut s = mockito::Server::new();
 //!
-//! let _m1 = s.mock("GET", "/hello")
+//! s.mock("GET", "/hello")
 //!   .match_header("content-type", "application/json")
 //!   .with_body(r#"{"hello": "world"}"#)
 //!   .create();
 //!
-//! let _m2 = s.mock("GET", "/hello")
+//! s.mock("GET", "/hello")
 //!   .match_header("content-type", "text/plain")
 //!   .with_body("world")
 //!   .create();
@@ -277,7 +283,7 @@
 //! ```
 //! let mut s = mockito::Server::new();
 //!
-//! let _m = s.mock("GET", "/hello")
+//! s.mock("GET", "/hello")
 //!   .match_header("content-type", mockito::Matcher::Regex(r".*json.*".to_string()))
 //!   .with_body(r#"{"hello": "world"}"#)
 //!   .create();
@@ -290,7 +296,7 @@
 //! ```
 //! let mut s = mockito::Server::new();
 //!
-//! let _m = s.mock("GET", "/hello")
+//! s.mock("GET", "/hello")
 //!  .match_header("content-type", mockito::Matcher::Any)
 //!  .with_body("something")
 //!  .create();
@@ -307,7 +313,7 @@
 //! ```
 //! let mut s = mockito::Server::new();
 //!
-//! let _m = s.mock("GET", "/hello")
+//! s.mock("GET", "/hello")
 //!   .match_header("authorization", mockito::Matcher::Missing)
 //!   .with_body("no authorization header")
 //!   .create();
@@ -329,7 +335,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match requests to POST / whenever the request body is "hello"
-//! let _m = s.mock("POST", "/").match_body("hello").create();
+//! s.mock("POST", "/").match_body("hello").create();
 //! ```
 //!
 //! Or you can match the body by using a regular expression:
@@ -340,7 +346,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match requests to POST / whenever the request body *contains* the word "hello" (e.g. "hello world")
-//! let _m = s.mock("POST", "/").match_body(
+//! s.mock("POST", "/").match_body(
 //!     mockito::Matcher::Regex("hello".to_string())
 //!   ).create();
 //! ```
@@ -357,7 +363,7 @@
 //! # fn main() {
 //! let mut s = mockito::Server::new();
 //! // Will match requests to POST / whenever the request body matches the json object
-//! let _m = s.mock("POST", "/").match_body(mockito::Matcher::Json(json!({"hello": "world"}))).create();
+//! s.mock("POST", "/").match_body(mockito::Matcher::Json(json!({"hello": "world"}))).create();
 //! # }
 //! ```
 //!
@@ -368,7 +374,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match requests to POST / whenever the request body matches the json object
-//! let _m = s.mock("POST", "/")
+//! s.mock("POST", "/")
 //!     .match_body(
 //!        mockito::Matcher::JsonString(r#"{"hello": "world"}"#.to_string())
 //!     )
@@ -386,7 +392,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match requests to POST / whenever the request body is either `hello=world` or `{"hello":"world"}`
-//! let _m = s.mock("POST", "/")
+//! s.mock("POST", "/")
 //!     .match_body(
 //!         mockito::Matcher::AnyOf(vec![
 //!             mockito::Matcher::Exact("hello=world".to_string()),
@@ -407,7 +413,7 @@
 //! let mut s = mockito::Server::new();
 //!
 //! // Will match requests to POST / whenever the request body contains both `hello` and `world`
-//! let _m = s.mock("POST", "/")
+//! s.mock("POST", "/")
 //!     .match_body(
 //!         mockito::Matcher::AllOf(vec![
 //!             mockito::Matcher::Regex("hello".to_string()),
@@ -531,7 +537,9 @@
 //!
 //! The errors produced by the `assert` method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
-//! a missing or incomplete mock. A colored diff is also displayed.
+//! a missing or incomplete mock. A colored diff is also displayed:
+//!
+//! ![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 //!
 //! Color output is enabled by default, but can be toggled with the `color` feature flag.
 //!
@@ -598,21 +606,33 @@
 //!
 //! # Cleaning up
 //!
-//! As mentioned earlier, mocks are cleaned up at the end of their normal Rust lifetime. However,
-//! you can always use the `reset` method to clean up *all* the mocks registered so far.
-//!
-//! ## Example
+//! As mentioned earlier, mocks are cleaned up whenever the server goes out of scope. If you
+//! need to remove them earlier, you can call `Server::reset` to remove all mocks registered
+//! so far:
 //!
 //! ```
 //! let mut s = mockito::Server::new();
 //!
-//! let _m1 = s.mock("GET", "/1").create();
-//! let _m2 = s.mock("GET", "/2").create();
-//! let _m3 = s.mock("GET", "/3").create();
+//! s.mock("GET", "/1").create();
+//! s.mock("GET", "/2").create();
+//! s.mock("GET", "/3").create();
 //!
 //! s.reset();
 //!
 //! // Nothing is mocked at this point
+//! ```
+//!
+//! ...or you can call `Mock::reset` to remove a single mock:
+//!
+//! ```
+//! let mut s = mockito::Server::new();
+//!
+//! let m1 = s.mock("GET", "/1").create();
+//! let m2 = s.mock("GET", "/2").create();
+//!
+//! m1.remove();
+//!
+//! // Only m2 is available at this point
 //! ```
 //!
 //! # Debug
@@ -638,7 +658,6 @@
 //!
 pub use error::{Error, ErrorKind};
 #[allow(deprecated)]
-pub use legacy::{mock, reset, server_address, server_url};
 pub use matcher::Matcher;
 pub use mock::Mock;
 pub use request::Request;
@@ -647,7 +666,6 @@ pub use server_pool::ServerGuard;
 
 mod diff;
 mod error;
-mod legacy;
 mod matcher;
 mod mock;
 mod request;

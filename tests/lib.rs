@@ -136,7 +136,7 @@ fn request_with_body<S: Display>(
 #[test]
 fn test_create_starts_the_server() {
     let mut s = Server::new();
-    let _m1 = s.mock("GET", "/").with_body("hello").create();
+    s.mock("GET", "/").with_body("hello").create();
 
     let stream = TcpStream::connect(s.host_with_port());
     assert!(stream.is_ok());
@@ -145,7 +145,7 @@ fn test_create_starts_the_server() {
 #[test]
 fn test_simple_route_mock() {
     let mut s = Server::new();
-    let _m1 = s.mock("GET", "/hello").with_body("world").create();
+    s.mock("GET", "/hello").with_body("world").create();
 
     let (status_line, _, body) = request(&s.host_with_port(), "GET /hello", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
@@ -155,8 +155,8 @@ fn test_simple_route_mock() {
 #[test]
 fn test_two_route_mocks() {
     let mut s = Server::new();
-    let _m1 = s.mock("GET", "/a").with_body("aaa").create();
-    let _m2 = s.mock("GET", "/b").with_body("bbb").create();
+    s.mock("GET", "/a").with_body("aaa").create();
+    s.mock("GET", "/b").with_body("bbb").create();
 
     let (_, _, body_a) = request(&s.host_with_port(), "GET /a", "");
     assert_eq!("aaa", body_a);
@@ -168,7 +168,7 @@ fn test_two_route_mocks() {
 #[test]
 fn test_no_match_returns_501() {
     let mut s = Server::new();
-    let _m1 = s.mock("GET", "/").with_body("matched").create();
+    s.mock("GET", "/").with_body("matched").create();
 
     let (status_line, _headers, body) = request(&s.host_with_port(), "GET /nope", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
@@ -178,14 +178,12 @@ fn test_no_match_returns_501() {
 #[test]
 fn test_match_header() {
     let mut s = Server::new();
-    let _m1 = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("content-type", "application/json")
         .with_body("{}")
         .create();
 
-    let _m2 = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("content-type", "text/plain")
         .with_body("hello")
         .create();
@@ -204,8 +202,7 @@ fn test_match_header() {
 #[test]
 fn test_match_header_is_case_insensitive_on_the_field_name() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("content-type", "text/plain")
         .create();
 
@@ -221,8 +218,7 @@ fn test_match_header_is_case_insensitive_on_the_field_name() {
 #[test]
 fn test_match_multiple_headers() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Content-Type", "text/plain")
         .match_header("Authorization", "secret")
         .with_body("matched")
@@ -246,8 +242,7 @@ fn test_match_multiple_headers() {
 #[test]
 fn test_match_header_any_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Content-Type", Matcher::Any)
         .with_body("matched")
         .create();
@@ -259,8 +254,7 @@ fn test_match_header_any_matching() {
 #[test]
 fn test_match_header_any_not_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Content-Type", Matcher::Any)
         .with_body("matched")
         .create();
@@ -272,8 +266,7 @@ fn test_match_header_any_not_matching() {
 #[test]
 fn test_match_header_missing_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Authorization", Matcher::Missing)
         .create();
 
@@ -284,8 +277,7 @@ fn test_match_header_missing_matching() {
 #[test]
 fn test_match_header_missing_not_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Authorization", Matcher::Missing)
         .create();
 
@@ -296,8 +288,7 @@ fn test_match_header_missing_not_matching() {
 #[test]
 fn test_match_header_missing_not_matching_even_when_empty() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Authorization", Matcher::Missing)
         .create();
 
@@ -308,8 +299,7 @@ fn test_match_header_missing_not_matching_even_when_empty() {
 #[test]
 fn test_match_multiple_header_conditions_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Hello", "World")
         .match_header("Content-Type", Matcher::Any)
         .match_header("Authorization", Matcher::Missing)
@@ -326,8 +316,7 @@ fn test_match_multiple_header_conditions_matching() {
 #[test]
 fn test_match_multiple_header_conditions_not_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("hello", "world")
         .match_header("Content-Type", Matcher::Any)
         .match_header("Authorization", Matcher::Missing)
@@ -340,7 +329,7 @@ fn test_match_multiple_header_conditions_not_matching() {
 #[test]
 fn test_match_any_body_by_default() {
     let mut s = Server::new();
-    let _m = s.mock("POST", "/").create();
+    s.mock("POST", "/").create();
 
     let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "hello");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
@@ -349,7 +338,7 @@ fn test_match_any_body_by_default() {
 #[test]
 fn test_match_body() {
     let mut s = Server::new();
-    let _m = s.mock("POST", "/").match_body("hello").create();
+    s.mock("POST", "/").match_body("hello").create();
 
     let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "hello");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
@@ -358,7 +347,7 @@ fn test_match_body() {
 #[test]
 fn test_match_body_not_matching() {
     let mut s = Server::new();
-    let _m = s.mock("POST", "/").match_body("hello").create();
+    s.mock("POST", "/").match_body("hello").create();
 
     let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "bye");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
@@ -367,8 +356,7 @@ fn test_match_body_not_matching() {
 #[test]
 fn test_match_binary_body() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Path::new("./tests/files/test_payload.bin"))
         .create();
 
@@ -390,8 +378,7 @@ fn test_match_binary_body() {
 #[test]
 fn test_does_not_match_binary_body() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Path::new("./tests/files/test_payload.bin"))
         .create();
 
@@ -409,8 +396,7 @@ fn test_does_not_match_binary_body() {
 #[test]
 fn test_match_body_with_regex() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::Regex("hello".to_string()))
         .create();
 
@@ -421,8 +407,7 @@ fn test_match_body_with_regex() {
 #[test]
 fn test_match_body_with_regex_not_matching() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::Regex("hello".to_string()))
         .create();
 
@@ -433,8 +418,7 @@ fn test_match_body_with_regex_not_matching() {
 #[test]
 fn test_match_body_with_json() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::Json(json!({"hello":"world", "foo": "bar"})))
         .create();
 
@@ -450,8 +434,7 @@ fn test_match_body_with_json() {
 #[test]
 fn test_match_body_with_more_headers_with_json() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::Json(json!({"hello":"world", "foo": "bar"})))
         .create();
 
@@ -477,8 +460,7 @@ fn test_match_body_with_more_headers_with_json() {
 #[test]
 fn test_match_body_with_json_order() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::Json(json!({"foo": "bar", "hello": "world"})))
         .create();
 
@@ -494,8 +476,7 @@ fn test_match_body_with_json_order() {
 #[test]
 fn test_match_body_with_json_string() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::JsonString(
             "{\"hello\":\"world\", \"foo\": \"bar\"}".to_string(),
         ))
@@ -513,8 +494,7 @@ fn test_match_body_with_json_string() {
 #[test]
 fn test_match_body_with_json_string_order() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::JsonString(
             "{\"foo\": \"bar\", \"hello\": \"world\"}".to_string(),
         ))
@@ -532,8 +512,7 @@ fn test_match_body_with_json_string_order() {
 #[test]
 fn test_match_body_with_partial_json() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::PartialJson(json!({"hello":"world"})))
         .create();
 
@@ -549,8 +528,7 @@ fn test_match_body_with_partial_json() {
 #[test]
 fn test_match_body_with_partial_json_and_extra_fields() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::PartialJson(json!({"hello":"world", "foo": "bar"})))
         .create();
 
@@ -562,8 +540,7 @@ fn test_match_body_with_partial_json_and_extra_fields() {
 #[test]
 fn test_match_body_with_partial_json_string() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::PartialJsonString(
             "{\"hello\": \"world\"}".to_string(),
         ))
@@ -581,8 +558,7 @@ fn test_match_body_with_partial_json_string() {
 #[test]
 fn test_match_body_with_partial_json_string_and_extra_fields() {
     let mut s = Server::new();
-    let _m = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body(Matcher::PartialJsonString(
             "{\"foo\": \"bar\", \"hello\": \"world\"}".to_string(),
         ))
@@ -596,7 +572,7 @@ fn test_match_body_with_partial_json_string_and_extra_fields() {
 #[test]
 fn test_mock_with_status() {
     let mut s = Server::new();
-    let _m = s.mock("GET", "/").with_status(204).with_body("").create();
+    s.mock("GET", "/").with_status(204).with_body("").create();
 
     let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 204 No Content\r\n", status_line);
@@ -605,7 +581,7 @@ fn test_mock_with_status() {
 #[test]
 fn test_mock_with_custom_status() {
     let mut s = Server::new();
-    let _m = s.mock("GET", "/").with_status(499).with_body("").create();
+    s.mock("GET", "/").with_status(499).with_body("").create();
 
     let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 499 <none>\r\n", status_line);
@@ -614,7 +590,7 @@ fn test_mock_with_custom_status() {
 #[test]
 fn test_mock_with_body() {
     let mut s = Server::new();
-    let _m = s.mock("GET", "/").with_body("hello").create();
+    s.mock("GET", "/").with_body("hello").create();
 
     let (_, _, body) = request(&s.host_with_port(), "GET /", "");
     assert_eq!("hello", body);
@@ -623,9 +599,8 @@ fn test_mock_with_body() {
 #[test]
 fn test_mock_with_fn_body() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
-        .with_body_from_fn(|w| {
+    s.mock("GET", "/")
+        .with_chunked_body(|w| {
             w.write_all(b"hel")?;
             w.write_all(b"lo")
         })
@@ -638,8 +613,7 @@ fn test_mock_with_fn_body() {
 #[test]
 fn test_mock_with_body_from_request() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", Matcher::Any)
+    s.mock("GET", Matcher::Any)
         .with_body_from_request(|request| {
             if request.path() == "/world" {
                 "hello world".into()
@@ -659,8 +633,7 @@ fn test_mock_with_body_from_request() {
 #[test]
 fn test_mock_with_body_from_request_body() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .with_body_from_request(|request| {
             let body = std::str::from_utf8(request.body().unwrap()).unwrap();
             if body == "test" {
@@ -681,8 +654,7 @@ fn test_mock_with_body_from_request_body() {
 #[test]
 fn test_mock_with_header() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .with_header("content-type", "application/json")
         .with_body("{}")
         .create();
@@ -694,8 +666,7 @@ fn test_mock_with_header() {
 #[test]
 fn test_mock_with_multiple_headers() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .with_header("content-type", "application/json")
         .with_header("x-api-key", "1234")
         .with_body("{}")
@@ -720,7 +691,7 @@ fn test_mock_preserves_header_order() {
         expected_headers.push(format!("{}: {}", field, value));
     }
 
-    let _m = mock.create();
+    mock.create();
 
     let (_, headers, _) = request(&s.host_with_port(), "GET /", "");
     let custom_headers: Vec<_> = headers
@@ -732,44 +703,59 @@ fn test_mock_preserves_header_order() {
 }
 
 #[test]
-fn test_going_out_of_context_removes_mock() {
-    let mut s = Server::new();
+fn test_pooled_server_going_out_of_context_removes_all_mocks() {
+    let address;
+
     {
-        let _m = s.mock("GET", "/reset").create();
+        let mut s = Server::new();
+        address = s.host_with_port();
+
+        s.mock("GET", "/reset").create();
 
         let (working_status_line, _, _) = request(&s.host_with_port(), "GET /reset", "");
         assert_eq!("HTTP/1.1 200 OK\r\n", working_status_line);
     }
 
-    let (reset_status_line, _, _) = request(&s.host_with_port(), "GET /reset", "");
+    let (reset_status_line, _, _) = request(address, "GET /reset", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
 }
 
 #[test]
-fn test_going_out_of_context_doesnt_remove_other_mocks() {
-    let mut s = Server::new();
-    let _m1 = s.mock("GET", "/long").create();
+fn test_unpooled_server_going_out_of_context_removes_all_mocks() {
+    let address;
 
     {
-        let _m2 = s.mock("GET", "/short").create();
+        let mut s = Server::new_with_port(0);
+        address = s.host_with_port();
 
-        let (short_status_line, _, _) = request(&s.host_with_port(), "GET /short", "");
-        assert_eq!("HTTP/1.1 200 OK\r\n", short_status_line);
+        s.mock("GET", "/reset").create();
+
+        let (working_status_line, _, _) = request(&s.host_with_port(), "GET /reset", "");
+        assert_eq!("HTTP/1.1 200 OK\r\n", working_status_line);
     }
 
-    let (long_status_line, _, _) = request(&s.host_with_port(), "GET /long", "");
-    assert_eq!("HTTP/1.1 200 OK\r\n", long_status_line);
+    let (reset_status_line, _, _) = request(address, "GET /reset", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", reset_status_line);
+}
+
+#[test]
+fn test_remove_a_single_mock() {
+    let mut s = Server::new();
+
+    let m1 = s.mock("GET", "/").create();
+    m1.remove();
+
+    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 }
 
 #[test]
 fn test_regex_match_path() {
     let mut s = Server::new();
-    let _m1 = s
-        .mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string()))
+    s.mock("GET", Matcher::Regex(r"^/a/\d{1}$".to_string()))
         .with_body("aaa")
         .create();
-    let _m2 = s
-        .mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string()))
+    s.mock("GET", Matcher::Regex(r"^/b/\d{1}$".to_string()))
         .with_body("bbb")
         .create();
 
@@ -789,8 +775,7 @@ fn test_regex_match_path() {
 #[test]
 fn test_regex_match_header() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header(
             "Authorization",
             Matcher::Regex(r"^Bearer token\.\w+$".to_string()),
@@ -816,8 +801,7 @@ fn test_regex_match_header() {
 #[test]
 fn test_any_of_match_header() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header(
             "Via",
             Matcher::AnyOf(vec![
@@ -851,8 +835,7 @@ fn test_any_of_match_header() {
 #[test]
 fn test_any_of_match_body() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_body(Matcher::AnyOf(vec![
             Matcher::Regex("one".to_string()),
             Matcher::Regex("two".to_string()),
@@ -875,8 +858,7 @@ fn test_any_of_match_body() {
 #[test]
 fn test_any_of_missing_match_header() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header(
             "Via",
             Matcher::AnyOf(vec![Matcher::Exact("one".into()), Matcher::Missing]),
@@ -910,8 +892,7 @@ fn test_any_of_missing_match_header() {
 #[test]
 fn test_all_of_match_header() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header(
             "Via",
             Matcher::AllOf(vec![
@@ -949,8 +930,7 @@ fn test_all_of_match_header() {
 #[test]
 fn test_all_of_match_body() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_body(Matcher::AllOf(vec![
             Matcher::Regex("one".to_string()),
             Matcher::Regex("two".to_string()),
@@ -973,8 +953,7 @@ fn test_all_of_match_body() {
 #[test]
 fn test_all_of_missing_match_header() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .match_header("Via", Matcher::AllOf(vec![Matcher::Missing]))
         .with_body("{}")
         .create();
@@ -1012,7 +991,7 @@ fn test_large_utf8_body() {
         .map(char::from)
         .collect();
 
-    let _m = s.mock("GET", "/").with_body(&mock_body).create();
+    s.mock("GET", "/").with_body(&mock_body).create();
 
     let (_, _, body) = request(&s.host_with_port(), "GET /", "");
     assert_eq!(mock_body, body);
@@ -1021,8 +1000,7 @@ fn test_large_utf8_body() {
 #[test]
 fn test_body_from_file() {
     let mut s = Server::new();
-    let _m = s
-        .mock("GET", "/")
+    s.mock("GET", "/")
         .with_body_from_file("tests/files/simple.http")
         .create();
     let (status_line, _, body) = request(&s.host_with_port(), "GET /", "");
@@ -1392,7 +1370,7 @@ fn test_assert_panics_with_too_many_requests() {
 
 #[test]
 #[should_panic(
-    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;37m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\n\n"
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;30m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\n\n"
 )]
 #[cfg(feature = "color")]
 fn test_assert_with_last_unmatched_request() {
@@ -1423,7 +1401,7 @@ fn test_assert_with_last_unmatched_request() {
 
 #[test]
 #[should_panic(
-    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;37m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\u{1b}[92mauthorization: 1234\n\u{1b}[0m\u{1b}[92maccept: text\n\u{1b}[0m\n\n"
+    expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\nauthorization: 1234\r\naccept: text\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;30m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\u{1b}[92mauthorization: 1234\n\u{1b}[0m\u{1b}[92maccept: text\n\u{1b}[0m\n\n"
 )]
 #[cfg(feature = "color")]
 fn test_assert_with_last_unmatched_request_and_headers() {
@@ -1482,22 +1460,27 @@ fn test_request_from_thread() {
 }
 
 #[test]
-#[ignore]
 fn test_mock_from_inside_thread_does_not_lock_forever() {
-    let mut s = Server::new();
-    let host = s.host_with_port();
-    let _mock_outside_thread = s.mock("GET", "/").with_body("outside").create();
+    let server = Arc::new(Mutex::new(Server::new()));
+    let host;
 
-    let server_mutex = Arc::new(Mutex::new(s));
-    let server_clone = server_mutex;
+    {
+        let s1_mutex = Arc::clone(&server);
+        let mut s1 = s1_mutex.lock().unwrap();
+        host = s1.host_with_port();
+        s1.mock("GET", "/").with_body("outside").create();
+    }
+
+    let s2_mutex = Arc::clone(&server);
     let process = thread::spawn(move || {
-        let mut s = server_clone.lock().unwrap();
-        let _mock_inside_thread = s.mock("GET", "/").with_body("inside").create();
+        let mut s2 = s2_mutex.lock().unwrap();
+        s2.mock("GET", "/").with_body("inside").create();
     });
 
     process.join().unwrap();
 
-    let (_, _, body) = request(&host, "GET /", "");
+    let (status_line, _, body) = request(&host, "GET /", "");
+    assert!(status_line.starts_with("HTTP/1.1 200 "));
     assert_eq!("outside", body);
 }
 
@@ -1505,8 +1488,7 @@ fn test_mock_from_inside_thread_does_not_lock_forever() {
 fn test_head_request_with_overridden_content_length() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _mock = s
-        .mock("HEAD", "/")
+    s.mock("HEAD", "/")
         .with_header("content-length", "100")
         .create();
 
@@ -1522,7 +1504,7 @@ fn test_head_request_with_overridden_content_length() {
 fn test_propagate_protocol_to_response() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _mock = s.mock("GET", "/").create();
+    s.mock("GET", "/").create();
 
     let stream = request_stream("1.0", &host, "GET /", "", "");
 
@@ -1536,7 +1518,7 @@ fn test_large_body_without_content_length() {
     let host = s.host_with_port();
     let body = "123".repeat(2048);
 
-    let _mock = s.mock("POST", "/").match_body(body.as_str()).create();
+    s.mock("POST", "/").match_body(body.as_str()).create();
 
     let headers = format!("content-length: {}\r\n", body.len());
     let stream = request_stream("1.0", &host, "POST /", &headers, &body);
@@ -1549,8 +1531,7 @@ fn test_large_body_without_content_length() {
 fn test_transfer_encoding_chunked() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _mock = s
-        .mock("POST", "/")
+    s.mock("POST", "/")
         .match_body("Hello, chunked world!")
         .create();
 
@@ -1574,8 +1555,7 @@ fn test_transfer_encoding_chunked() {
 fn test_match_exact_query() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::Exact("number=one".to_string()))
         .create();
 
@@ -1590,7 +1570,7 @@ fn test_match_exact_query() {
 fn test_match_exact_query_via_path() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s.mock("GET", "/hello?number=one").create();
+    s.mock("GET", "/hello?number=one").create();
 
     let (status_line, _, _) = request(&host, "GET /hello?number=one", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
@@ -1603,8 +1583,7 @@ fn test_match_exact_query_via_path() {
 fn test_match_partial_query_by_regex() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::Regex("number=one".to_string()))
         .create();
 
@@ -1616,8 +1595,7 @@ fn test_match_partial_query_by_regex() {
 fn test_match_partial_query_by_urlencoded() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::UrlEncoded("num ber".into(), "o ne".into()))
         .create();
 
@@ -1632,8 +1610,7 @@ fn test_match_partial_query_by_urlencoded() {
 fn test_match_partial_query_by_regex_all_of() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::AllOf(vec![
             Matcher::Regex("number=one".to_string()),
             Matcher::Regex("hello=world".to_string()),
@@ -1655,8 +1632,7 @@ fn test_match_partial_query_by_regex_all_of() {
 fn test_match_partial_query_by_urlencoded_all_of() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::AllOf(vec![
             Matcher::UrlEncoded("num ber".into(), "o ne".into()),
             Matcher::UrlEncoded("hello".into(), "world".into()),
@@ -1678,8 +1654,7 @@ fn test_match_partial_query_by_urlencoded_all_of() {
 fn test_match_query_with_non_percent_url_escaping() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::AllOf(vec![
             Matcher::UrlEncoded("num ber".into(), "o ne".into()),
             Matcher::UrlEncoded("hello".into(), "world".into()),
@@ -1698,8 +1673,7 @@ fn test_match_query_with_non_percent_url_escaping() {
 fn test_match_missing_query() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .match_query(Matcher::Missing)
         .create();
 
@@ -1731,7 +1705,7 @@ fn test_anyof_exact_path_and_query_matcher() {
 fn test_default_headers() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s.mock("GET", "/").create();
+    s.mock("GET", "/").create();
 
     let (_, headers, _) = request(&host, "GET /", "");
     assert_eq!(3, headers.len());
@@ -1853,7 +1827,7 @@ fn test_matched_bool() {
 fn test_invalid_header_field_name() {
     let mut s = Server::new();
     let host = s.host_with_port();
-    let _m = s.mock("GET", "/").create();
+    s.mock("GET", "/").create();
 
     let (uppercase_status_line, _, _body) = request(&host, "GET /", "Bad Header: something\r\n");
     assert_eq!("HTTP/1.1 400 Bad Request\r\n", uppercase_status_line);
@@ -1865,9 +1839,9 @@ fn test_running_multiple_servers() {
     let mut s2 = Server::new();
     let mut s3 = Server::new();
 
-    let _m = s2.mock("GET", "/").with_body("s2").create();
-    let _m = s1.mock("GET", "/").with_body("s1").create();
-    let _m = s3.mock("GET", "/").with_body("s3").create();
+    s2.mock("GET", "/").with_body("s2").create();
+    s1.mock("GET", "/").with_body("s1").create();
+    s3.mock("GET", "/").with_body("s3").create();
 
     let (_, _, body1) = request_with_body(&s1.host_with_port(), "GET /", "", "");
     let (_, _, body2) = request_with_body(&s2.host_with_port(), "GET /", "", "");
@@ -1944,8 +1918,7 @@ async fn test_http2_requests_async() {
 #[tokio::test]
 async fn test_simple_route_mock_async() {
     let mut s = Server::new_async().await;
-    let _m1 = s
-        .mock("GET", "/hello")
+    s.mock("GET", "/hello")
         .with_body("world")
         .create_async()
         .await;
@@ -2008,7 +1981,7 @@ async fn test_several_route_mocks_async() {
 #[tokio::test]
 async fn test_match_body_asnyc() {
     let mut s = Server::new_async().await;
-    let _m = s.mock("POST", "/").match_body("hello").create_async().await;
+    s.mock("POST", "/").match_body("hello").create_async().await;
 
     let response = reqwest::Client::new()
         .post(s.url())

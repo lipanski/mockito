@@ -141,13 +141,13 @@ impl Mock {
     ///
     /// // This will match requests containing the URL-encoded
     /// // query parameter `greeting=good%20day`
-    /// let _m1 = s.mock("GET", "/test")
+    /// s.mock("GET", "/test")
     ///   .match_query(Matcher::UrlEncoded("greeting".into(), "good day".into()))
     ///   .create();
     ///
     /// // This will match requests containing the URL-encoded
     /// // query parameters `hello=world` and `greeting=good%20day`
-    /// let _m2 = s.mock("GET", "/test")
+    /// s.mock("GET", "/test")
     ///   .match_query(Matcher::AllOf(vec![
     ///     Matcher::UrlEncoded("hello".into(), "world".into()),
     ///     Matcher::UrlEncoded("greeting".into(), "good day".into())
@@ -155,7 +155,7 @@ impl Mock {
     ///   .create();
     ///
     /// // You can achieve similar results with the regex matcher
-    /// let _m3 = s.mock("GET", "/test")
+    /// s.mock("GET", "/test")
     ///   .match_query(Matcher::Regex("hello=world".into()))
     ///   .create();
     /// ```
@@ -185,7 +185,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").match_header("content-type", "application/json");
+    /// s.mock("GET", "/").match_header("content-type", "application/json");
     /// ```
     ///
     /// Like most other `Mock` methods, it allows chanining:
@@ -195,7 +195,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/")
+    /// s.mock("GET", "/")
     ///   .match_header("content-type", "application/json")
     ///   .match_header("authorization", "password");
     /// ```
@@ -216,8 +216,8 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m1 = s.mock("POST", "/").match_body(r#"{"hello": "world"}"#).with_body("json").create();
-    /// let _m2 = s.mock("POST", "/").match_body("hello=world").with_body("form").create();
+    /// s.mock("POST", "/").match_body(r#"{"hello": "world"}"#).with_body("json").create();
+    /// s.mock("POST", "/").match_body("hello=world").with_body("form").create();
     ///
     /// // Requests passing `{"hello": "world"}` inside the body will be responded with "json".
     /// // Requests passing `hello=world` inside the body will be responded with "form".
@@ -241,9 +241,9 @@ impl Mock {
     ///
     /// // the following are equivalent ways of defining a mock matching
     /// // a binary payload
-    /// let _b1 = s.mock("POST", "/").match_body(tmp_file.as_path()).create();
-    /// let _b3 = s.mock("POST", "/").match_body(random_bytes).create();
-    /// let _b2 = s.mock("POST", "/").match_body(&mut f_read).create();
+    /// s.mock("POST", "/").match_body(tmp_file.as_path()).create();
+    /// s.mock("POST", "/").match_body(random_bytes).create();
+    /// s.mock("POST", "/").match_body(&mut f_read).create();
     /// ```
     ///
     pub fn match_body<M: Into<Matcher>>(mut self, body: M) -> Self {
@@ -260,7 +260,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_status(201);
+    /// s.mock("GET", "/").with_status(201);
     /// ```
     ///
     #[track_caller]
@@ -280,7 +280,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_header("content-type", "application/json");
+    /// s.mock("GET", "/").with_header("content-type", "application/json");
     /// ```
     ///
     pub fn with_header(mut self, field: &str, value: &str) -> Self {
@@ -300,7 +300,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_body("hello world");
+    /// s.mock("GET", "/").with_body("hello world");
     /// ```
     ///
     pub fn with_body<StrOrBytes: AsRef<[u8]>>(mut self, body: StrOrBytes) -> Self {
@@ -319,15 +319,26 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_body_from_fn(|w| w.write_all(b"hello world"));
+    /// s.mock("GET", "/").with_chunked_body(|w| w.write_all(b"hello world"));
     /// ```
     ///
-    pub fn with_body_from_fn(
+    pub fn with_chunked_body(
         mut self,
         callback: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
     ) -> Self {
         self.inner.response.body = Body::FnWithWriter(Arc::new(callback));
         self
+    }
+
+    ///
+    /// **DEPRECATED:** Replaced by `Mock::with_chunked_body`.
+    ///
+    #[deprecated(since = "1.0.0", note = "Use `Mock::with_chunked_body` instead")]
+    pub fn with_body_from_fn(
+        self,
+        callback: impl Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static,
+    ) -> Self {
+        self.with_chunked_body(callback)
     }
 
     ///
@@ -371,7 +382,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_body_from_file("tests/files/simple.http");
+    /// s.mock("GET", "/").with_body_from_file("tests/files/simple.http");
     /// ```
     ///
     #[track_caller]
@@ -501,10 +512,9 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", "/").with_body("hello world").create();
+    /// s.mock("GET", "/").with_body("hello world").create();
     /// ```
     ///
-    #[must_use]
     pub fn create(mut self) -> Mock {
         let remote_mock = RemoteMock::new(self.inner.clone());
         let state = self.state.clone();
@@ -528,6 +538,24 @@ impl Mock {
         self.created = true;
 
         self
+    }
+
+    ///
+    /// Removes the mock from the server.
+    ///
+    pub fn remove(&self) {
+        let mutex = self.state.clone();
+        let mut state = mutex.blocking_write();
+        state.remove_mock(self.inner.id.clone());
+    }
+
+    ///
+    /// Same as `Mock::remove` but async.
+    ///
+    pub async fn remove_async(&self) {
+        let mutex = self.state.clone();
+        let mut state = mutex.write().await;
+        state.remove_mock(self.inner.id.clone());
     }
 
     fn matched_hits(&self, hits: usize) -> bool {
@@ -585,17 +613,9 @@ impl Mock {
 
 impl Drop for Mock {
     fn drop(&mut self) {
-        futures::executor::block_on(async {
-            let mutex = self.state.clone();
-            let mut state = mutex.write().await;
-            state.remove_mock(self.inner.id.clone());
-
-            log::debug!("Mock::drop() called for {}", self);
-
-            if !self.created {
-                log::warn!("Missing .create() call on mock {}", self);
-            }
-        })
+        if !self.created {
+            log::warn!("Missing .create() call on mock {}", self);
+        }
     }
 }
 

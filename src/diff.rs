@@ -31,7 +31,7 @@ pub fn compare(expected: &str, actual: &str) -> String {
                                 let z = change.value();
                                 #[cfg(feature = "color")]
                                 #[allow(clippy::unnecessary_to_owned)]
-                                result.push_str(&z.white().on_green().to_string());
+                                result.push_str(&z.black().on_green().to_string());
                                 #[cfg(not(feature = "color"))]
                                 result.push_str(z);
                             }

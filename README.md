@@ -6,7 +6,6 @@
     <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.65.0-orange">
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/d/mockito"></a>
     <a href="https://github.com/lipanski/mockito/actions/workflows/tests.yml/?branch=master"><img src="https://github.com/lipanski/mockito/actions/workflows/tests.yml/badge.svg?branch=master"></a>
-    <a href="https://ci.appveyor.com/project/lipanski/mockito"><img src="https://ci.appveyor.com/api/projects/status/github/lipanski/mockito?branch=master&svg=true"></a>
   </p>
   <p align="center"><em>HTTP mocking for Rust!</em></p>
 </p>
@@ -22,9 +21,10 @@ or offline work. Mockito runs a local pool of HTTP servers which create, deliver
 - Checks that a mock was called (spy)
 - Mocks multiple hosts at the same time
 - Exposes sync and async interfaces
-- Prints out the last unmatched request in case of errors
+- Prints out a colored diff of the last unmatched request in case of errors
 - Simple, intuitive API
 - An awesome logo
+
 
 The full documentation is available at <https://docs.rs/mockito>.
 
@@ -45,7 +45,7 @@ fn test_something() {
     let url = server.url();
 
     // Create a mock
-    let m = server.mock("GET", "/hello")
+    let mock = server.mock("GET", "/hello")
       .with_status(201)
       .with_header("content-type", "text/plain")
       .with_header("x-api-key", "1234")
@@ -56,9 +56,13 @@ fn test_something() {
     // `content-type: text/plain` header and the body "world".
 
     // You can use `Mock::assert` to verify that your mock was called
-    m.assert();
+    mock.assert();
 }
 ```
+
+If `Mock::assert` fails, a colored diff of the last unmatched request is displayed:
+
+![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 
 Use **matchers** to handle requests to the same endpoint in a different way:
 
@@ -67,7 +71,7 @@ Use **matchers** to handle requests to the same endpoint in a different way:
 fn test_something() {
     let mut server = mockito::Server::new();
 
-    let m1 = server.mock("GET", "/greetings")
+    server.mock("GET", "/greetings")
       .match_header("content-type", "application/json")
       .match_body(mockito::Matcher::PartialJsonString(
           "{\"greeting\": \"hello\"}".to_string(),
@@ -75,7 +79,7 @@ fn test_something() {
       .with_body("hello json")
       .create();
 
-    let m2 = server.mock("GET", "/greetings")
+    server.mock("GET", "/greetings")
       .match_header("content-type", "application/text")
       .match_body(mockito::Matcher::Regex("greeting=hello".to_string()))
       .with_body("hello text")
