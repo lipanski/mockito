@@ -1993,3 +1993,16 @@ async fn test_match_body_asnyc() {
 
     assert_eq!(200, response.status());
 }
+
+#[tokio::test]
+async fn test_join_all_async() {
+    let futures = (0..10).map(|_| async {
+        let mut s = Server::new_async().await;
+        let m = s.mock("POST", "/").create_async().await;
+
+        reqwest::Client::new().post(s.url()).send().await.unwrap();
+        m.assert_async().await;
+    });
+
+    let _results = futures::future::join_all(futures).await;
+}

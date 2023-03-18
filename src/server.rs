@@ -10,11 +10,11 @@ use hyper::{Body, Request as HyperRequest, Response, StatusCode};
 use std::fmt;
 use std::net::SocketAddr;
 use std::ops::Drop;
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
 use std::thread;
 use tokio::net::TcpListener;
 use tokio::runtime;
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::RwLock;
 use tokio::task::{spawn_local, LocalSet};
 
 #[derive(Clone, Debug)]
@@ -201,7 +201,7 @@ impl Server {
     pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = oneshot::channel::<String>();
+        let (address_sender, address_receiver) = mpsc::channel::<String>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -214,7 +214,7 @@ impl Server {
         });
 
         let address = address_receiver
-            .blocking_recv()
+            .recv()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let server = Server { address, state };
@@ -228,7 +228,7 @@ impl Server {
     pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = oneshot::channel::<String>();
+        let (address_sender, address_receiver) = mpsc::channel::<String>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -241,7 +241,7 @@ impl Server {
         });
 
         let address = address_receiver
-            .await
+            .recv()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let server = Server { address, state };
@@ -251,7 +251,7 @@ impl Server {
 
     async fn bind_server(
         address: SocketAddr,
-        address_sender: oneshot::Sender<String>,
+        address_sender: mpsc::Sender<String>,
         state: Arc<RwLock<State>>,
     ) -> Result<(), Error> {
         let listener = TcpListener::bind(address)
