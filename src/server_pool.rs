@@ -93,8 +93,8 @@ impl ServerPool {
         }
     }
 
-    fn recycle(&'static self, mut server: Server) {
-        server.reset_async();
+    fn recycle(&self, mut server: Server) {
+        server.reset();
         let state_mutex = self.state.clone();
         let mut state = state_mutex.lock().unwrap();
         state.push_back(server);
