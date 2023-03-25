@@ -154,7 +154,6 @@
 //! - `Mock::assert_async`
 //! - `Mock::matched_async`
 //! - `Mock::remove_async`
-//! - `Server::reset_async`
 //!
 //! ...otherwise your tests will not compile and you'll see the following error:
 //!
