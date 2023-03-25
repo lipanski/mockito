@@ -78,11 +78,16 @@ impl ServerPool {
             .await
             .map_err(|err| Error::new_with_context(ErrorKind::Deadlock, err))?;
 
+        let server = if self.created < self.max_size {
+            Some(Server::try_new_with_port_async(0).await?)
+        } else {
+            None
+        };
+
         let state_mutex = self.state.clone();
         let mut state = state_mutex.lock().unwrap();
 
-        if self.created < self.max_size {
-            let server = Server::try_new_with_port_async(0).await?;
+        if let Some(server) = server {
             state.push_back(server);
         }
 

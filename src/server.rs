@@ -358,11 +358,9 @@ async fn handle_request(
 
     let mutex = state.clone();
     let mut state = mutex.write().unwrap();
-
-    let mut mocks_stream = state.mocks.iter_mut();
     let mut matching_mocks: Vec<&mut RemoteMock> = vec![];
 
-    while let Some(mock) = mocks_stream.next() {
+    for mock in state.mocks.iter_mut() {
         if mock.matches(&mut request) {
             matching_mocks.push(mock);
         }
