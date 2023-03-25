@@ -3,18 +3,16 @@ use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
-use futures::stream::{self, StreamExt};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::{Body, Request as HyperRequest, Response, StatusCode};
 use std::fmt;
 use std::net::SocketAddr;
 use std::ops::Drop;
-use std::sync::Arc;
+use std::sync::{mpsc, Arc, RwLock};
 use std::thread;
 use tokio::net::TcpListener;
 use tokio::runtime;
-use tokio::sync::{oneshot, RwLock};
 use tokio::task::{spawn_local, LocalSet};
 
 #[derive(Clone, Debug)]
@@ -27,11 +25,11 @@ impl RemoteMock {
         RemoteMock { inner }
     }
 
-    async fn matches(&self, other: &mut Request) -> bool {
+    fn matches(&self, other: &mut Request) -> bool {
         self.method_matches(other)
             && self.path_matches(other)
             && self.headers_match(other)
-            && self.body_matches(other).await
+            && self.body_matches(other)
     }
 
     fn method_matches(&self, request: &Request) -> bool {
@@ -49,8 +47,8 @@ impl RemoteMock {
             .all(|&(ref field, ref expected)| expected.matches_values(&request.header(field)))
     }
 
-    async fn body_matches(&self, request: &mut Request) -> bool {
-        let body = request.read_body().await;
+    fn body_matches(&self, request: &mut Request) -> bool {
+        let body = request.body().unwrap();
         let safe_body = &String::from_utf8_lossy(body);
 
         self.inner.body.matches_value(safe_body) || self.inner.body.matches_binary_value(body)
@@ -201,7 +199,7 @@ impl Server {
     pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = oneshot::channel::<String>();
+        let (address_sender, address_receiver) = mpsc::channel::<String>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -214,7 +212,7 @@ impl Server {
         });
 
         let address = address_receiver
-            .blocking_recv()
+            .recv()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let server = Server { address, state };
@@ -228,7 +226,7 @@ impl Server {
     pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = oneshot::channel::<String>();
+        let (address_sender, address_receiver) = mpsc::channel::<String>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -241,7 +239,7 @@ impl Server {
         });
 
         let address = address_receiver
-            .await
+            .recv()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
         let server = Server { address, state };
@@ -251,7 +249,7 @@ impl Server {
 
     async fn bind_server(
         address: SocketAddr,
-        address_sender: oneshot::Sender<String>,
+        address_sender: mpsc::Sender<String>,
         state: Arc<RwLock<State>>,
     ) -> Result<(), Error> {
         let listener = TcpListener::bind(address)
@@ -321,17 +319,18 @@ impl Server {
     ///
     pub fn reset(&mut self) {
         let state = self.state.clone();
-        let mut state = state.blocking_write();
+        let mut state = state.write().unwrap();
         state.mocks.clear();
         state.unmatched_requests.clear();
     }
 
     ///
-    /// Same as `Server::reset` but async.
+    /// **DEPRECATED:** Use `Server::reset` instead. The implementation is not async any more.
     ///
+    #[deprecated(since = "1.0.1", note = "Use `Server::reset` instead")]
     pub async fn reset_async(&mut self) {
         let state = self.state.clone();
-        let mut state = state.write().await;
+        let mut state = state.write().unwrap();
         state.mocks.clear();
         state.unmatched_requests.clear();
     }
@@ -339,10 +338,7 @@ impl Server {
 
 impl Drop for Server {
     fn drop(&mut self) {
-        futures::executor::block_on(async {
-            log::debug!("Server::drop() called for {}", self);
-            self.reset_async().await;
-        });
+        self.reset();
     }
 }
 
@@ -361,13 +357,11 @@ async fn handle_request(
     log::debug!("Request received: {}", request.formatted());
 
     let mutex = state.clone();
-    let mut state = mutex.write().await;
-
-    let mut mocks_stream = stream::iter(&mut state.mocks);
+    let mut state = mutex.write().unwrap();
     let mut matching_mocks: Vec<&mut RemoteMock> = vec![];
 
-    while let Some(mock) = mocks_stream.next().await {
-        if mock.matches(&mut request).await {
+    for mock in state.mocks.iter_mut() {
+        if mock.matches(&mut request) {
             matching_mocks.push(mock);
         }
     }
@@ -382,7 +376,7 @@ async fn handle_request(
     if let Some(mock) = mock {
         log::debug!("Mock found");
         mock.inner.hits += 1;
-        respond_with_mock(request, mock).await
+        respond_with_mock(request, mock)
     } else {
         log::debug!("Mock not found");
         state.unmatched_requests.push(request);
@@ -390,7 +384,7 @@ async fn handle_request(
     }
 }
 
-async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
+fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
 
