@@ -3,7 +3,6 @@ use crate::request::Request;
 use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
-use futures::stream::{self, StreamExt};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::{Body, Request as HyperRequest, Response, StatusCode};
@@ -11,10 +10,11 @@ use std::fmt;
 use std::net::SocketAddr;
 use std::ops::Drop;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::thread;
 use tokio::net::TcpListener;
 use tokio::runtime;
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::oneshot;
 use tokio::task::{spawn_local, LocalSet};
 
 #[derive(Clone, Debug)]
@@ -27,11 +27,11 @@ impl RemoteMock {
         RemoteMock { inner }
     }
 
-    async fn matches(&self, other: &mut Request) -> bool {
+    fn matches(&self, other: &mut Request) -> bool {
         self.method_matches(other)
             && self.path_matches(other)
             && self.headers_match(other)
-            && self.body_matches(other).await
+            && self.body_matches(other)
     }
 
     fn method_matches(&self, request: &Request) -> bool {
@@ -49,8 +49,8 @@ impl RemoteMock {
             .all(|&(ref field, ref expected)| expected.matches_values(&request.header(field)))
     }
 
-    async fn body_matches(&self, request: &mut Request) -> bool {
-        let body = request.read_body().await;
+    fn body_matches(&self, request: &mut Request) -> bool {
+        let body = request.body().unwrap();
         let safe_body = &String::from_utf8_lossy(body);
 
         self.inner.body.matches_value(safe_body) || self.inner.body.matches_binary_value(body)
@@ -321,7 +321,7 @@ impl Server {
     ///
     pub fn reset(&mut self) {
         let state = self.state.clone();
-        let mut state = state.blocking_write();
+        let mut state = state.write().unwrap();
         state.mocks.clear();
         state.unmatched_requests.clear();
     }
@@ -329,9 +329,9 @@ impl Server {
     ///
     /// Same as `Server::reset` but async.
     ///
-    pub async fn reset_async(&mut self) {
+    pub fn reset_async(&mut self) {
         let state = self.state.clone();
-        let mut state = state.write().await;
+        let mut state = state.write().unwrap();
         state.mocks.clear();
         state.unmatched_requests.clear();
     }
@@ -339,10 +339,7 @@ impl Server {
 
 impl Drop for Server {
     fn drop(&mut self) {
-        futures::executor::block_on(async {
-            log::debug!("Server::drop() called for {}", self);
-            self.reset_async().await;
-        });
+        self.reset();
     }
 }
 
@@ -361,13 +358,13 @@ async fn handle_request(
     log::debug!("Request received: {}", request.formatted());
 
     let mutex = state.clone();
-    let mut state = mutex.write().await;
+    let mut state = mutex.write().unwrap();
 
-    let mut mocks_stream = stream::iter(&mut state.mocks);
+    let mut mocks_stream = state.mocks.iter_mut();
     let mut matching_mocks: Vec<&mut RemoteMock> = vec![];
 
-    while let Some(mock) = mocks_stream.next().await {
-        if mock.matches(&mut request).await {
+    while let Some(mock) = mocks_stream.next() {
+        if mock.matches(&mut request) {
             matching_mocks.push(mock);
         }
     }
@@ -382,7 +379,7 @@ async fn handle_request(
     if let Some(mock) = mock {
         log::debug!("Mock found");
         mock.inner.hits += 1;
-        respond_with_mock(request, mock).await
+        respond_with_mock(request, mock)
     } else {
         log::debug!("Mock not found");
         state.unmatched_requests.push(request);
@@ -390,7 +387,7 @@ async fn handle_request(
     }
 }
 
-async fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
+fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
 

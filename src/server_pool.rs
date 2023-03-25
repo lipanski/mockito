@@ -2,10 +2,9 @@ use crate::Server;
 use crate::{Error, ErrorKind};
 use lazy_static::lazy_static;
 use std::collections::VecDeque;
-use std::ops::Drop;
-use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
-use tokio::sync::{Mutex, Semaphore, SemaphorePermit};
+use std::ops::{Deref, DerefMut, Drop};
+use std::sync::{Arc, Mutex};
+use tokio::sync::{Semaphore, SemaphorePermit};
 
 const DEFAULT_POOL_SIZE: usize = 100;
 
@@ -46,11 +45,9 @@ impl DerefMut for ServerGuard {
 
 impl Drop for ServerGuard {
     fn drop(&mut self) {
-        futures::executor::block_on(async {
-            if let Some(server) = self.server.take() {
-                SERVER_POOL.recycle_async(server).await;
-            }
-        });
+        if let Some(server) = self.server.take() {
+            SERVER_POOL.recycle(server);
+        }
     }
 }
 
@@ -82,7 +79,7 @@ impl ServerPool {
             .map_err(|err| Error::new_with_context(ErrorKind::Deadlock, err))?;
 
         let state_mutex = self.state.clone();
-        let mut state = state_mutex.lock().await;
+        let mut state = state_mutex.lock().unwrap();
 
         if self.created < self.max_size {
             let server = Server::try_new_with_port_async(0).await?;
@@ -96,10 +93,10 @@ impl ServerPool {
         }
     }
 
-    async fn recycle_async(&'static self, mut server: Server) {
-        server.reset_async().await;
+    fn recycle(&'static self, mut server: Server) {
+        server.reset_async();
         let state_mutex = self.state.clone();
-        let mut state = state_mutex.lock().await;
+        let mut state = state_mutex.lock().unwrap();
         state.push_back(server);
     }
 }

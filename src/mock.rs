@@ -15,7 +15,7 @@ use std::ops::Drop;
 use std::path::Path;
 use std::string::ToString;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 
 #[derive(Clone, Debug)]
 pub struct InnerMock {
@@ -441,7 +441,7 @@ impl Mock {
     #[track_caller]
     pub fn assert(&self) {
         let mutex = self.state.clone();
-        let state = mutex.blocking_read();
+        let state = mutex.read().unwrap();
         if let Some(hits) = state.get_mock_hits(self.inner.id.clone()) {
             let matched = self.matched_hits(hits);
             let message = if !matched {
@@ -462,7 +462,7 @@ impl Mock {
     ///
     pub async fn assert_async(&self) {
         let mutex = self.state.clone();
-        let state = mutex.read().await;
+        let state = mutex.read().unwrap();
         if let Some(hits) = state.get_mock_hits(self.inner.id.clone()) {
             let matched = self.matched_hits(hits);
             let message = if !matched {
@@ -483,7 +483,7 @@ impl Mock {
     ///
     pub fn matched(&self) -> bool {
         let mutex = self.state.clone();
-        let state = mutex.blocking_read();
+        let state = mutex.read().unwrap();
         let Some(hits) = state.get_mock_hits(self.inner.id.clone()) else {
             return false;
         };
@@ -496,7 +496,7 @@ impl Mock {
     ///
     pub async fn matched_async(&self) -> bool {
         let mutex = self.state.clone();
-        let state = mutex.read().await;
+        let state = mutex.read().unwrap();
         let Some(hits) = state.get_mock_hits(self.inner.id.clone()) else {
             return false;
         };
@@ -518,7 +518,7 @@ impl Mock {
     pub fn create(mut self) -> Mock {
         let remote_mock = RemoteMock::new(self.inner.clone());
         let state = self.state.clone();
-        let mut state = state.blocking_write();
+        let mut state = state.write().unwrap();
         state.mocks.push(remote_mock);
 
         self.created = true;
@@ -532,7 +532,7 @@ impl Mock {
     pub async fn create_async(mut self) -> Mock {
         let remote_mock = RemoteMock::new(self.inner.clone());
         let state = self.state.clone();
-        let mut state = state.write().await;
+        let mut state = state.write().unwrap();
         state.mocks.push(remote_mock);
 
         self.created = true;
@@ -545,7 +545,7 @@ impl Mock {
     ///
     pub fn remove(&self) {
         let mutex = self.state.clone();
-        let mut state = mutex.blocking_write();
+        let mut state = mutex.write().unwrap();
         state.remove_mock(self.inner.id.clone());
     }
 
@@ -554,7 +554,7 @@ impl Mock {
     ///
     pub async fn remove_async(&self) {
         let mutex = self.state.clone();
-        let mut state = mutex.write().await;
+        let mut state = mutex.write().unwrap();
         state.remove_mock(self.inner.id.clone());
     }
 
