@@ -170,17 +170,20 @@
 //! JSON), any or missing. The following guide will walk you through the most common matchers. Check the
 //! `Matcher` documentation for all the rest.
 //!
-//! # Matching by path
+//! # Matching by path and query
 //!
-//! By default, the request path is compared by its exact value:
+//! By default, the request path and query is compared by its exact value:
 //!
 //! ## Example
 //!
 //! ```
 //! let mut s = mockito::Server::new();
 //!
-//! // Matched only calls to GET /hello
+//! // Matches only calls to GET /hello
 //! s.mock("GET", "/hello").create();
+//!
+//! // Matches only calls to GET /hello?world=1
+//! s.mock("GET", "/hello?world=1").create();
 //! ```
 //!
 //! You can also match the path partially, by using a regular expression:
@@ -250,6 +253,17 @@
 //!
 //! // This will perform a full match against the query part
 //! s.mock("GET", "/test?hello=world").create();
+//! ```
+//!
+//! If you'd like to ignore the query entirely, use the `Matcher::Any` variant:
+//!
+//! ## Example
+//!
+//! ```
+//! let mut s = mockito::Server::new();
+//!
+//! // This will match requests to GET /test with any query
+//! s.mock("GET", "/test").match_query(mockito::Matcher::Any).create();
 //! ```
 //!
 //! # Matching by header
