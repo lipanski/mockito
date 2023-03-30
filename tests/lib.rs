@@ -1685,6 +1685,22 @@ fn test_match_missing_query() {
 }
 
 #[test]
+fn test_match_any_query() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    s.mock("GET", "/hello").match_query(Matcher::Any).create();
+
+    let (status_line, _, _) = request(&host, "GET /hello", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request(&host, "GET /hello?", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+
+    let (status_line, _, _) = request(&host, "GET /hello?number=one", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+}
+
+#[test]
 fn test_anyof_exact_path_and_query_matcher() {
     let mut s = Server::new();
     let host = s.host_with_port();
