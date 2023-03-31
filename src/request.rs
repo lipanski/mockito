@@ -82,7 +82,12 @@ impl Request {
         let mut formatted = format!(
             "\r\n{} {}\r\n",
             &self.inner.method(),
-            &self.inner.uri().path()
+            &self
+                .inner
+                .uri()
+                .path_and_query()
+                .map(|pq| pq.as_str())
+                .unwrap_or("")
         );
 
         for (key, value) in self.inner.headers() {
