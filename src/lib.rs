@@ -315,7 +315,7 @@
 //!  .create();
 //!
 //! // Requests containing any content-type header value will be mocked.
-//! // Requests not containing this header will return `501 Mock Not Found`.
+//! // Requests not containing this header will return `501 Not Implemented`.
 //! ```
 //!
 //! You can mock requests that should be *missing a particular header field*, by setting the `Mock::match_header`
@@ -635,7 +635,7 @@
 //! // Nothing is mocked at this point
 //! ```
 //!
-//! ...or you can call `Mock::reset` to remove a single mock:
+//! ...or you can call `Mock::remove` to remove a single mock:
 //!
 //! ```
 //! let mut s = mockito::Server::new();
