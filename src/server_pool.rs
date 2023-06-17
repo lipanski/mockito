@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut, Drop};
 use std::sync::{Arc, Mutex};
 use tokio::sync::{Semaphore, SemaphorePermit};
 
-const DEFAULT_POOL_SIZE: usize = 100;
+const DEFAULT_POOL_SIZE: usize = 50;
 
 lazy_static! {
     pub(crate) static ref SERVER_POOL: ServerPool = ServerPool::new(DEFAULT_POOL_SIZE);
@@ -53,14 +53,14 @@ impl Drop for ServerGuard {
 
 pub(crate) struct ServerPool {
     max_size: usize,
-    created: usize,
+    created: Arc<Mutex<usize>>,
     semaphore: Semaphore,
     state: Arc<Mutex<VecDeque<Server>>>,
 }
 
 impl ServerPool {
     fn new(max_size: usize) -> ServerPool {
-        let created = 0;
+        let created = Arc::new(Mutex::new(0));
         let semaphore = Semaphore::new(max_size);
         let state = Arc::new(Mutex::new(VecDeque::new()));
         ServerPool {
@@ -78,10 +78,23 @@ impl ServerPool {
             .await
             .map_err(|err| Error::new_with_context(ErrorKind::Deadlock, err))?;
 
-        let server = if self.created < self.max_size {
-            Some(Server::try_new_with_port_async(0).await?)
-        } else {
-            None
+        let should_create = {
+            let created_mutex = self.created.clone();
+            let mut created = created_mutex.lock().unwrap();
+            if *created < self.max_size {
+                *created += 1;
+                true
+            } else {
+                false
+            }
+        };
+
+        let server = {
+            if should_create {
+                Some(Server::try_new_with_port_async(0).await?)
+            } else {
+                None
+            }
         };
 
         let state_mutex = self.state.clone();

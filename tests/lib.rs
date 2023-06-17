@@ -1902,42 +1902,61 @@ fn test_running_multiple_servers() {
 }
 
 #[test]
-fn test_running_lots_of_servers_wont_block() {
-    let mut s1 = Server::new();
-    let _s2 = Server::new();
-    let _s3 = Server::new();
-    let _s4 = Server::new();
-    let _s5 = Server::new();
-    let _s7 = Server::new();
-    let _s8 = Server::new();
-    let _s9 = Server::new();
-    let _s10 = Server::new();
-    let _s11 = Server::new();
-    let _s12 = Server::new();
-    let _s13 = Server::new();
-    let _s14 = Server::new();
-    let _s15 = Server::new();
-    let _s17 = Server::new();
-    let _s18 = Server::new();
-    let _s19 = Server::new();
-    let _s20 = Server::new();
-    let _s21 = Server::new();
-    let _s22 = Server::new();
-    let _s23 = Server::new();
-    let _s24 = Server::new();
-    let _s25 = Server::new();
-    let _s27 = Server::new();
-    let _s28 = Server::new();
-    let _s29 = Server::new();
-    let mut s30 = Server::new();
+#[allow(clippy::vec_init_then_push)]
+fn test_server_pool() {
+    // If the pool is not working, this will hit the FD limit (Too many open files)
+    for _ in 0..5 {
+        // The pool size is 50, anything beyond that will block
+        for _ in 0..50 {
+            let mut servers = vec![];
+            servers.push(Server::new());
 
-    let m1 = s1.mock("GET", "/pool").create();
-    let (_, _, _) = request_with_body(&s1.host_with_port(), "GET /pool", "", "");
-    m1.assert();
+            let s = servers.first_mut().unwrap();
+            let m = s.mock("GET", "/pool").create();
+            let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
+            m.assert();
+        }
 
-    let m30 = s30.mock("GET", "/pool").create();
-    let (_, _, _) = request_with_body(&s30.host_with_port(), "GET /pool", "", "");
-    m30.assert();
+        for _ in 0..50 {
+            let mut servers = vec![];
+            servers.push(Server::new());
+
+            let s = servers.first_mut().unwrap();
+            let m = s.mock("GET", "/pool").create();
+            let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
+            m.assert();
+        }
+
+        for _ in 0..50 {
+            let mut servers = vec![];
+            servers.push(Server::new());
+
+            let s = servers.first_mut().unwrap();
+            let m = s.mock("GET", "/pool").create();
+            let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
+            m.assert();
+        }
+
+        for _ in 0..50 {
+            let mut servers = vec![];
+            servers.push(Server::new());
+
+            let s = servers.first_mut().unwrap();
+            let m = s.mock("GET", "/pool").create();
+            let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
+            m.assert();
+        }
+
+        for _ in 0..50 {
+            let mut servers = vec![];
+            servers.push(Server::new());
+
+            let s = servers.first_mut().unwrap();
+            let m = s.mock("GET", "/pool").create();
+            let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
+            m.assert();
+        }
+    }
 }
 
 #[tokio::test]
