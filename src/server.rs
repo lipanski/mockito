@@ -112,7 +112,7 @@ impl State {
 ///
 /// Mockito uses a server pool to manage running servers. Once the pool reaches capacity,
 /// new requests will have to wait for a free server. The size of the server pool
-/// is set to 100.
+/// is set to 50.
 ///
 /// Most of the times, you should initialize new servers with `Server::new`, which fetches
 /// the next available instance from the pool:
