@@ -2,7 +2,7 @@ use std::error::Error as ErrorTrait;
 use std::fmt::Display;
 
 ///
-/// Contains information about an error occurence
+/// Contains information about an error occurrence
 ///
 #[derive(Debug)]
 pub struct Error {

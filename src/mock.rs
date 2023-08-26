@@ -344,7 +344,7 @@ impl Mock {
     ///
     /// Sets the body of the mock response dynamically while exposing the request object.
     ///
-    /// You can use this method to provide a custom reponse body for every incoming request.
+    /// You can use this method to provide a custom response body for every incoming request.
     ///
     /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
     /// Use `move` closures and `Arc` to share any data.
