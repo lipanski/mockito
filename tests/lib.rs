@@ -611,6 +611,20 @@ fn test_mock_with_fn_body() {
 }
 
 #[test]
+fn test_mock_with_fn_body_streamed_forever() {
+    let mut s = Server::new();
+    s.mock("GET", "/")
+        .with_chunked_body(|w| loop {
+            w.write_all(b"spam")?
+        })
+        .create();
+
+    let stream = request_stream("1.1", s.host_with_port(), "GET /", "", "");
+    let (status_line, _, _) = parse_stream(stream, true);
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+}
+
+#[test]
 fn test_mock_with_body_from_request() {
     let mut s = Server::new();
     s.mock("GET", Matcher::Any)

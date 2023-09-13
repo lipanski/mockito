@@ -1,6 +1,6 @@
 use crate::mock::InnerMock;
 use crate::request::Request;
-use crate::response::{Body as ResponseBody, Chunked as ResponseChunked};
+use crate::response::{Body as ResponseBody, ChunkedStream};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use hyper::server::conn::Http;
@@ -401,13 +401,8 @@ fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Bod
                 Body::from(bytes.clone())
             }
             ResponseBody::FnWithWriter(body_fn) => {
-                let mut chunked = ResponseChunked::new();
-                body_fn(&mut chunked)
-                    .map_err(|_| Error::new(ErrorKind::ResponseBodyFailure))
-                    .unwrap();
-                chunked.finish();
-
-                Body::wrap_stream(chunked)
+                let stream = ChunkedStream::new(Arc::clone(body_fn))?;
+                Body::wrap_stream(stream)
             }
             ResponseBody::FnWithRequest(body_fn) => {
                 let bytes = body_fn(&request);
