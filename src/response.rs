@@ -1,11 +1,13 @@
+use crate::error::Error;
 use crate::Request;
-use core::task::Poll;
 use futures::stream::Stream;
 use hyper::StatusCode;
 use std::fmt;
 use std::io;
-use std::mem;
 use std::sync::Arc;
+use std::task::Poll;
+use std::thread;
+use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Response {
@@ -61,50 +63,65 @@ impl Default for Response {
     }
 }
 
-pub(crate) struct Chunked {
-    buffer: Vec<u8>,
-    finished: bool,
+struct ChunkedStreamWriter {
+    sender: mpsc::Sender<io::Result<Box<[u8]>>>,
 }
 
-impl Chunked {
-    pub fn new() -> Self {
-        Self {
-            buffer: vec![],
-            finished: false,
-        }
-    }
-
-    pub fn finish(&mut self) {
-        self.finished = true;
-    }
-}
-
-impl Stream for Chunked {
-    type Item = Result<Vec<u8>, String>;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        if !self.buffer.is_empty() {
-            let data = mem::take(&mut self.buffer);
-            Poll::Ready(Some(Ok(data)))
-        } else if !self.finished {
-            Poll::Pending
-        } else {
-            Poll::Ready(None)
-        }
-    }
-}
-
-impl io::Write for Chunked {
+impl io::Write for ChunkedStreamWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.buffer.append(&mut buf.to_vec());
+        self.sender
+            .blocking_send(Ok(buf.into()))
+            .map_err(|_| io::ErrorKind::BrokenPipe)?;
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.finished = true;
         Ok(())
+    }
+}
+
+pub(crate) struct ChunkedStream {
+    receiver: Option<mpsc::Receiver<io::Result<Box<[u8]>>>>,
+    thread: Option<thread::JoinHandle<()>>,
+}
+
+impl ChunkedStream {
+    pub fn new(body_fn: Arc<BodyFnWithWriter>) -> Result<Self, Error> {
+        let (sender, receiver) = mpsc::channel(1);
+        let join = thread::Builder::new()
+            .name(format!("mockito::body_fn_{:p}", body_fn))
+            .spawn(move || {
+                let mut writer = ChunkedStreamWriter { sender };
+                if let Err(e) = body_fn(&mut writer) {
+                    let _ = writer.sender.blocking_send(Err(e));
+                }
+            })
+            .map_err(|e| Error::new_with_context(crate::ErrorKind::ResponseFailure, e))?;
+        Ok(Self {
+            receiver: Some(receiver),
+            thread: Some(join),
+        })
+    }
+}
+
+impl Drop for ChunkedStream {
+    fn drop(&mut self) {
+        // must close the channel first
+        let _ = self.receiver.take();
+        let _ = self.thread.take().map(|t| t.join());
+    }
+}
+
+impl Stream for ChunkedStream {
+    type Item = io::Result<Box<[u8]>>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        self.receiver
+            .as_mut()
+            .map(move |r| r.poll_recv(cx))
+            .unwrap_or(Poll::Ready(None))
     }
 }
