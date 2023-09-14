@@ -5,7 +5,7 @@ use std::ops::{Deref, DerefMut, Drop};
 use std::sync::Mutex;
 use tokio::sync::{Semaphore, SemaphorePermit};
 
-// macOS has small default ulimits
+// macOS has small default ulimits. Sync it with test_server_pool()
 const DEFAULT_POOL_SIZE: usize = if cfg!(target_os = "macos") { 20 } else { 50 };
 pub(crate) static SERVER_POOL: ServerPool = ServerPool::new(DEFAULT_POOL_SIZE);
 
