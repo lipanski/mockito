@@ -3,7 +3,7 @@
   <p align="center">
     <a href="https://docs.rs/mockito"><img src="https://docs.rs/mockito/badge.svg"></a>
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/v/mockito.svg"></a>
-    <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.65.0-orange">
+    <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.68.0-orange">
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/d/mockito"></a>
     <a href="https://github.com/lipanski/mockito/actions/workflows/tests.yml/?branch=master"><img src="https://github.com/lipanski/mockito/actions/workflows/tests.yml/badge.svg?branch=master"></a>
   </p>
@@ -122,7 +122,7 @@ async fn test_simple_route_mock_async() {
 
 ## Minimum supported Rust toolchain
 
-The current minimum support Rust toolchain is **1.65.0**
+The current minimum support Rust toolchain is **1.68.0**
 
 ## Contribution Guidelines
 
@@ -144,7 +144,7 @@ cargo test
 ...or run tests using a different toolchain:
 
 ```sh
-rustup run --install 1.65.0 cargo test
+rustup run --install 1.68.0 cargo test
 ```
 
 ...or run tests while disabling the default features (e.g. the colors):
@@ -184,7 +184,7 @@ rustup component add clippy
 The linter is always run on the minimum supported Rust version:
 
 ```sh
-rustup run --install 1.65.0 cargo clippy-mockito
+rustup run --install 1.68.0 cargo clippy-mockito
 ```
 
 ### Release
