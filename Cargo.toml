@@ -11,6 +11,7 @@ keywords = ["mock", "mocks", "http", "webmock", "webmocks"]
 categories = ["development-tools::testing", "web-programming"]
 exclude = ["/.appveyor.yml", "/.travis.yml", "/benchmarks.txt", "/docs/", "/slides.pdf"]
 edition = "2021"
+rust-version = "1.68"
 
 [badges]
 travis-ci = { repository = "lipanski/mockito", branch = "master" }
@@ -21,7 +22,6 @@ assert-json-diff = "2.0"
 colored = { version = "2.0", optional = true }
 futures = "0.3"
 hyper = { version = "0.14", features = ["full"] }
-lazy_static = "1.4"
 log = "0.4"
 rand = "0.8"
 regex = "1.7"

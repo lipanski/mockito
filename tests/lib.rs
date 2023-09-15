@@ -1915,17 +1915,23 @@ fn test_running_multiple_servers() {
     assert_eq!("s3", body3);
 }
 
+static SERIAL_POOL_TESTS: Mutex<()> = Mutex::new(());
+const DEFAULT_POOL_SIZE: usize = if cfg!(target_os = "macos") { 20 } else { 50 };
+
 #[test]
 #[allow(clippy::vec_init_then_push)]
 fn test_server_pool() {
+    // two tests can't monopolize the pool at the same time
+    let _lock = SERIAL_POOL_TESTS.lock().unwrap();
+
     // If the pool is not working, this will hit the file descriptor limit (Too many open files)
     for _ in 0..20 {
-        // The pool size is 50, anything beyond that will block
-        for _ in 0..50 {
-            let mut servers = vec![];
+        let mut servers = vec![];
+        // Anything beyond pool size will block.
+        for _ in 0..DEFAULT_POOL_SIZE {
             servers.push(Server::new());
 
-            let s = servers.first_mut().unwrap();
+            let s = servers.last_mut().unwrap();
             let m = s.mock("GET", "/pool").create();
             let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
             m.assert();
@@ -1933,17 +1939,21 @@ fn test_server_pool() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[allow(clippy::vec_init_then_push)]
 async fn test_server_pool_async() {
+    // two tests can't monopolize the pool at the same time
+    tokio::task::yield_now().await;
+    let _lock = tokio::task::block_in_place(|| SERIAL_POOL_TESTS.lock().unwrap());
+
     // If the pool is not working, this will hit the file descriptor limit (Too many open files)
     for _ in 0..20 {
-        // The pool size is 50, anything beyond that will block
-        for _ in 0..50 {
-            let mut servers = vec![];
+        let mut servers = vec![];
+        // Anything beyond pool size will block
+        for _ in 0..DEFAULT_POOL_SIZE {
             servers.push(Server::new_async().await);
 
-            let s = servers.first_mut().unwrap();
+            let s = servers.last_mut().unwrap();
             let m = s.mock("GET", "/pool").create_async().await;
             let (_, _, _) = request_with_body(&s.host_with_port(), "GET /pool", "", "");
             m.assert_async().await;
@@ -2052,8 +2062,11 @@ async fn test_match_body_asnyc() {
     assert_eq!(200, response.status());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_join_all_async() {
+    tokio::task::yield_now().await;
+    let _lock = tokio::task::block_in_place(|| SERIAL_POOL_TESTS.lock().unwrap());
+
     let futures = (0..10).map(|_| async {
         let mut s = Server::new_async().await;
         let m = s.mock("POST", "/").create_async().await;
