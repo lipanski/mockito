@@ -1383,6 +1383,26 @@ fn test_assert_panics_with_too_many_requests() {
 }
 
 #[test]
+fn test_expect_zero() {
+    let mut s = Server::new();
+    let mock = s.mock("GET", "/hello").expect(0).create();
+
+    mock.assert();
+}
+
+#[test]
+#[should_panic(expected = "\n> Expected 0 request(s) to:\n\r\nGET /hello\r\n\n...but received 1\n")]
+fn test_expect_zero_fail() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    let mock = s.mock("GET", "/hello").expect(0).create();
+
+    request(&host, "GET /hello", "");
+
+    mock.assert();
+}
+
+#[test]
 #[should_panic(
     expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n\n> The last unmatched request was:\n\r\nGET /bye\r\n\n> Difference:\n\n\u{1b}[31mGET /hello\n\u{1b}[0m\u{1b}[32mGET\u{1b}[0m\u{1b}[32m \u{1b}[0m\u{1b}[42;30m/bye\u{1b}[0m\u{1b}[32m\n\u{1b}[0m\n\n"
 )]
