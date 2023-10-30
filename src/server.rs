@@ -44,7 +44,7 @@ impl RemoteMock {
         self.inner
             .headers
             .iter()
-            .all(|&(ref field, ref expected)| expected.matches_values(&request.header(field)))
+            .all(|(field, expected)| expected.matches_values(&request.header(field)))
     }
 
     fn body_matches(&self, request: &mut Request) -> bool {
