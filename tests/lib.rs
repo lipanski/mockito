@@ -148,7 +148,7 @@ fn test_simple_route_mock() {
     let mut s = Server::new();
     s.mock("GET", "/hello").with_body("world").create();
 
-    let (status_line, _, body) = request(&s.host_with_port(), "GET /hello", "");
+    let (status_line, _, body) = request(s.host_with_port(), "GET /hello", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
     assert_eq!("world", body);
 }
@@ -159,10 +159,10 @@ fn test_two_route_mocks() {
     s.mock("GET", "/a").with_body("aaa").create();
     s.mock("GET", "/b").with_body("bbb").create();
 
-    let (_, _, body_a) = request(&s.host_with_port(), "GET /a", "");
+    let (_, _, body_a) = request(s.host_with_port(), "GET /a", "");
     assert_eq!("aaa", body_a);
 
-    let (_, _, body_b) = request(&s.host_with_port(), "GET /b", "");
+    let (_, _, body_b) = request(s.host_with_port(), "GET /b", "");
     assert_eq!("bbb", body_b);
 }
 
@@ -171,7 +171,7 @@ fn test_no_match_returns_501() {
     let mut s = Server::new();
     s.mock("GET", "/").with_body("matched").create();
 
-    let (status_line, _headers, body) = request(&s.host_with_port(), "GET /nope", "");
+    let (status_line, _headers, body) = request(s.host_with_port(), "GET /nope", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
     assert_eq!("", body);
 }
@@ -190,13 +190,13 @@ fn test_match_header() {
         .create();
 
     let (_, _, body_json) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "content-type: application/json\r\n",
     );
     assert_eq!("{}", body_json);
 
-    let (_, _, body_text) = request(&s.host_with_port(), "GET /", "content-type: text/plain\r\n");
+    let (_, _, body_text) = request(s.host_with_port(), "GET /", "content-type: text/plain\r\n");
     assert_eq!("hello", body_text);
 }
 
@@ -208,11 +208,11 @@ fn test_match_header_is_case_insensitive_on_the_field_name() {
         .create();
 
     let (uppercase_status_line, _, _) =
-        request(&s.host_with_port(), "GET /", "Content-Type: text/plain\r\n");
+        request(s.host_with_port(), "GET /", "Content-Type: text/plain\r\n");
     assert_eq!("HTTP/1.1 200 OK\r\n", uppercase_status_line);
 
     let (lowercase_status_line, _, _) =
-        request(&s.host_with_port(), "GET /", "content-type: text/plain\r\n");
+        request(s.host_with_port(), "GET /", "content-type: text/plain\r\n");
     assert_eq!("HTTP/1.1 200 OK\r\n", lowercase_status_line);
 }
 
@@ -226,14 +226,14 @@ fn test_match_multiple_headers() {
         .create();
 
     let (_, _, body_matching) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "content-type: text/plain\r\nauthorization: secret\r\n",
     );
     assert_eq!("matched", body_matching);
 
     let (status_not_matching, _, _) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "content-type: text/plain\r\nauthorization: meh\r\n",
     );
@@ -248,7 +248,7 @@ fn test_match_header_any_matching() {
         .with_body("matched")
         .create();
 
-    let (_, _, body) = request(&s.host_with_port(), "GET /", "content-type: something\r\n");
+    let (_, _, body) = request(s.host_with_port(), "GET /", "content-type: something\r\n");
     assert_eq!("matched", body);
 }
 
@@ -260,7 +260,7 @@ fn test_match_header_any_not_matching() {
         .with_body("matched")
         .create();
 
-    let (status, _, _) = request(&s.host_with_port(), "GET /", "");
+    let (status, _, _) = request(s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -271,7 +271,7 @@ fn test_match_header_missing_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request(&s.host_with_port(), "GET /", "");
+    let (status, _, _) = request(s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
@@ -282,7 +282,7 @@ fn test_match_header_missing_not_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request(&s.host_with_port(), "GET /", "Authorization: something\r\n");
+    let (status, _, _) = request(s.host_with_port(), "GET /", "Authorization: something\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -293,7 +293,7 @@ fn test_match_header_missing_not_matching_even_when_empty() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request(&s.host_with_port(), "GET /", "Authorization:\r\n");
+    let (status, _, _) = request(s.host_with_port(), "GET /", "Authorization:\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -307,7 +307,7 @@ fn test_match_multiple_header_conditions_matching() {
         .create();
 
     let (status, _, _) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Hello: World\r\nContent-Type: something\r\n",
     );
@@ -323,7 +323,7 @@ fn test_match_multiple_header_conditions_not_matching() {
         .match_header("Authorization", Matcher::Missing)
         .create();
 
-    let (status, _, _) = request(&s.host_with_port(), "GET /", "Hello: World\r\n");
+    let (status, _, _) = request(s.host_with_port(), "GET /", "Hello: World\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -332,7 +332,7 @@ fn test_match_any_body_by_default() {
     let mut s = Server::new();
     s.mock("POST", "/").create();
 
-    let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "hello");
+    let (status, _, _) = request_with_body(s.host_with_port(), "POST /", "", "hello");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
@@ -341,7 +341,7 @@ fn test_match_body() {
     let mut s = Server::new();
     s.mock("POST", "/").match_body("hello").create();
 
-    let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "hello");
+    let (status, _, _) = request_with_body(s.host_with_port(), "POST /", "", "hello");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
@@ -350,7 +350,7 @@ fn test_match_body_not_matching() {
     let mut s = Server::new();
     s.mock("POST", "/").match_body("hello").create();
 
-    let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "bye");
+    let (status, _, _) = request_with_body(s.host_with_port(), "POST /", "", "bye");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -368,7 +368,7 @@ fn test_match_binary_body() {
         .unwrap();
     let content_length_header = format!("Content-Length: {}\r\n", file_content.len());
     let (status, _, _) = binary_request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         &content_length_header,
         file_content,
@@ -386,7 +386,7 @@ fn test_does_not_match_binary_body() {
     let file_content: Binary = (0..1024).map(|_| rand::random::<u8>()).collect();
     let content_length_header = format!("Content-Length: {}\r\n", file_content.len());
     let (status, _, _) = binary_request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         &content_length_header,
         file_content,
@@ -401,7 +401,7 @@ fn test_match_body_with_regex() {
         .match_body(Matcher::Regex("hello".to_string()))
         .create();
 
-    let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "test hello test");
+    let (status, _, _) = request_with_body(s.host_with_port(), "POST /", "", "test hello test");
     assert_eq!("HTTP/1.1 200 OK\r\n", status);
 }
 
@@ -412,7 +412,7 @@ fn test_match_body_with_regex_not_matching() {
         .match_body(Matcher::Regex("hello".to_string()))
         .create();
 
-    let (status, _, _) = request_with_body(&s.host_with_port(), "POST /", "", "bye");
+    let (status, _, _) = request_with_body(s.host_with_port(), "POST /", "", "bye");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -424,7 +424,7 @@ fn test_match_body_with_json() {
         .create();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         "",
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -450,7 +450,7 @@ fn test_match_body_with_more_headers_with_json() {
         .concat();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         &headers,
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -466,7 +466,7 @@ fn test_match_body_with_json_order() {
         .create();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         "",
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -484,7 +484,7 @@ fn test_match_body_with_json_string() {
         .create();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         "",
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -502,7 +502,7 @@ fn test_match_body_with_json_string_order() {
         .create();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         "",
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -518,7 +518,7 @@ fn test_match_body_with_partial_json() {
         .create();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         "",
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -534,7 +534,7 @@ fn test_match_body_with_partial_json_and_extra_fields() {
         .create();
 
     let (status, _, _) =
-        request_with_body(&s.host_with_port(), "POST /", "", r#"{"hello":"world"}"#);
+        request_with_body(s.host_with_port(), "POST /", "", r#"{"hello":"world"}"#);
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -548,7 +548,7 @@ fn test_match_body_with_partial_json_string() {
         .create();
 
     let (status, _, _) = request_with_body(
-        &s.host_with_port(),
+        s.host_with_port(),
         "POST /",
         "",
         r#"{"hello":"world", "foo": "bar"}"#,
@@ -566,7 +566,7 @@ fn test_match_body_with_partial_json_string_and_extra_fields() {
         .create();
 
     let (status, _, _) =
-        request_with_body(&s.host_with_port(), "POST /", "", r#"{"hello":"world"}"#);
+        request_with_body(s.host_with_port(), "POST /", "", r#"{"hello":"world"}"#);
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
@@ -575,7 +575,7 @@ fn test_mock_with_status() {
     let mut s = Server::new();
     s.mock("GET", "/").with_status(204).with_body("").create();
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 204 No Content\r\n", status_line);
 }
 
@@ -584,7 +584,7 @@ fn test_mock_with_custom_status() {
     let mut s = Server::new();
     s.mock("GET", "/").with_status(499).with_body("").create();
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 499 <none>\r\n", status_line);
 }
 
@@ -593,7 +593,7 @@ fn test_mock_with_body() {
     let mut s = Server::new();
     s.mock("GET", "/").with_body("hello").create();
 
-    let (_, _, body) = request(&s.host_with_port(), "GET /", "");
+    let (_, _, body) = request(s.host_with_port(), "GET /", "");
     assert_eq!("hello", body);
 }
 
@@ -607,7 +607,7 @@ fn test_mock_with_fn_body() {
         })
         .create();
 
-    let (_, _, body) = request(&s.host_with_port(), "GET /", "");
+    let (_, _, body) = request(s.host_with_port(), "GET /", "");
     assert_eq!("hello", body);
 }
 
@@ -638,10 +638,10 @@ fn test_mock_with_body_from_request() {
         })
         .create();
 
-    let (_, _, body) = request(&s.host_with_port(), "GET /world", "");
+    let (_, _, body) = request(s.host_with_port(), "GET /world", "");
     assert_eq!("hello world", body);
 
-    let (_, _, body) = request(&s.host_with_port(), "GET /", "");
+    let (_, _, body) = request(s.host_with_port(), "GET /", "");
     assert_eq!("just hello", body);
 }
 
@@ -659,10 +659,10 @@ fn test_mock_with_body_from_request_body() {
         })
         .create();
 
-    let (_, _, body) = request_with_body(&s.host_with_port(), "GET /", "", "test");
+    let (_, _, body) = request_with_body(s.host_with_port(), "GET /", "", "test");
     assert_eq!("test", body);
 
-    let (_, _, body) = request_with_body(&s.host_with_port(), "GET /", "", "something else");
+    let (_, _, body) = request_with_body(s.host_with_port(), "GET /", "", "something else");
     assert_eq!("not a test", body);
 }
 
@@ -674,7 +674,7 @@ fn test_mock_with_header() {
         .with_body("{}")
         .create();
 
-    let (_, headers, _) = request(&s.host_with_port(), "GET /", "");
+    let (_, headers, _) = request(s.host_with_port(), "GET /", "");
     assert!(headers.contains(&"content-type: application/json".to_string()));
 }
 
@@ -687,7 +687,7 @@ fn test_mock_with_multiple_headers() {
         .with_body("{}")
         .create();
 
-    let (_, headers, _) = request(&s.host_with_port(), "GET /", "");
+    let (_, headers, _) = request(s.host_with_port(), "GET /", "");
     assert!(headers.contains(&"content-type: application/json".to_string()));
     assert!(headers.contains(&"x-api-key: 1234".to_string()));
 }
@@ -708,7 +708,7 @@ fn test_mock_preserves_header_order() {
 
     mock.create();
 
-    let (_, headers, _) = request(&s.host_with_port(), "GET /", "");
+    let (_, headers, _) = request(s.host_with_port(), "GET /", "");
     let custom_headers: Vec<_> = headers
         .into_iter()
         .filter(|header| header.starts_with("x-custom-header"))
@@ -727,7 +727,7 @@ fn test_pooled_server_going_out_of_context_removes_all_mocks() {
 
         s.mock("GET", "/reset").create();
 
-        let (working_status_line, _, _) = request(&s.host_with_port(), "GET /reset", "");
+        let (working_status_line, _, _) = request(s.host_with_port(), "GET /reset", "");
         assert_eq!("HTTP/1.1 200 OK\r\n", working_status_line);
     }
 
@@ -745,7 +745,7 @@ fn test_unpooled_server_going_out_of_context_removes_all_mocks() {
 
         s.mock("GET", "/reset").create();
 
-        let (working_status_line, _, _) = request(&s.host_with_port(), "GET /reset", "");
+        let (working_status_line, _, _) = request(s.host_with_port(), "GET /reset", "");
         assert_eq!("HTTP/1.1 200 OK\r\n", working_status_line);
     }
 
@@ -760,7 +760,7 @@ fn test_remove_a_single_mock() {
     let m1 = s.mock("GET", "/").create();
     m1.remove();
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 }
 
@@ -774,16 +774,16 @@ fn test_regex_match_path() {
         .with_body("bbb")
         .create();
 
-    let (_, _, body_a) = request(&s.host_with_port(), "GET /a/1", "");
+    let (_, _, body_a) = request(s.host_with_port(), "GET /a/1", "");
     assert_eq!("aaa", body_a);
 
-    let (_, _, body_b) = request(&s.host_with_port(), "GET /b/2", "");
+    let (_, _, body_b) = request(s.host_with_port(), "GET /b/2", "");
     assert_eq!("bbb", body_b);
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /a/11", "");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /a/11", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /c/2", "");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /c/2", "");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 }
 
@@ -799,17 +799,13 @@ fn test_regex_match_header() {
         .create();
 
     let (_, _, body_json) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Authorization: Bearer token.payload\r\n",
     );
     assert_eq!("{}", body_json);
 
-    let (status_line, _, _) = request(
-        &s.host_with_port(),
-        "GET /",
-        "authorization: Beare none\r\n",
-    );
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "authorization: Beare none\r\n");
     assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
 }
 
@@ -827,23 +823,23 @@ fn test_any_of_match_header() {
         .with_body("{}")
         .create();
 
-    let (_, _, body_json) = request(&s.host_with_port(), "GET /", "Via: one\r\n");
+    let (_, _, body_json) = request(s.host_with_port(), "GET /", "Via: one\r\n");
     assert_eq!("{}", body_json);
 
-    let (_, _, body_json) = request(&s.host_with_port(), "GET /", "Via: two\r\n");
+    let (_, _, body_json) = request(s.host_with_port(), "GET /", "Via: two\r\n");
     assert_eq!("{}", body_json);
 
-    let (_, _, body_json) = request(&s.host_with_port(), "GET /", "Via: one\r\nVia: two\r\n");
+    let (_, _, body_json) = request(s.host_with_port(), "GET /", "Via: one\r\nVia: two\r\n");
     assert_eq!("{}", body_json);
 
     let (status_line, _, _) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Via: one\r\nVia: two\r\nVia: wrong\r\n",
     );
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: wrong\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
@@ -857,16 +853,16 @@ fn test_any_of_match_body() {
         ]))
         .create();
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "one");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "one");
     assert!(status_line.starts_with("HTTP/1.1 200 "));
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "two");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "two");
     assert!(status_line.starts_with("HTTP/1.1 200 "));
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "one two");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "one two");
     assert!(status_line.starts_with("HTTP/1.1 200 "));
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "three");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "three");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
@@ -881,26 +877,26 @@ fn test_any_of_missing_match_header() {
         .with_body("{}")
         .create();
 
-    let (_, _, body_json) = request(&s.host_with_port(), "GET /", "Via: one\r\n");
+    let (_, _, body_json) = request(s.host_with_port(), "GET /", "Via: one\r\n");
     assert_eq!("{}", body_json);
 
     let (_, _, body_json) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Via: one\r\nVia: one\r\nVia: one\r\n",
     );
     assert_eq!("{}", body_json);
 
-    let (_, _, body_json) = request(&s.host_with_port(), "GET /", "NotVia: one\r\n");
+    let (_, _, body_json) = request(s.host_with_port(), "GET /", "NotVia: one\r\n");
     assert_eq!("{}", body_json);
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: wrong\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: wrong\r\nVia: one\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: wrong\r\nVia: one\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: one\r\nVia: wrong\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: one\r\nVia: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
@@ -918,27 +914,27 @@ fn test_all_of_match_header() {
         .with_body("{}")
         .create();
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: one\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: one\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: two\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: two\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
     let (status_line, _, _) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Via: one two\r\nVia: one two three\r\n",
     );
     assert!(status_line.starts_with("HTTP/1.1 200 "));
 
     let (status_line, _, _) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Via: one\r\nVia: two\r\nVia: wrong\r\n",
     );
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: wrong\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
@@ -952,16 +948,16 @@ fn test_all_of_match_body() {
         ]))
         .create();
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "one");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "one");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "two");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "two");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "one two");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "one two");
     assert!(status_line.starts_with("HTTP/1.1 200 "));
 
-    let (status_line, _, _) = request_with_body(&s.host_with_port(), "GET /", "", "three");
+    let (status_line, _, _) = request_with_body(s.host_with_port(), "GET /", "", "three");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
@@ -973,26 +969,26 @@ fn test_all_of_missing_match_header() {
         .with_body("{}")
         .create();
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: one\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: one\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
     let (status_line, _, _) = request(
-        &s.host_with_port(),
+        s.host_with_port(),
         "GET /",
         "Via: one\r\nVia: one\r\nVia: one\r\n",
     );
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "NotVia: one\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "NotVia: one\r\n");
     assert!(status_line.starts_with("HTTP/1.1 200 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: wrong\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: wrong\r\nVia: one\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: wrong\r\nVia: one\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 
-    let (status_line, _, _) = request(&s.host_with_port(), "GET /", "Via: one\r\nVia: wrong\r\n");
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "Via: one\r\nVia: wrong\r\n");
     assert!(status_line.starts_with("HTTP/1.1 501 "));
 }
 
@@ -1008,7 +1004,7 @@ fn test_large_utf8_body() {
 
     s.mock("GET", "/").with_body(&mock_body).create();
 
-    let (_, _, body) = request(&s.host_with_port(), "GET /", "");
+    let (_, _, body) = request(s.host_with_port(), "GET /", "");
     assert_eq!(mock_body, body);
 }
 
@@ -1018,7 +1014,7 @@ fn test_body_from_file() {
     s.mock("GET", "/")
         .with_body_from_file("tests/files/simple.http")
         .create();
-    let (status_line, _, body) = request(&s.host_with_port(), "GET /", "");
+    let (status_line, _, body) = request(s.host_with_port(), "GET /", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
     assert_eq!("test body\n", body);
 }
@@ -1183,7 +1179,7 @@ fn test_assert_defaults_to_one_hit() {
     let host = s.host_with_port();
     let mock = s.mock("GET", "/hello").create();
 
-    request(&host, "GET /hello", "");
+    request(host, "GET /hello", "");
 
     mock.assert();
 }
@@ -1398,7 +1394,7 @@ fn test_expect_zero_fail() {
     let host = s.host_with_port();
     let mock = s.mock("GET", "/hello").expect(0).create();
 
-    request(&host, "GET /hello", "");
+    request(host, "GET /hello", "");
 
     mock.assert();
 }
@@ -1413,7 +1409,7 @@ fn test_assert_with_last_unmatched_request() {
     let host = s.host_with_port();
     let mock = s.mock("GET", "/hello").create();
 
-    request(&host, "GET /bye", "");
+    request(host, "GET /bye", "");
 
     mock.assert();
 }
@@ -1444,7 +1440,7 @@ fn test_assert_with_last_unmatched_request_and_query() {
     let host = s.host_with_port();
     let mock = s.mock("GET", "/hello?world=1").create();
 
-    request(&host, "GET /hello?world=2", "");
+    request(host, "GET /hello?world=2", "");
 
     mock.assert();
 }
@@ -1475,7 +1471,7 @@ fn test_assert_with_last_unmatched_request_and_headers() {
     let host = s.host_with_port();
     let mock = s.mock("GET", "/hello").create();
 
-    request(&host, "GET /bye", "authorization: 1234\r\naccept: text\r\n");
+    request(host, "GET /bye", "authorization: 1234\r\naccept: text\r\n");
 
     mock.assert();
 }
@@ -1505,7 +1501,7 @@ fn test_assert_with_last_unmatched_request_and_body() {
     let host = s.host_with_port();
     let mock = s.mock("GET", "/hello").create();
 
-    request_with_body(&host, "POST /bye", "", "hello");
+    request_with_body(host, "POST /bye", "", "hello");
 
     mock.assert();
 }
@@ -1517,7 +1513,7 @@ fn test_request_from_thread() {
     let mock = s.mock("GET", "/").create();
 
     let process = thread::spawn(move || {
-        request(&host, "GET /", "");
+        request(host, "GET /", "");
     });
 
     process.join().unwrap();
@@ -1545,7 +1541,7 @@ fn test_mock_from_inside_thread_does_not_lock_forever() {
 
     process.join().unwrap();
 
-    let (status_line, _, body) = request(&host, "GET /", "");
+    let (status_line, _, body) = request(host, "GET /", "");
     assert!(status_line.starts_with("HTTP/1.1 200 "));
     assert_eq!("outside", body);
 }
@@ -1558,7 +1554,7 @@ fn test_head_request_with_overridden_content_length() {
         .with_header("content-length", "100")
         .create();
 
-    let (_, headers, _) = request(&host, "HEAD /", "");
+    let (_, headers, _) = request(host, "HEAD /", "");
 
     assert_eq!(
         vec!["connection: close", "content-length: 100"],
@@ -1572,7 +1568,7 @@ fn test_propagate_protocol_to_response() {
     let host = s.host_with_port();
     s.mock("GET", "/").create();
 
-    let stream = request_stream("1.0", &host, "GET /", "", "");
+    let stream = request_stream("1.0", host, "GET /", "", "");
 
     let (status_line, _, _) = parse_stream(stream, true);
     assert_eq!("HTTP/1.0 200 OK\r\n", status_line);
@@ -1587,7 +1583,7 @@ fn test_large_body_without_content_length() {
     s.mock("POST", "/").match_body(body.as_str()).create();
 
     let headers = format!("content-length: {}\r\n", body.len());
-    let stream = request_stream("1.0", &host, "POST /", &headers, &body);
+    let stream = request_stream("1.0", host, "POST /", &headers, &body);
 
     let (status_line, _, _) = parse_stream(stream, false);
     assert_eq!("HTTP/1.0 200 OK\r\n", status_line);
@@ -1606,7 +1602,7 @@ fn test_transfer_encoding_chunked() {
     let (status, _, _) = parse_stream(
         request_stream(
             "1.1",
-            &host,
+            host,
             "POST /",
             "Transfer-Encoding: chunked\r\n",
             body,
@@ -1653,7 +1649,7 @@ fn test_match_partial_query_by_regex() {
         .match_query(Matcher::Regex("number=one".to_string()))
         .create();
 
-    let (status_line, _, _) = request(&host, "GET /hello?something=else&number=one", "");
+    let (status_line, _, _) = request(host, "GET /hello?something=else&number=one", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 }
 
@@ -1728,7 +1724,7 @@ fn test_match_query_with_non_percent_url_escaping() {
         .create();
 
     let (status_line, _, _) = request(
-        &host,
+        host,
         "GET /hello?hello=world&something=else&num+ber=o+ne",
         "",
     );
@@ -1777,7 +1773,7 @@ fn test_anyof_exact_path_and_query_matcher() {
         )
         .create();
 
-    let (status_line, _, _) = request(&host, "GET /hello?world", "");
+    let (status_line, _, _) = request(host, "GET /hello?world", "");
     assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
 
     mock.assert();
@@ -1789,7 +1785,7 @@ fn test_default_headers() {
     let host = s.host_with_port();
     s.mock("GET", "/").create();
 
-    let (_, headers, _) = request(&host, "GET /", "");
+    let (_, headers, _) = request(host, "GET /", "");
     assert_eq!(3, headers.len());
     assert_eq!(
         vec!["connection: close", "content-length: 0"],
@@ -1911,7 +1907,7 @@ fn test_invalid_header_field_name() {
     let host = s.host_with_port();
     s.mock("GET", "/").create();
 
-    let (uppercase_status_line, _, _body) = request(&host, "GET /", "Bad Header: something\r\n");
+    let (uppercase_status_line, _, _body) = request(host, "GET /", "Bad Header: something\r\n");
     assert_eq!("HTTP/1.1 400 Bad Request\r\n", uppercase_status_line);
 }
 
@@ -1925,9 +1921,9 @@ fn test_running_multiple_servers() {
     s1.mock("GET", "/").with_body("s1").create();
     s3.mock("GET", "/").with_body("s3").create();
 
-    let (_, _, body1) = request_with_body(&s1.host_with_port(), "GET /", "", "");
-    let (_, _, body2) = request_with_body(&s2.host_with_port(), "GET /", "", "");
-    let (_, _, body3) = request_with_body(&s3.host_with_port(), "GET /", "", "");
+    let (_, _, body1) = request_with_body(s1.host_with_port(), "GET /", "", "");
+    let (_, _, body2) = request_with_body(s2.host_with_port(), "GET /", "", "");
+    let (_, _, body3) = request_with_body(s3.host_with_port(), "GET /", "", "");
 
     assert!(s1.host_with_port() != s2.host_with_port());
     assert!(s2.host_with_port() != s3.host_with_port());
@@ -1961,7 +1957,7 @@ fn test_server_pool() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[allow(clippy::vec_init_then_push)]
+#[allow(clippy::vec_init_then_push, clippy::await_holding_lock)]
 async fn test_server_pool_async() {
     // two tests can't monopolize the pool at the same time
     tokio::task::yield_now().await;
@@ -2084,6 +2080,7 @@ async fn test_match_body_asnyc() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[allow(clippy::await_holding_lock)]
 async fn test_join_all_async() {
     tokio::task::yield_now().await;
     let _lock = tokio::task::block_in_place(|| SERIAL_POOL_TESTS.lock().unwrap());
