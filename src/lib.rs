@@ -670,6 +670,7 @@
 //! ```
 //!
 pub use error::{Error, ErrorKind};
+pub use hyper::header::HeaderName;
 #[allow(deprecated)]
 pub use matcher::Matcher;
 pub use mock::Mock;
