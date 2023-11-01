@@ -1,6 +1,8 @@
 use crate::{Error, ErrorKind};
 use hyper::body;
 use hyper::body::Buf;
+use hyper::header::AsHeaderName;
+use hyper::header::HeaderValue;
 use hyper::Body as HyperBody;
 use hyper::Request as HyperRequest;
 
@@ -41,17 +43,12 @@ impl Request {
     }
 
     /// Retrieves all the header values for the given header field name
-    pub fn header(&self, header_name: &str) -> Vec<&str> {
-        self.inner
-            .headers()
-            .get_all(header_name)
-            .iter()
-            .map(|item| item.to_str().unwrap())
-            .collect::<Vec<&str>>()
+    pub fn header<T: AsHeaderName>(&self, header_name: T) -> Vec<&HeaderValue> {
+        self.inner.headers().get_all(header_name).iter().collect()
     }
 
     /// Checks whether the provided header field exists
-    pub fn has_header(&self, header_name: &str) -> bool {
+    pub fn has_header<T: AsHeaderName>(&self, header_name: T) -> bool {
         self.inner.headers().contains_key(header_name)
     }
 

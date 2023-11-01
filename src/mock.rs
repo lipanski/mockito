@@ -5,6 +5,8 @@ use crate::server::RemoteMock;
 use crate::server::State;
 use crate::Request;
 use crate::{Error, ErrorKind};
+use hyper::header::IntoHeaderName;
+use hyper::HeaderMap;
 use hyper::StatusCode;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -22,7 +24,7 @@ pub struct InnerMock {
     pub(crate) id: String,
     pub(crate) method: String,
     pub(crate) path: PathAndQueryMatcher,
-    pub(crate) headers: Vec<(String, Matcher)>,
+    pub(crate) headers: HeaderMap<Matcher>,
     pub(crate) body: Matcher,
     pub(crate) response: Response,
     pub(crate) hits: usize,
@@ -40,8 +42,8 @@ impl fmt::Display for InnerMock {
         formatted.push(' ');
         formatted.push_str(&self.path.to_string());
 
-        for &(ref key, ref value) in &self.headers {
-            formatted.push_str(key);
+        for (key, value) in &self.headers {
+            formatted.push_str(key.as_str());
             formatted.push_str(": ");
             formatted.push_str(&value.to_string());
             formatted.push_str("\r\n");
@@ -110,7 +112,7 @@ impl Mock {
                 .collect(),
             method: method.to_owned().to_uppercase(),
             path: PathAndQueryMatcher::Unified(path.into()),
-            headers: Vec::new(),
+            headers: HeaderMap::<Matcher>::default(),
             body: Matcher::Any,
             response: Response::default(),
             hits: 0,
@@ -200,10 +202,8 @@ impl Mock {
     ///   .match_header("authorization", "password");
     /// ```
     ///
-    pub fn match_header<M: Into<Matcher>>(mut self, field: &str, value: M) -> Self {
-        self.inner
-            .headers
-            .push((field.to_owned().to_lowercase(), value.into()));
+    pub fn match_header<T: IntoHeaderName, M: Into<Matcher>>(mut self, field: T, value: M) -> Self {
+        self.inner.headers.append(field, value.into());
 
         self
     }
@@ -283,11 +283,8 @@ impl Mock {
     /// s.mock("GET", "/").with_header("content-type", "application/json");
     /// ```
     ///
-    pub fn with_header(mut self, field: &str, value: &str) -> Self {
-        self.inner
-            .response
-            .headers
-            .push((field.to_owned(), value.to_owned()));
+    pub fn with_header<T: IntoHeaderName>(mut self, field: T, value: &str) -> Self {
+        self.inner.response.headers.append(field, value.to_owned());
 
         self
     }

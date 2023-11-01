@@ -1,4 +1,5 @@
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
+use hyper::header::HeaderValue;
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::From;
@@ -108,7 +109,7 @@ impl fmt::Display for Matcher {
 }
 
 impl Matcher {
-    pub(crate) fn matches_values(&self, header_values: &[&str]) -> bool {
+    pub(crate) fn matches_values(&self, header_values: &[&HeaderValue]) -> bool {
         match self {
             Matcher::Missing => header_values.is_empty(),
             // AnyOf([…Missing…]) is handled here, but
@@ -122,7 +123,12 @@ impl Matcher {
                 matchers.iter().all(|m| m.matches_values(header_values))
             }
             _ => {
-                !header_values.is_empty() && header_values.iter().all(|val| self.matches_value(val))
+                !header_values.is_empty()
+                    && header_values.iter().all(|val| {
+                        val.to_str()
+                            .map(|val| self.matches_value(val))
+                            .unwrap_or(false)
+                    })
             }
         }
     }

@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::Request;
 use futures::stream::Stream;
+use hyper::HeaderMap;
 use hyper::StatusCode;
 use std::fmt;
 use std::io;
@@ -12,7 +13,7 @@ use tokio::sync::mpsc;
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Response {
     pub status: StatusCode,
-    pub headers: Vec<(String, String)>,
+    pub headers: HeaderMap<String>,
     pub body: Body,
 }
 
@@ -55,9 +56,11 @@ impl PartialEq for Body {
 
 impl Default for Response {
     fn default() -> Self {
+        let mut headers = HeaderMap::with_capacity(1);
+        headers.insert("connection", "close".parse().unwrap());
         Self {
             status: StatusCode::OK,
-            headers: vec![("connection".into(), "close".into())],
+            headers,
             body: Body::Bytes(Vec::new()),
         }
     }
