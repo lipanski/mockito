@@ -5,7 +5,7 @@ use crate::server::RemoteMock;
 use crate::server::State;
 use crate::Request;
 use crate::{Error, ErrorKind};
-use hyper::header::IntoHeaderName;
+use hyper::header::HeaderName;
 use hyper::HeaderMap;
 use hyper::StatusCode;
 use rand::distributions::Alphanumeric;
@@ -18,6 +18,42 @@ use std::path::Path;
 use std::string::ToString;
 use std::sync::Arc;
 use std::sync::RwLock;
+
+#[allow(missing_docs)]
+pub trait IntoHeaderName {
+    #[track_caller]
+    fn into_header_name(self) -> HeaderName;
+}
+
+impl IntoHeaderName for String {
+    fn into_header_name(self) -> HeaderName {
+        HeaderName::try_from(self)
+            .map_err(|_| Error::new(ErrorKind::InvalidHeaderName))
+            .unwrap()
+    }
+}
+
+impl IntoHeaderName for &String {
+    fn into_header_name(self) -> HeaderName {
+        HeaderName::try_from(self)
+            .map_err(|_| Error::new(ErrorKind::InvalidHeaderName))
+            .unwrap()
+    }
+}
+
+impl IntoHeaderName for &str {
+    fn into_header_name(self) -> HeaderName {
+        HeaderName::try_from(self)
+            .map_err(|_| Error::new(ErrorKind::InvalidHeaderName))
+            .unwrap()
+    }
+}
+
+impl IntoHeaderName for HeaderName {
+    fn into_header_name(self) -> HeaderName {
+        self
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct InnerMock {
@@ -202,8 +238,11 @@ impl Mock {
     ///   .match_header("authorization", "password");
     /// ```
     ///
+    #[track_caller]
     pub fn match_header<T: IntoHeaderName, M: Into<Matcher>>(mut self, field: T, value: M) -> Self {
-        self.inner.headers.append(field, value.into());
+        self.inner
+            .headers
+            .append(field.into_header_name(), value.into());
 
         self
     }
@@ -284,7 +323,10 @@ impl Mock {
     /// ```
     ///
     pub fn with_header<T: IntoHeaderName>(mut self, field: T, value: &str) -> Self {
-        self.inner.response.headers.append(field, value.to_owned());
+        self.inner
+            .response
+            .headers
+            .append(field.into_header_name(), value.to_owned());
 
         self
     }
