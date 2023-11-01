@@ -62,6 +62,8 @@ pub enum ErrorKind {
     ResponseBodyFailure,
     /// File not found
     FileNotFound,
+    /// Invalid header name
+    InvalidHeaderName,
 }
 
 impl ErrorKind {
@@ -75,6 +77,7 @@ impl ErrorKind {
             ErrorKind::RequestBodyFailure => "failed to read the request body",
             ErrorKind::ResponseBodyFailure => "failed to write the response body",
             ErrorKind::FileNotFound => "file not found",
+            ErrorKind::InvalidHeaderName => "invalid header name",
         }
     }
 }

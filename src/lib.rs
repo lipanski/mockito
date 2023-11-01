@@ -672,7 +672,7 @@
 pub use error::{Error, ErrorKind};
 #[allow(deprecated)]
 pub use matcher::Matcher;
-pub use mock::Mock;
+pub use mock::{IntoHeaderName, Mock};
 pub use request::Request;
 pub use server::Server;
 pub use server_pool::ServerGuard;

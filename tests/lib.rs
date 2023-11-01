@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate serde_json;
 
-use hyper::header::HeaderName;
 use mockito::{Matcher, Server};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
@@ -700,7 +699,7 @@ fn test_mock_preserves_header_order() {
 
     // Add a large number of headers so getting the same order accidentally is unlikely.
     for i in 0..100 {
-        let field: HeaderName = format!("x-custom-header-{}", i).try_into().unwrap();
+        let field = format!("x-custom-header-{}", i);
         let value = "test";
         mock = mock.with_header(&field, value);
         expected_headers.push(format!("{}: {}", field, value));
