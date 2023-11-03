@@ -55,6 +55,12 @@ impl IntoHeaderName for HeaderName {
     }
 }
 
+impl IntoHeaderName for &HeaderName {
+    fn into_header_name(self) -> HeaderName {
+        self.into()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct InnerMock {
     pub(crate) id: String,
