@@ -21,19 +21,20 @@ appveyor = { repository = "lipanski/mockito", branch = "master", service = "gith
 assert-json-diff = "2.0"
 colored = { version = "2.0", optional = true }
 futures = "0.3"
-hyper = { version = "0.14", features = ["full"] }
+hyper = { version = "0.14", features = ["http1", "http2", "server", "stream"] }
 log = "0.4"
 rand = "0.8"
 regex = "1.7"
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 similar = "2.2"
-tokio = { version = "1.25", features = ["full"] }
+tokio = { version = "1.25", features = ["net", "rt", "sync"] }
 
 [dev-dependencies]
 env_logger = "0.8"
 testing_logger = "0.1"
 reqwest = "0.11"
+tokio = { version = "1.25", features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = ["color"]
