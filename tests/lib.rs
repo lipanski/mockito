@@ -1931,14 +1931,13 @@ fn test_running_multiple_servers() {
     assert_eq!("s3", body3);
 }
 
-static SERIAL_POOL_TESTS: Mutex<()> = Mutex::new(());
+static SERIAL_POOL_TESTS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 const DEFAULT_POOL_SIZE: usize = if cfg!(target_os = "macos") { 20 } else { 50 };
 
 #[test]
-#[allow(clippy::vec_init_then_push)]
 fn test_server_pool() {
     // two tests can't monopolize the pool at the same time
-    let _lock = SERIAL_POOL_TESTS.lock().unwrap();
+    let _lock = SERIAL_POOL_TESTS.blocking_lock();
 
     // If the pool is not working, this will hit the file descriptor limit (Too many open files)
     for _ in 0..20 {
@@ -1956,11 +1955,9 @@ fn test_server_pool() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[allow(clippy::vec_init_then_push, clippy::await_holding_lock)]
 async fn test_server_pool_async() {
     // two tests can't monopolize the pool at the same time
-    tokio::task::yield_now().await;
-    let _lock = tokio::task::block_in_place(|| SERIAL_POOL_TESTS.lock().unwrap());
+    let _lock = SERIAL_POOL_TESTS.lock().await;
 
     // If the pool is not working, this will hit the file descriptor limit (Too many open files)
     for _ in 0..20 {
@@ -2079,10 +2076,8 @@ async fn test_match_body_asnyc() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[allow(clippy::await_holding_lock)]
 async fn test_join_all_async() {
-    tokio::task::yield_now().await;
-    let _lock = tokio::task::block_in_place(|| SERIAL_POOL_TESTS.lock().unwrap());
+    let _lock = SERIAL_POOL_TESTS.lock().await;
 
     let futures = (0..10).map(|_| async {
         let mut s = Server::new_async().await;
