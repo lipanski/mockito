@@ -129,7 +129,7 @@ impl State {
 ///
 #[derive(Debug)]
 pub struct Server {
-    address: String,
+    address: SocketAddr,
     state: Arc<RwLock<State>>,
 }
 
@@ -199,7 +199,7 @@ impl Server {
     pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = mpsc::channel::<String>();
+        let (address_sender, address_receiver) = mpsc::channel::<SocketAddr>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -226,7 +226,7 @@ impl Server {
     pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
         let address = SocketAddr::from(([127, 0, 0, 1], port));
-        let (address_sender, address_receiver) = mpsc::channel::<String>();
+        let (address_sender, address_receiver) = mpsc::channel::<SocketAddr>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -249,7 +249,7 @@ impl Server {
 
     async fn bind_server(
         address: SocketAddr,
-        address_sender: mpsc::Sender<String>,
+        address_sender: mpsc::Sender<SocketAddr>,
         state: Arc<RwLock<State>>,
     ) -> Result<(), Error> {
         let listener = TcpListener::bind(address)
@@ -260,7 +260,7 @@ impl Server {
             .local_addr()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
-        address_sender.send(address.to_string()).unwrap();
+        address_sender.send(address).unwrap();
 
         while let Ok((stream, _)) = listener.accept().await {
             let mutex = state.clone();
@@ -311,7 +311,14 @@ impl Server {
     /// Can be used with `std::net::TcpStream`.
     ///
     pub fn host_with_port(&self) -> String {
-        self.address.clone()
+        self.address.to_string()
+    }
+
+    ///
+    /// The raw address of the mock server.
+    ///
+    pub fn socket_address(&self) -> SocketAddr {
+        self.address
     }
 
     ///
