@@ -1,5 +1,5 @@
-use crate::Server;
 use crate::{Error, ErrorKind};
+use crate::{Server, ServerOpts};
 use std::collections::VecDeque;
 use std::ops::{Deref, DerefMut, Drop};
 use std::sync::Mutex;
@@ -75,7 +75,7 @@ impl ServerPool {
         let recycled = self.free_list.lock().unwrap().pop_front();
         let server = match recycled {
             Some(server) => server,
-            None => Server::try_new_with_port_async(0).await?,
+            None => Server::try_new_with_opts_async(ServerOpts::default()).await?,
         };
 
         Ok(ServerGuard::new(server, permit))
