@@ -121,6 +121,23 @@
 //! }
 //! ```
 //!
+//! Start a **stand-alone server** on a dedicated port:
+//!
+//! ```
+//! fn main() {
+//!     let opts = mockito::ServerOpts {
+//!         host: "0.0.0.0",
+//!         port: 1234,
+//!         ..Default::default()
+//!     };
+//!     let mut server = mockito::Server::new_with_opts(opts);
+//!
+//!     let _m = server.mock("GET", "/").with_body("hello world").create();
+//!
+//!     // loop {}
+//! }
+//! ```
+//!
 //! # Lifetime
 //!
 //! A mock is available only throughout the lifetime of the server. Once the server goes
