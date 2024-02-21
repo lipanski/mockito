@@ -142,10 +142,16 @@ pub struct Mock {
     inner: InnerMock,
     /// Used to warn of mocks missing a `.create()` call. See issue #112
     created: bool,
+    assert_on_drop: bool,
 }
 
 impl Mock {
-    pub(crate) fn new<P: Into<Matcher>>(state: Arc<RwLock<State>>, method: &str, path: P) -> Mock {
+    pub(crate) fn new<P: Into<Matcher>>(
+        state: Arc<RwLock<State>>,
+        method: &str,
+        path: P,
+        assert_on_drop: bool,
+    ) -> Mock {
         let inner = InnerMock {
             id: thread_rng()
                 .sample_iter(&Alphanumeric)
@@ -166,6 +172,7 @@ impl Mock {
             state,
             inner,
             created: false,
+            assert_on_drop,
         }
     }
 
@@ -355,6 +362,10 @@ impl Mock {
 
     ///
     /// Sets the body of the mock response dynamically. The response will use chunked transfer encoding.
+    ///
+    /// The callback function will be called only once. You can sleep in between calls to the
+    /// writer to simulate delays between the chunks. The callback function can also return an
+    /// error after any number of writes in order to abort the response.
     ///
     /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
     /// Use `move` closures and `Arc` to share any data.
@@ -660,6 +671,10 @@ impl Drop for Mock {
     fn drop(&mut self) {
         if !self.created {
             log::warn!("Missing .create() call on mock {}", self);
+        }
+
+        if self.assert_on_drop {
+            self.assert();
         }
     }
 }

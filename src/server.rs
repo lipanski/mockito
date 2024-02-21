@@ -6,9 +6,11 @@ use crate::{Error, ErrorKind, Matcher, Mock};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
 use hyper::{Body, Request as HyperRequest, Response, StatusCode};
+use std::default::Default;
 use std::fmt;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::ops::Drop;
+use std::str::FromStr;
 use std::sync::{mpsc, Arc, RwLock};
 use std::thread;
 use tokio::net::TcpListener;
@@ -108,6 +110,43 @@ impl State {
 }
 
 ///
+/// Options to configure a mock server. Provides a default implementation.
+///
+/// ```
+/// let opts = mockito::ServerOpts { port: 1234, ..Default::default() };
+/// ```
+///
+pub struct ServerOpts {
+    /// The server host (defaults to 127.0.0.1)
+    pub host: &'static str,
+    /// The server port (defaults to a randomly assigned free port)
+    pub port: u16,
+    /// Automatically call `assert()` before dropping a mock (defaults to false)
+    pub assert_on_drop: bool,
+}
+
+impl ServerOpts {
+    pub(crate) fn address(&self) -> SocketAddr {
+        let ip = IpAddr::from_str(self.host).unwrap();
+        SocketAddr::from((ip, self.port))
+    }
+}
+
+impl Default for ServerOpts {
+    fn default() -> Self {
+        let host = "127.0.0.1";
+        let port = 0;
+        let assert_on_drop = false;
+
+        ServerOpts {
+            host,
+            port,
+            assert_on_drop,
+        }
+    }
+}
+
+///
 /// One instance of the mock server.
 ///
 /// Mockito uses a server pool to manage running servers. Once the pool reaches capacity,
@@ -121,16 +160,25 @@ impl State {
 /// let mut server = mockito::Server::new();
 /// ```
 ///
-/// If for any reason you'd like to bypass the server pool, you can use `Server::new_with_port`:
+/// If you'd like to bypass the server pool or configure the server in a different way
+/// (by setting a custom host and port or enabling auto-asserts), you can use `Server::new_with_opts`:
 ///
 /// ```
-/// let mut server = mockito::Server::new_with_port(0);
+/// let opts = mockito::ServerOpts { port: 0, ..Default::default() };
+/// let server_with_port = mockito::Server::new_with_opts(opts);
+///
+/// let opts = mockito::ServerOpts { host: "0.0.0.0", ..Default::default() };
+/// let server_with_host = mockito::Server::new_with_opts(opts);
+///
+/// let opts = mockito::ServerOpts { assert_on_drop: true, ..Default::default() };
+/// let server_with_auto_assert = mockito::Server::new_with_opts(opts);
 /// ```
 ///
 #[derive(Debug)]
 pub struct Server {
     address: SocketAddr,
     state: Arc<RwLock<State>>,
+    assert_on_drop: bool,
 }
 
 impl Server {
@@ -175,30 +223,55 @@ impl Server {
     }
 
     ///
-    /// Starts a new server on a given port. If the port is set to `0`, a random available
-    /// port will be assigned. Note that **this call bypasses the server pool**.
+    /// **DEPRECATED:** Use `Server::new_with_opts` instead.
+    ///
+    #[deprecated(since = "1.3.0", note = "Use `Server::new_with_opts` instead")]
+    #[track_caller]
+    pub fn new_with_port(port: u16) -> Server {
+        let opts = ServerOpts {
+            port,
+            ..Default::default()
+        };
+        Server::try_new_with_opts(opts).unwrap()
+    }
+
+    ///
+    /// Starts a new server with the given options. Note that **this call bypasses the server pool**.
     ///
     /// This method will panic on failure.
     ///
     #[track_caller]
-    pub fn new_with_port(port: u16) -> Server {
-        Server::try_new_with_port(port).unwrap()
+    pub fn new_with_opts(opts: ServerOpts) -> Server {
+        Server::try_new_with_opts(opts).unwrap()
     }
 
     ///
-    /// Same as `Server::new_with_port` but async.
+    /// **DEPRECATED:** Use `Server::new_with_opts_async` instead.
     ///
+    #[deprecated(since = "1.3.0", note = "Use `Server::new_with_opts_async` instead")]
     pub async fn new_with_port_async(port: u16) -> Server {
-        Server::try_new_with_port_async(port).await.unwrap()
+        let opts = ServerOpts {
+            port,
+            ..Default::default()
+        };
+        Server::try_new_with_opts_async(opts).await.unwrap()
     }
 
     ///
-    /// Same as `Server::new_with_port` but won't panic on failure.
+    /// Same as `Server::new_with_opts` but async.
+    ///
+    pub async fn new_with_opts_async(opts: ServerOpts) -> Server {
+        Server::try_new_with_opts_async(opts).await.unwrap()
+    }
+
+    ///
+    /// Same as `Server::new_with_opts` but won't panic on failure.
     ///
     #[track_caller]
-    pub(crate) fn try_new_with_port(port: u16) -> Result<Server, Error> {
+    pub(crate) fn try_new_with_opts(opts: ServerOpts) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
-        let address = SocketAddr::from(([127, 0, 0, 1], port));
+        let address = opts.address();
+        let assert_on_drop = opts.assert_on_drop;
         let (address_sender, address_receiver) = mpsc::channel::<SocketAddr>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
@@ -215,17 +288,22 @@ impl Server {
             .recv()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
-        let server = Server { address, state };
+        let server = Server {
+            address,
+            state,
+            assert_on_drop,
+        };
 
         Ok(server)
     }
 
     ///
-    /// Same as `Server::try_new_with_port` but async.
+    /// Same as `Server::try_new_with_opts` but async.
     ///
-    pub(crate) async fn try_new_with_port_async(port: u16) -> Result<Server, Error> {
+    pub(crate) async fn try_new_with_opts_async(opts: ServerOpts) -> Result<Server, Error> {
         let state = Arc::new(RwLock::new(State::new()));
-        let address = SocketAddr::from(([127, 0, 0, 1], port));
+        let address = opts.address();
+        let assert_on_drop = opts.assert_on_drop;
         let (address_sender, address_receiver) = mpsc::channel::<SocketAddr>();
         let runtime = runtime::Builder::new_current_thread()
             .enable_all()
@@ -242,7 +320,11 @@ impl Server {
             .recv()
             .map_err(|err| Error::new_with_context(ErrorKind::ServerFailure, err))?;
 
-        let server = Server { address, state };
+        let server = Server {
+            address,
+            state,
+            assert_on_drop,
+        };
 
         Ok(server)
     }
@@ -296,7 +378,7 @@ impl Server {
     /// ```
     ///
     pub fn mock<P: Into<Matcher>>(&mut self, method: &str, path: P) -> Mock {
-        Mock::new(self.state.clone(), method, path)
+        Mock::new(self.state.clone(), method, path, self.assert_on_drop)
     }
 
     ///

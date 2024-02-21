@@ -150,6 +150,7 @@
 //! In order to write async tests, you'll need to use the `_async` methods:
 //!
 //! - `Server::new_async`
+//! - `Server::new_with_opts_async`
 //! - `Mock::create_async`
 //! - `Mock::assert_async`
 //! - `Mock::matched_async`
@@ -160,6 +161,23 @@
 //! ```text
 //! Cannot block the current thread from within a runtime.
 //! This happens because a function attempted to block the current thread while the thread is being used to drive asynchronous tasks.
+//! ```
+//!
+//! # Configuring the server
+//!
+//! When calling `Server::new()`, a mock server with default options is returned from the server
+//! pool. This should suffice for most use cases.
+//!
+//! If you'd like to bypass the server pool or configure the server in a different
+//! way, you can use `Server::new_with_opts`. The following **options** are available:
+//!
+//! - `host`: allows setting the host (defaults to `127.0.0.1`)
+//! - `port`: allows setting the port (defaults to a randomly assigned free port)
+//! - `assert_on_drop`: automatically call `Mock::assert()` before dropping a mock (defaults to `false`)
+//!
+//! ```
+//! let opts = mockito::ServerOpts { assert_on_drop: true, ..Default::default() };
+//! let server = mockito::Server::new_with_opts(opts);
 //! ```
 //!
 //! # Matchers
@@ -674,7 +692,7 @@ pub use error::{Error, ErrorKind};
 pub use matcher::Matcher;
 pub use mock::{IntoHeaderName, Mock};
 pub use request::Request;
-pub use server::Server;
+pub use server::{Server, ServerOpts};
 pub use server_pool::ServerGuard;
 
 mod diff;

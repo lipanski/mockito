@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate serde_json;
 
-use mockito::{Matcher, Server};
+use mockito::{Matcher, Server, ServerOpts};
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 use std::fmt::Display;
@@ -739,7 +739,11 @@ fn test_unpooled_server_going_out_of_context_removes_all_mocks() {
     let address;
 
     {
-        let mut s = Server::new_with_port(0);
+        let opts = ServerOpts {
+            port: 0,
+            ..Default::default()
+        };
+        let mut s = Server::new_with_opts(opts);
         address = s.host_with_port();
 
         s.mock("GET", "/reset").create();
@@ -1184,6 +1188,35 @@ fn test_assert_defaults_to_one_hit() {
 }
 
 #[test]
+fn test_server_with_assert_on_drop_defaults_to_one_hit() {
+    let opts = ServerOpts {
+        assert_on_drop: true,
+        ..Default::default()
+    };
+    let mut s = Server::new_with_opts(opts);
+    let host = s.host_with_port();
+    let _mock = s.mock("GET", "/hello").create();
+
+    request(host, "GET /hello", "");
+}
+
+#[tokio::test]
+async fn test_server_with_assert_on_drop_defaults_to_one_hit_async() {
+    let opts = ServerOpts {
+        assert_on_drop: true,
+        ..Default::default()
+    };
+    let mut s = Server::new_with_opts_async(opts).await;
+    let _mock = s.mock("GET", "/hello").create_async().await;
+
+    reqwest::Client::new()
+        .get(format!("{}/hello", s.url()))
+        .send()
+        .await
+        .unwrap();
+}
+
+#[test]
 fn test_expect() {
     let mut s = Server::new();
     let host = s.host_with_port();
@@ -1284,6 +1317,52 @@ fn test_assert_panics_expect_at_least_with_too_few_requests() {
 
 #[test]
 #[should_panic(
+    expected = "\n> Expected at least 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 2\n"
+)]
+fn test_server_with_assert_on_drop_panics_expect_at_least_with_too_few_requests() {
+    let opts = ServerOpts {
+        assert_on_drop: true,
+        ..Default::default()
+    };
+    let mut s = Server::new_with_opts(opts);
+    let host = s.host_with_port();
+    let _mock = s.mock("GET", "/hello").expect_at_least(3).create();
+
+    request(&host, "GET /hello", "");
+    request(&host, "GET /hello", "");
+}
+
+#[tokio::test]
+#[should_panic(
+    expected = "\n> Expected at least 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 2\n"
+)]
+async fn test_server_with_assert_on_drop_panics_expect_at_least_with_too_few_requests_async() {
+    let opts = ServerOpts {
+        assert_on_drop: true,
+        ..Default::default()
+    };
+    let mut s = Server::new_with_opts_async(opts).await;
+    let _mock = s
+        .mock("GET", "/hello")
+        .expect_at_least(3)
+        .create_async()
+        .await;
+
+    reqwest::Client::new()
+        .get(format!("{}/hello", s.url()))
+        .send()
+        .await
+        .unwrap();
+
+    reqwest::Client::new()
+        .get(format!("{}/hello", s.url()))
+        .send()
+        .await
+        .unwrap();
+}
+
+#[test]
+#[should_panic(
     expected = "\n> Expected at most 3 request(s) to:\n\r\nGET /hello\r\n\n...but received 4\n"
 )]
 fn test_assert_panics_expect_at_most_with_too_many_requests() {
@@ -1348,6 +1427,28 @@ fn test_assert_panics_if_no_request_was_performed() {
     let mock = s.mock("GET", "/hello").create();
 
     mock.assert();
+}
+
+#[test]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n")]
+fn test_server_with_assert_on_drop_panics_if_no_request_was_performed() {
+    let opts = ServerOpts {
+        assert_on_drop: true,
+        ..Default::default()
+    };
+    let mut s = Server::new_with_opts(opts);
+    let _mock = s.mock("GET", "/hello").create();
+}
+
+#[tokio::test]
+#[should_panic(expected = "\n> Expected 1 request(s) to:\n\r\nGET /hello\r\n\n...but received 0\n")]
+async fn test_server_with_assert_on_drop_panics_if_no_request_was_performed_async() {
+    let opts = ServerOpts {
+        assert_on_drop: true,
+        ..Default::default()
+    };
+    let mut s = Server::new_with_opts_async(opts).await;
+    let _mock = s.mock("GET", "/hello").create_async().await;
 }
 
 #[test]
