@@ -120,6 +120,23 @@ async fn test_simple_route_mock_async() {
 }
 ```
 
+Start a **stand-alone server** on a dedicated port:
+
+```rust
+fn main() {
+    let opts = mockito::ServerOpts {
+        host: "0.0.0.0",
+        port: 1234,
+        ..Default::default()
+    };
+    let mut server = mockito::Server::new_with_opts(opts);
+
+    let _m = server.mock("GET", "/").with_body("hello world").create();
+
+    loop {}
+}
+```
+
 ## Minimum supported Rust toolchain
 
 The current minimum support Rust toolchain is **1.68.0**
