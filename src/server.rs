@@ -4,10 +4,13 @@ use crate::response::{Body as ResponseBody, ChunkedStream};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use http::{Request as HttpRequest, Response, StatusCode};
-use hyper::server::conn::Http;
+use http_body_util::{BodyExt, Empty, Full, StreamBody};
+use hyper::body::Incoming;
 use hyper::service::service_fn;
-use hyper::Body;
+use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::server::conn::auto::Builder as ConnectionBuilder;
 use std::default::Default;
+use std::error::Error as StdError;
 use std::fmt;
 use std::net::{IpAddr, SocketAddr};
 use std::ops::Drop;
@@ -353,10 +356,10 @@ impl Server {
             let mutex = state.clone();
 
             spawn_local(async move {
-                let _ = Http::new()
+                let _ = ConnectionBuilder::new(TokioExecutor::new())
                     .serve_connection(
-                        stream,
-                        service_fn(move |request: HttpRequest<Body>| {
+                        TokioIo::new(stream),
+                        service_fn(move |request: HttpRequest<Incoming>| {
                             handle_request(request, mutex.clone())
                         }),
                     )
@@ -442,10 +445,27 @@ impl fmt::Display for Server {
     }
 }
 
+type BoxError = Box<dyn StdError + Send + Sync>;
+type BoxBody = http_body_util::combinators::UnsyncBoxBody<bytes::Bytes, BoxError>;
+
+trait IntoBoxBody {
+    fn into_box_body(self) -> BoxBody;
+}
+
+impl<B> IntoBoxBody for B
+where
+    B: http_body::Body<Data = bytes::Bytes> + Send + 'static,
+    B::Error: Into<BoxError>,
+{
+    fn into_box_body(self) -> BoxBody {
+        self.map_err(Into::into).boxed_unsync()
+    }
+}
+
 async fn handle_request(
-    hyper_request: HttpRequest<Body>,
+    hyper_request: HttpRequest<Incoming>,
     state: Arc<RwLock<State>>,
-) -> Result<Response<Body>, Error> {
+) -> Result<Response<BoxBody>, Error> {
     let mut request = Request::new(hyper_request);
     request.read_body().await;
     log::debug!("Request received: {}", request.formatted());
@@ -478,7 +498,7 @@ async fn handle_request(
     }
 }
 
-fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
+fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<BoxBody>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
 
@@ -492,32 +512,32 @@ fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Bod
                 if !request.has_header("content-length") {
                     response = response.header("content-length", bytes.len());
                 }
-                Body::from(bytes.clone())
+                Full::new(bytes.to_owned()).into_box_body()
             }
             ResponseBody::FnWithWriter(body_fn) => {
                 let stream = ChunkedStream::new(Arc::clone(body_fn))?;
-                Body::wrap_stream(stream)
+                StreamBody::new(stream).into_box_body()
             }
             ResponseBody::FnWithRequest(body_fn) => {
                 let bytes = body_fn(&request);
-                Body::from(bytes)
+                Full::new(bytes.to_owned()).into_box_body()
             }
         }
     } else {
-        Body::empty()
+        Empty::new().into_box_body()
     };
 
-    let response: Response<Body> = response
+    let response: Response<BoxBody> = response
         .body(body)
         .map_err(|err| Error::new_with_context(ErrorKind::ResponseFailure, err))?;
 
     Ok(response)
 }
 
-fn respond_with_mock_not_found() -> Result<Response<Body>, Error> {
-    let response: Response<Body> = Response::builder()
+fn respond_with_mock_not_found() -> Result<Response<BoxBody>, Error> {
+    let response: Response<BoxBody> = Response::builder()
         .status(StatusCode::NOT_IMPLEMENTED)
-        .body(Body::empty())
+        .body(Empty::new().into_box_body())
         .map_err(|err| Error::new_with_context(ErrorKind::ResponseFailure, err))?;
 
     Ok(response)

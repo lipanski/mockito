@@ -1,7 +1,9 @@
 use crate::error::Error;
 use crate::Request;
+use bytes::Bytes;
 use futures_core::stream::Stream;
 use http::{HeaderMap, StatusCode};
+use http_body::Frame;
 use std::fmt;
 use std::io;
 use std::sync::Arc;
@@ -17,11 +19,11 @@ pub(crate) struct Response {
 }
 
 type BodyFnWithWriter = dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static;
-type BodyFnWithRequest = dyn Fn(&Request) -> Vec<u8> + Send + Sync + 'static;
+type BodyFnWithRequest = dyn Fn(&Request) -> Bytes + Send + Sync + 'static;
 
 #[derive(Clone)]
 pub(crate) enum Body {
-    Bytes(Vec<u8>),
+    Bytes(Bytes),
     FnWithWriter(Arc<BodyFnWithWriter>),
     FnWithRequest(Arc<BodyFnWithRequest>),
 }
@@ -60,7 +62,7 @@ impl Default for Response {
         Self {
             status: StatusCode::OK,
             headers,
-            body: Body::Bytes(Vec::new()),
+            body: Body::Bytes(Bytes::new()),
         }
     }
 }
@@ -115,7 +117,7 @@ impl Drop for ChunkedStream {
 }
 
 impl Stream for ChunkedStream {
-    type Item = io::Result<Box<[u8]>>;
+    type Item = io::Result<Frame<Bytes>>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -123,7 +125,11 @@ impl Stream for ChunkedStream {
     ) -> Poll<Option<Self::Item>> {
         self.receiver
             .as_mut()
-            .map(move |r| r.poll_recv(cx))
+            .map(move |receiver| {
+                receiver.poll_recv(cx).map(|received| {
+                    received.map(|result| result.map(|data| Frame::data(Bytes::from(data))))
+                })
+            })
             .unwrap_or(Poll::Ready(None))
     }
 }
