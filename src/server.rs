@@ -207,7 +207,11 @@ impl Server {
     ///
     #[track_caller]
     pub(crate) fn try_new() -> Result<ServerGuard, Error> {
-        futures::executor::block_on(async { Server::try_new_async().await })
+        runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Cannot build local tokio runtime")
+            .block_on(async { Server::try_new_async().await })
     }
 
     ///
