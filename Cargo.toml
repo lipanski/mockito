@@ -19,8 +19,10 @@ appveyor = { repository = "lipanski/mockito", branch = "master", service = "gith
 
 [dependencies]
 assert-json-diff = "2.0"
+bytes = "1"
 colored = { version = "2.0", optional = true }
 futures-core = "0.3"
+http = "0.2"
 hyper = { version = "0.14", features = ["http1", "http2", "server", "stream"] }
 log = "0.4"
 rand = "0.8"

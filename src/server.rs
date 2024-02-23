@@ -3,9 +3,10 @@ use crate::request::Request;
 use crate::response::{Body as ResponseBody, ChunkedStream};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
+use http::{Request as HttpRequest, Response, StatusCode};
 use hyper::server::conn::Http;
 use hyper::service::service_fn;
-use hyper::{Body, Request as HyperRequest, Response, StatusCode};
+use hyper::Body;
 use std::default::Default;
 use std::fmt;
 use std::net::{IpAddr, SocketAddr};
@@ -355,7 +356,7 @@ impl Server {
                 let _ = Http::new()
                     .serve_connection(
                         stream,
-                        service_fn(move |request: HyperRequest<Body>| {
+                        service_fn(move |request: HttpRequest<Body>| {
                             handle_request(request, mutex.clone())
                         }),
                     )
@@ -442,7 +443,7 @@ impl fmt::Display for Server {
 }
 
 async fn handle_request(
-    hyper_request: HyperRequest<Body>,
+    hyper_request: HttpRequest<Body>,
     state: Arc<RwLock<State>>,
 ) -> Result<Response<Body>, Error> {
     let mut request = Request::new(hyper_request);

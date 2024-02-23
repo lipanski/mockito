@@ -1,22 +1,21 @@
 use crate::{Error, ErrorKind};
+use bytes::Buf;
+use http::header::{AsHeaderName, HeaderValue};
+use http::Request as HttpRequest;
 use hyper::body;
-use hyper::body::Buf;
-use hyper::header::AsHeaderName;
-use hyper::header::HeaderValue;
 use hyper::Body as HyperBody;
-use hyper::Request as HyperRequest;
 
 ///
 /// Stores a HTTP request
 ///
 #[derive(Debug)]
 pub struct Request {
-    inner: HyperRequest<HyperBody>,
+    inner: HttpRequest<HyperBody>,
     body: Option<Vec<u8>>,
 }
 
 impl Request {
-    pub(crate) fn new(request: HyperRequest<HyperBody>) -> Self {
+    pub(crate) fn new(request: HttpRequest<HyperBody>) -> Self {
         Request {
             inner: request,
             body: None,

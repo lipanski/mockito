@@ -1,8 +1,7 @@
 use crate::error::Error;
 use crate::Request;
 use futures_core::stream::Stream;
-use hyper::HeaderMap;
-use hyper::StatusCode;
+use http::{HeaderMap, StatusCode};
 use std::fmt;
 use std::io;
 use std::sync::Arc;
