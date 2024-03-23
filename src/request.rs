@@ -1,22 +1,20 @@
 use crate::{Error, ErrorKind};
-use hyper::body;
-use hyper::body::Buf;
-use hyper::header::AsHeaderName;
-use hyper::header::HeaderValue;
-use hyper::Body as HyperBody;
-use hyper::Request as HyperRequest;
+use http::header::{AsHeaderName, HeaderValue};
+use http::Request as HttpRequest;
+use http_body_util::BodyExt;
+use hyper::body::Incoming;
 
 ///
 /// Stores a HTTP request
 ///
 #[derive(Debug)]
 pub struct Request {
-    inner: HyperRequest<HyperBody>,
+    inner: HttpRequest<Incoming>,
     body: Option<Vec<u8>>,
 }
 
 impl Request {
-    pub(crate) fn new(request: HyperRequest<HyperBody>) -> Self {
+    pub(crate) fn new(request: HttpRequest<Incoming>) -> Self {
         Request {
             inner: request,
             body: None,
@@ -64,12 +62,15 @@ impl Request {
     pub(crate) async fn read_body(&mut self) -> &Vec<u8> {
         if self.body.is_none() {
             let raw_body = self.inner.body_mut();
-            let mut buf = body::aggregate(raw_body)
+
+            let bytes = raw_body
+                .collect()
                 .await
                 .map_err(|err| Error::new_with_context(ErrorKind::RequestBodyFailure, err))
-                .unwrap();
-            let bytes = buf.copy_to_bytes(buf.remaining()).to_vec();
-            self.body = Some(bytes);
+                .unwrap()
+                .to_bytes();
+
+            self.body = Some(bytes.to_vec());
         }
 
         self.body.as_ref().unwrap()

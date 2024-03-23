@@ -5,9 +5,8 @@ use crate::server::RemoteMock;
 use crate::server::State;
 use crate::Request;
 use crate::{Error, ErrorKind};
-use hyper::header::HeaderName;
-use hyper::HeaderMap;
-use hyper::StatusCode;
+use bytes::Bytes;
+use http::{HeaderMap, HeaderName, StatusCode};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use std::convert::Into;
@@ -356,7 +355,7 @@ impl Mock {
     /// ```
     ///
     pub fn with_body<StrOrBytes: AsRef<[u8]>>(mut self, body: StrOrBytes) -> Self {
-        self.inner.response.body = Body::Bytes(body.as_ref().to_owned());
+        self.inner.response.body = Body::Bytes(Bytes::from(body.as_ref().to_owned()));
         self
     }
 
@@ -425,7 +424,8 @@ impl Mock {
         mut self,
         callback: impl Fn(&Request) -> Vec<u8> + Send + Sync + 'static,
     ) -> Self {
-        self.inner.response.body = Body::FnWithRequest(Arc::new(callback));
+        self.inner.response.body =
+            Body::FnWithRequest(Arc::new(move |req| Bytes::from(callback(req))));
         self
     }
 
@@ -446,7 +446,8 @@ impl Mock {
         self.inner.response.body = Body::Bytes(
             std::fs::read(path)
                 .map_err(|_| Error::new(ErrorKind::FileNotFound))
-                .unwrap(),
+                .unwrap()
+                .into(),
         );
         self
     }

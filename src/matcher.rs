@@ -1,5 +1,5 @@
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
-use hyper::header::HeaderValue;
+use http::header::HeaderValue;
 use regex::Regex;
 use std::collections::HashMap;
 use std::convert::From;
