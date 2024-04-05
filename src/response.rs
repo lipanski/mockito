@@ -1,9 +1,8 @@
 use crate::error::Error;
 use crate::Request;
 use bytes::Bytes;
-use futures_core::stream::Stream;
+use futures_util::Stream;
 use http::{HeaderMap, StatusCode};
-use http_body::Frame;
 use std::fmt;
 use std::io;
 use std::sync::Arc;
@@ -117,7 +116,7 @@ impl Drop for ChunkedStream {
 }
 
 impl Stream for ChunkedStream {
-    type Item = io::Result<Frame<Bytes>>;
+    type Item = io::Result<Bytes>;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -126,9 +125,9 @@ impl Stream for ChunkedStream {
         self.receiver
             .as_mut()
             .map(move |receiver| {
-                receiver.poll_recv(cx).map(|received| {
-                    received.map(|result| result.map(|data| Frame::data(Bytes::from(data))))
-                })
+                receiver
+                    .poll_recv(cx)
+                    .map(|received| received.map(|result| result.map(Into::into)))
             })
             .unwrap_or(Poll::Ready(None))
     }

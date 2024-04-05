@@ -3,8 +3,11 @@ use crate::request::Request;
 use crate::response::{Body as ResponseBody, ChunkedStream};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
+use bytes::Bytes;
+use futures_util::{TryStream, TryStreamExt};
 use http::{Request as HttpRequest, Response, StatusCode};
-use http_body_util::{BodyExt, Empty, Full, StreamBody};
+use http_body::{Body as HttpBody, Frame, SizeHint};
+use http_body_util::{BodyExt, StreamBody};
 use hyper::body::Incoming;
 use hyper::service::service_fn;
 use hyper_util::rt::{TokioExecutor, TokioIo};
@@ -14,8 +17,10 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::net::{IpAddr, SocketAddr};
 use std::ops::Drop;
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{mpsc, Arc, RwLock};
+use std::task::{ready, Context, Poll};
 use std::thread;
 use tokio::net::TcpListener;
 use tokio::runtime;
@@ -446,26 +451,72 @@ impl fmt::Display for Server {
 }
 
 type BoxError = Box<dyn StdError + Send + Sync>;
-type BoxBody = http_body_util::combinators::UnsyncBoxBody<bytes::Bytes, BoxError>;
 
-trait IntoBoxBody {
-    fn into_box_body(self) -> BoxBody;
+enum Body {
+    Once(Option<Bytes>),
+    Wrap(http_body_util::combinators::UnsyncBoxBody<Bytes, BoxError>),
 }
 
-impl<B> IntoBoxBody for B
-where
-    B: http_body::Body<Data = bytes::Bytes> + Send + 'static,
-    B::Error: Into<BoxError>,
-{
-    fn into_box_body(self) -> BoxBody {
-        self.map_err(Into::into).boxed_unsync()
+impl Body {
+    fn empty() -> Self {
+        Self::Once(None)
+    }
+
+    fn from_data_stream<S>(stream: S) -> Self
+    where
+        S: TryStream<Ok = Bytes> + Send + 'static,
+        S::Error: Into<BoxError>,
+    {
+        let body = StreamBody::new(stream.map_ok(Frame::data).map_err(Into::into)).boxed_unsync();
+        Self::Wrap(body)
+    }
+}
+
+impl From<Bytes> for Body {
+    fn from(bytes: Bytes) -> Self {
+        if bytes.is_empty() {
+            Self::empty()
+        } else {
+            Self::Once(Some(bytes))
+        }
+    }
+}
+
+impl HttpBody for Body {
+    type Data = Bytes;
+    type Error = BoxError;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        match self.as_mut().get_mut() {
+            Self::Once(val) => Poll::Ready(Ok(val.take().map(Frame::data)).transpose()),
+            Self::Wrap(body) => Poll::Ready(ready!(Pin::new(body).poll_frame(cx))),
+        }
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        match self {
+            Self::Once(None) => SizeHint::with_exact(0),
+            Self::Once(Some(bytes)) => SizeHint::with_exact(bytes.len() as u64),
+            Self::Wrap(body) => body.size_hint(),
+        }
+    }
+
+    fn is_end_stream(&self) -> bool {
+        match self {
+            Self::Once(None) => true,
+            Self::Once(Some(bytes)) => bytes.is_empty(),
+            Self::Wrap(body) => body.is_end_stream(),
+        }
     }
 }
 
 async fn handle_request(
     hyper_request: HttpRequest<Incoming>,
     state: Arc<RwLock<State>>,
-) -> Result<Response<BoxBody>, Error> {
+) -> Result<Response<Body>, Error> {
     let mut request = Request::new(hyper_request);
     request.read_body().await;
     log::debug!("Request received: {}", request.formatted());
@@ -498,7 +549,7 @@ async fn handle_request(
     }
 }
 
-fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<BoxBody>, Error> {
+fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
     let status: StatusCode = mock.inner.response.status;
     let mut response = Response::builder().status(status);
 
@@ -512,32 +563,32 @@ fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Box
                 if !request.has_header("content-length") {
                     response = response.header("content-length", bytes.len());
                 }
-                Full::new(bytes.to_owned()).into_box_body()
+                Body::from(bytes.to_owned())
             }
             ResponseBody::FnWithWriter(body_fn) => {
                 let stream = ChunkedStream::new(Arc::clone(body_fn))?;
-                StreamBody::new(stream).into_box_body()
+                Body::from_data_stream(stream)
             }
             ResponseBody::FnWithRequest(body_fn) => {
                 let bytes = body_fn(&request);
-                Full::new(bytes.to_owned()).into_box_body()
+                Body::from(bytes)
             }
         }
     } else {
-        Empty::new().into_box_body()
+        Body::empty()
     };
 
-    let response: Response<BoxBody> = response
+    let response = response
         .body(body)
         .map_err(|err| Error::new_with_context(ErrorKind::ResponseFailure, err))?;
 
     Ok(response)
 }
 
-fn respond_with_mock_not_found() -> Result<Response<BoxBody>, Error> {
-    let response: Response<BoxBody> = Response::builder()
+fn respond_with_mock_not_found() -> Result<Response<Body>, Error> {
+    let response = Response::builder()
         .status(StatusCode::NOT_IMPLEMENTED)
-        .body(Empty::new().into_box_body())
+        .body(Body::empty())
         .map_err(|err| Error::new_with_context(ErrorKind::ResponseFailure, err))?;
 
     Ok(response)
