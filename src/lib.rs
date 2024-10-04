@@ -52,7 +52,7 @@
 //! }
 //! ```
 //!
-//! If `Mock::assert` fails, a colored diff of the last unmatched request is displayed:
+//! If [`Mock::assert`] fails, a colored diff of the last unmatched request is displayed:
 //!
 //! ![colored-diff.png](https://raw.githubusercontent.com/lipanski/mockito/master/docs/colored-diff.png)
 //!
@@ -106,6 +106,7 @@
 //! ```
 //! #[cfg(test)]
 //! mod tests {
+//! # use mockito::Server;
 //!   #[tokio::test]
 //!   async fn test_something() {
 //!     let mut server = Server::new_async().await;
@@ -158,22 +159,22 @@
 //! // Requests to `address` will fail as of this point
 //! ```
 //!
-//! You can remove individual mocks earlier by calling `Mock::remove`.
+//! You can remove individual mocks earlier by calling [`Mock::remove`].
 //!
 //! # Async
 //!
 //! Mockito comes with both a sync and an async interface.
 //!
-//! In order to write async tests, you'll need to use the `_async` methods:
+//! In order to write async tests, you'll need to use the `*_async` methods:
 //!
-//! - `Server::new_async`
-//! - `Server::new_with_opts_async`
-//! - `Mock::create_async`
-//! - `Mock::assert_async`
-//! - `Mock::matched_async`
-//! - `Mock::remove_async`
+//! - [`Server::new_async`]
+//! - [`Server::new_with_opts_async`]
+//! - [`Mock::create_async`]
+//! - [`Mock::assert_async`]
+//! - [`Mock::matched_async`]
+//! - [`Mock::remove_async`]
 //!
-//! ...otherwise your tests will not compile and you'll see the following error:
+//! ...otherwise your tests will not compile, and you'll see the following error:
 //!
 //! ```text
 //! Cannot block the current thread from within a runtime.
@@ -182,15 +183,15 @@
 //!
 //! # Configuring the server
 //!
-//! When calling `Server::new()`, a mock server with default options is returned from the server
+//! When calling [`Server::new()`], a mock server with default options is returned from the server
 //! pool. This should suffice for most use cases.
 //!
 //! If you'd like to bypass the server pool or configure the server in a different
-//! way, you can use `Server::new_with_opts`. The following **options** are available:
+//! way, you can use [`Server::new_with_opts`]. The following **options** are available:
 //!
 //! - `host`: allows setting the host (defaults to `127.0.0.1`)
 //! - `port`: allows setting the port (defaults to a randomly assigned free port)
-//! - `assert_on_drop`: automatically call `Mock::assert()` before dropping a mock (defaults to `false`)
+//! - `assert_on_drop`: automatically call [`Mock::assert()`] before dropping a mock (defaults to `false`)
 //!
 //! ```
 //! let opts = mockito::ServerOpts { assert_on_drop: true, ..Default::default() };
@@ -201,9 +202,9 @@
 //!
 //! Mockito can match your request by method, path, query, headers or body.
 //!
-//! Various matchers are provided by the `Matcher` type: exact (string, binary, JSON), partial (regular expressions,
+//! Various matchers are provided by the [`Matcher`] type: exact (string, binary, JSON), partial (regular expressions,
 //! JSON), any or missing. The following guide will walk you through the most common matchers. Check the
-//! `Matcher` documentation for all the rest.
+//! [`Matcher`] documentation for all the rest.
 //!
 //! # Matching by path and query
 //!
@@ -234,7 +235,7 @@
 //!   ).create();
 //! ```
 //!
-//! Or you can catch all requests, by using the `Matcher::Any` variant:
+//! Or you can catch all requests, by using the [`Matcher::Any`] variant:
 //!
 //! ## Example
 //!
@@ -247,8 +248,8 @@
 //!
 //! # Matching by query
 //!
-//! You can match the query part by using the `Mock#match_query` function together with the various matchers,
-//! most notably `Matcher::UrlEncoded`:
+//! You can match the query part by using the [`Mock::match_query`] function together with the various matchers,
+//! most notably [`Matcher::UrlEncoded`]:
 //!
 //! ## Example
 //!
@@ -276,9 +277,9 @@
 //!   .create();
 //! ```
 //!
-//! Note that the key/value arguments for `Matcher::UrlEncoded` should be left in plain (unencoded) format.
+//! Note that the key/value arguments for [`Matcher::UrlEncoded`] should be left in plain (unencoded) format.
 //!
-//! You can also specify the query as part of the path argument in a `mock` call, in which case an exact
+//! You can also specify the query as part of the path argument in a [`mock`](Server::mock) call, in which case an exact
 //! match will be performed:
 //!
 //! ## Example
@@ -290,7 +291,7 @@
 //! s.mock("GET", "/test?hello=world").create();
 //! ```
 //!
-//! If you'd like to ignore the query entirely, use the `Matcher::Any` variant:
+//! If you'd like to ignore the query entirely, use the [`Matcher::Any`] variant:
 //!
 //! ## Example
 //!
@@ -324,7 +325,7 @@
 //! // will respond with text.
 //! ```
 //!
-//! You can also match a header value with a *regular expressions*, by using the `Matcher::Regex` matcher:
+//! You can also match a header value with a *regular expressions*, by using the [`Matcher::Regex`] matcher:
 //!
 //! ## Example
 //!
@@ -337,7 +338,7 @@
 //!   .create();
 //! ```
 //!
-//! Or you can match a header *only by its field name*, by setting the `Mock::match_header` value to `Matcher::Any`.
+//! Or you can match a header *only by its field name*, by setting the [`Mock::match_header`] value to [`Matcher::Any`].
 //!
 //! ## Example
 //!
@@ -353,8 +354,8 @@
 //! // Requests not containing this header will return `501 Not Implemented`.
 //! ```
 //!
-//! You can mock requests that should be *missing a particular header field*, by setting the `Mock::match_header`
-//! value to `Matcher::Missing`.
+//! You can mock requests that should be *missing a particular header field*, by setting the [`Mock::match_header`]
+//! value to [`Matcher::Missing`].
 //!
 //! ## Example
 //!
@@ -372,8 +373,8 @@
 //!
 //! # Matching by body
 //!
-//! You can match a request by its body by using the `Mock#match_body` method.
-//! By default the request body is ignored, similar to passing the `Matcher::Any` argument to the `match_body` method.
+//! You can match a request by its body by using the [`Mock::match_body`] method.
+//! By default, the request body is ignored, similar to passing the [`Matcher::Any`] argument to the [`Mock::match_body`] method.
 //!
 //! You can match a body by an exact value:
 //!
@@ -415,7 +416,7 @@
 //! # }
 //! ```
 //!
-//! If `serde_json::json!` is not exposed, you can use `Matcher::JsonString` the same way,
+//! If `serde_json::json!` is not exposed, you can use [`Matcher::JsonString`] the same way,
 //! but by passing a `String` to the matcher:
 //!
 //! ```
@@ -431,7 +432,7 @@
 //!
 //! # The `AnyOf` matcher
 //!
-//! The `Matcher::AnyOf` construct takes a vector of matchers as arguments and will be enabled
+//! The [`Matcher::AnyOf`] construct takes a vector of matchers as arguments and will be enabled
 //! if at least one of the provided matchers matches the request.
 //!
 //! ## Example
@@ -452,8 +453,8 @@
 //!
 //! # The `AllOf` matcher
 //!
-//! The `Matcher::AllOf` construct takes a vector of matchers as arguments and will be enabled
-//! if all of the provided matchers match the request.
+//! The [`Matcher::AllOf`] construct takes a vector of matchers as arguments and will be enabled
+//! if all the provided matchers match the request.
 //!
 //! ## Example
 //!
@@ -473,7 +474,7 @@
 //!
 //! # Asserts
 //!
-//! You can use the `Mock::assert` method to **assert that a mock was called**. In other words,
+//! You can use the [`Mock::assert`] method to **assert that a mock was called**. In other words,
 //! `Mock#assert` can validate that your code performed the expected HTTP request.
 //!
 //! By default, the method expects only **one** request to your mock.
@@ -535,7 +536,7 @@
 //! french_hello_mock.assert();
 //! ```
 //!
-//! If you're expecting more than 1 request, you can use the `Mock::expect` method to specify the exact amount of requests:
+//! If you're expecting more than 1 request, you can use the [`Mock::expect`] method to specify the exact amount of requests:
 //!
 //! ## Example
 //!
@@ -559,7 +560,7 @@
 //! mock.assert();
 //! ```
 //!
-//! You can also work with ranges, by using the `Mock::expect_at_least` and `Mock::expect_at_most` methods:
+//! You can also work with ranges, by using the [`Mock::expect_at_least`] and [`Mock::expect_at_most`] methods:
 //!
 //! ## Example
 //!
@@ -583,7 +584,7 @@
 //! mock.assert();
 //! ```
 //!
-//! The errors produced by the `assert` method contain information about the tested mock, but also about the
+//! The errors produced by the [`Mock::assert`] method contain information about the tested mock, but also about the
 //! **last unmatched request**, which can be very useful to track down an error in your implementation or
 //! a missing or incomplete mock. A colored diff is also displayed:
 //!
@@ -591,7 +592,7 @@
 //!
 //! Color output is enabled by default, but can be toggled with the `color` feature flag.
 //!
-//! Here's an example of how a `Mock#assert` error looks like:
+//! Here's an example of how a [`Mock::assert`] error looks like:
 //!
 //! ```text
 //! > Expected 1 request(s) to:
@@ -613,7 +614,7 @@
 //!
 //! ```
 //!
-//! You can also use the `matched` method to return a boolean for whether the mock was called the
+//! You can also use the [`Mock::matched`] method to return a boolean for whether the mock was called the
 //! correct number of times without panicking
 //!
 //! ## Example
@@ -655,7 +656,7 @@
 //! # Cleaning up
 //!
 //! As mentioned earlier, mocks are cleaned up whenever the server goes out of scope. If you
-//! need to remove them earlier, you can call `Server::reset` to remove all mocks registered
+//! need to remove them earlier, you can call [`Server::reset`] to remove all mocks registered
 //! so far:
 //!
 //! ```
@@ -670,7 +671,7 @@
 //! // Nothing is mocked at this point
 //! ```
 //!
-//! ...or you can call `Mock::remove` to remove a single mock:
+//! ...or you can call [`Mock::remove`] to remove a single mock:
 //!
 //! ```
 //! let mut s = mockito::Server::new();
