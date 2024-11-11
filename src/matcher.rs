@@ -1,3 +1,4 @@
+use crate::request::Request;
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use http::header::HeaderValue;
 use regex::Regex;
@@ -9,6 +10,7 @@ use std::io;
 use std::io::Read;
 use std::path::Path;
 use std::string::ToString;
+use std::sync::Arc;
 
 ///
 /// Allows matching the request path, headers or body in multiple ways: by the exact value, by any value (as
@@ -279,5 +281,35 @@ impl fmt::Display for BinaryBody {
             let first_bytes: Vec<u8> = self.content.iter().copied().take(len).collect();
             write!(f, "filecontent: {:?}", first_bytes)
         }
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct RequestMatcher(Arc<dyn Fn(&Request) -> bool + Send + Sync>);
+
+impl RequestMatcher {
+    pub(crate) fn matches(&self, value: &Request) -> bool {
+        self.0(value)
+    }
+}
+
+impl<F> From<F> for RequestMatcher
+where
+    F: Fn(&Request) -> bool + Send + Sync + 'static,
+{
+    fn from(value: F) -> Self {
+        Self(Arc::new(value))
+    }
+}
+
+impl Default for RequestMatcher {
+    fn default() -> Self {
+        RequestMatcher(Arc::new(|_| true))
+    }
+}
+
+impl fmt::Debug for RequestMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(RequestMatcher)")
     }
 }

@@ -1,5 +1,5 @@
 use crate::diff;
-use crate::matcher::{Matcher, PathAndQueryMatcher};
+use crate::matcher::{Matcher, PathAndQueryMatcher, RequestMatcher};
 use crate::response::{Body, Response};
 use crate::server::RemoteMock;
 use crate::server::State;
@@ -67,6 +67,7 @@ pub struct InnerMock {
     pub(crate) path: PathAndQueryMatcher,
     pub(crate) headers: HeaderMap<Matcher>,
     pub(crate) body: Matcher,
+    pub(crate) request_matcher: RequestMatcher,
     pub(crate) response: Response,
     pub(crate) hits: usize,
     pub(crate) expected_hits_at_least: Option<usize>,
@@ -161,6 +162,7 @@ impl Mock {
             path: PathAndQueryMatcher::Unified(path.into()),
             headers: HeaderMap::<Matcher>::default(),
             body: Matcher::Any,
+            request_matcher: RequestMatcher::default(),
             response: Response::default(),
             hits: 0,
             expected_hits_at_least: None,
@@ -299,6 +301,36 @@ impl Mock {
     ///
     pub fn match_body<M: Into<Matcher>>(mut self, body: M) -> Self {
         self.inner.body = body.into();
+
+        self
+    }
+
+    ///
+    /// Allows matching the entire request based on a closure that takes
+    /// the [`Request`] object as an argument and returns a boolean value.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use mockito::Matcher;
+    ///
+    /// let mut s = mockito::Server::new();
+    ///
+    /// // This will match requests that have the x-test header set
+    /// // and contain the word "hello" inside the body
+    /// s.mock("GET", "/")
+    ///     .match_request(|request| {
+    ///         request.has_header("x-test") &&
+    ///             request.utf8_lossy_body().unwrap().contains("hello")
+    ///     })
+    ///     .create();
+    /// ```
+    ///
+    pub fn match_request<F>(mut self, request_matcher: F) -> Self
+    where
+        F: Fn(&Request) -> bool + Send + Sync + 'static,
+    {
+        self.inner.request_matcher = request_matcher.into();
 
         self
     }

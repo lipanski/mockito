@@ -41,6 +41,7 @@ impl RemoteMock {
             && self.path_matches(other)
             && self.headers_match(other)
             && self.body_matches(other)
+            && self.request_matches(other)
     }
 
     fn method_matches(&self, request: &Request) -> bool {
@@ -63,6 +64,10 @@ impl RemoteMock {
         let safe_body = &String::from_utf8_lossy(body);
 
         self.inner.body.matches_value(safe_body) || self.inner.body.matches_binary_value(body)
+    }
+
+    fn request_matches(&self, request: &Request) -> bool {
+        self.inner.request_matcher.matches(request)
     }
 
     #[allow(clippy::missing_const_for_fn)]
