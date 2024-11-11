@@ -3,6 +3,7 @@ use http::header::{AsHeaderName, HeaderValue};
 use http::Request as HttpRequest;
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
+use std::borrow::Cow;
 
 ///
 /// Stores a HTTP request
@@ -51,11 +52,17 @@ impl Request {
     }
 
     /// Returns the request body or an error, if the body hasn't been read
-    /// up to this moment.
+    /// yet.
     pub fn body(&self) -> Result<&Vec<u8>, Error> {
         self.body
             .as_ref()
             .ok_or_else(|| Error::new(ErrorKind::RequestBodyFailure))
+    }
+
+    /// Returns the request body as UTF8 or an error, if the body hasn't
+    /// been read yet.
+    pub fn utf8_lossy_body(&self) -> Result<Cow<'_, str>, Error> {
+        self.body().map(|body| String::from_utf8_lossy(body))
     }
 
     /// Reads the body (if it hasn't been read already) and returns it

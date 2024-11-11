@@ -1880,6 +1880,69 @@ fn test_anyof_exact_path_and_query_matcher() {
 }
 
 #[test]
+fn test_request_matcher_path() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    let m = s
+        .mock("GET", Matcher::Any)
+        .match_request(|req| req.path().contains("hello"))
+        .with_body("world")
+        .create();
+
+    let (status_line, _, _) = request(&host, "GET /", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+
+    let (status_line, _, body) = request(host, "GET /hello", "");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+    assert_eq!("world", body);
+
+    m.assert();
+}
+
+#[test]
+fn test_request_matcher_headers() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    let m = s
+        .mock("GET", "/")
+        .match_request(|req| req.has_header("x-test"))
+        .with_body("world")
+        .create();
+
+    let (status_line, _, _) = request(&host, "GET /", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+
+    let (status_line, _, body) = request(host, "GET /", "x-test: 1\r\n");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+    assert_eq!("world", body);
+
+    m.assert();
+}
+
+#[test]
+fn test_request_matcher_body() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    let m = s
+        .mock("GET", "/")
+        .match_request(|req| {
+            let body = req.utf8_lossy_body().unwrap();
+            body.contains("hello")
+        })
+        .with_body("world")
+        .create();
+
+    let (status_line, _, _) = request_with_body(&host, "GET /", "", "bye");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status_line);
+
+    let (status_line, _, body) = request_with_body(host, "GET /", "", "hello");
+    assert_eq!("HTTP/1.1 200 OK\r\n", status_line);
+    assert_eq!("world", body);
+
+    m.assert();
+}
+
+#[test]
 fn test_default_headers() {
     let mut s = Server::new();
     let host = s.host_with_port();

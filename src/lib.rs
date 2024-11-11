@@ -472,6 +472,30 @@
 //!     .create();
 //! ```
 //!
+//! # Custom matchers
+//!
+//! If you need a more custom matcher, you can use the [`Mock::match_request`] function, which
+//! takes a closure and exposes the [`Request`] object as an argument. The closure should return
+//! a boolean value.
+//!
+//! ## Example
+//!
+//! ```
+//! use mockito::Matcher;
+//!
+//! let mut s = mockito::Server::new();
+//!
+//! // This will match requests that have the x-test header set
+//! // and contain the word "hello" inside the body
+//! s.mock("GET", "/")
+//!     .match_request(|request| {
+//!         request.has_header("x-test") &&
+//!             request.utf8_lossy_body().unwrap().contains("hello")
+//!     })
+//!     .create();
+//!
+//! ```
+//!
 //! # Asserts
 //!
 //! You can use the [`Mock::assert`] method to **assert that a mock was called**. In other words,
