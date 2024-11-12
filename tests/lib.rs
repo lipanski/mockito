@@ -2239,6 +2239,42 @@ async fn test_match_body_asnyc() {
     assert_eq!(200, response.status());
 }
 
+#[tokio::test]
+async fn test_request_matcher_body_async() {
+    let mut s = Server::new_async().await;
+    let m = s
+        .mock("POST", "/")
+        .match_request(|req| {
+            let body = req.utf8_lossy_body().unwrap();
+            body.contains("hello")
+        })
+        .with_body("world")
+        .create_async()
+        .await;
+
+    let response = reqwest::Client::new()
+        .post(s.url())
+        .version(reqwest::Version::HTTP_11)
+        .body("bye")
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(501, response.status());
+
+    let response = reqwest::Client::new()
+        .post(s.url())
+        .version(reqwest::Version::HTTP_11)
+        .body("hello")
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(200, response.status());
+
+    m.assert_async().await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_join_all_async() {
     let _lock = SERIAL_POOL_TESTS.lock().await;
