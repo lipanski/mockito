@@ -1,6 +1,6 @@
 use crate::mock::InnerMock;
 use crate::request::Request;
-use crate::response::{Body as ResponseBody, ChunkedStream};
+use crate::response::{Body as ResponseBody, ChunkedStream, Header};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use bytes::Bytes;
@@ -559,7 +559,12 @@ fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Bod
     let mut response = Response::builder().status(status);
 
     for (name, value) in mock.inner.response.headers.iter() {
-        response = response.header(name, value);
+        match value {
+            Header::String(value) => response = response.header(name, value),
+            Header::FnWithRequest(header_fn) => {
+                response = response.header(name, header_fn(&request))
+            }
+        }
     }
 
     let body = if request.method() != "HEAD" {

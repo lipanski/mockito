@@ -1,6 +1,6 @@
 use crate::diff;
 use crate::matcher::{Matcher, PathAndQueryMatcher, RequestMatcher};
-use crate::response::{Body, Response};
+use crate::response::{Body, Header, Response};
 use crate::server::RemoteMock;
 use crate::server::State;
 use crate::Request;
@@ -370,8 +370,44 @@ impl Mock {
         self.inner
             .response
             .headers
-            .append(field.into_header_name(), value.to_owned());
+            .append(field.into_header_name(), Header::String(value.to_string()));
 
+        self
+    }
+
+    ///
+    /// Sets the headers of the mock response dynamically while exposing the request object.
+    ///
+    /// You can use this method to provide custom headers for every incoming request.
+    ///
+    /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
+    /// Use `move` closures and `Arc` to share any data.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// let mut s = mockito::Server::new();
+    ///
+    /// let _m = s.mock("GET", mockito::Matcher::Any).with_header_from_request("user", |request| {
+    ///     if request.path() == "/bob" {
+    ///         "bob".into()
+    ///     } else if request.path() == "/alice" {
+    ///         "alice".into()
+    ///     } else {
+    ///         "everyone".into()
+    ///     }
+    /// });
+    /// ```
+    ///
+    pub fn with_header_from_request<T: IntoHeaderName>(
+        mut self,
+        field: T,
+        callback: impl Fn(&Request) -> String + Send + Sync + 'static,
+    ) -> Self {
+        self.inner.response.headers.append(
+            field.into_header_name(),
+            Header::FnWithRequest(Arc::new(move |req| callback(req))),
+        );
         self
     }
 
