@@ -678,6 +678,25 @@ fn test_mock_with_header() {
 }
 
 #[test]
+fn test_mock_with_header_from_request() {
+    let mut s = Server::new();
+    s.mock("GET", Matcher::Any)
+        .with_header_from_request("user", |req| {
+            if req.path() == "/alice" {
+                "alice".into()
+            } else {
+                "everyone".into()
+            }
+        })
+        .create();
+
+    let (_, headers, _) = request(s.host_with_port(), "GET /alice", "");
+    assert!(headers.contains(&"user: alice".to_string()));
+    let (_, headers, _) = request(s.host_with_port(), "GET /anyone-else", "");
+    assert!(headers.contains(&"user: everyone".to_string()));
+}
+
+#[test]
 fn test_mock_with_multiple_headers() {
     let mut s = Server::new();
     s.mock("GET", "/")

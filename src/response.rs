@@ -13,9 +13,39 @@ use tokio::sync::mpsc;
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Response {
     pub status: StatusCode,
-    pub headers: HeaderMap<String>,
+    pub headers: HeaderMap<Header>,
     pub body: Body,
 }
+
+#[derive(Clone)]
+pub(crate) enum Header {
+    String(String),
+    FnWithRequest(Arc<HeaderFnWithRequest>),
+}
+
+impl fmt::Debug for Header {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Header::String(ref s) => s.fmt(f),
+            Header::FnWithRequest(_) => f.write_str("<callback>"),
+        }
+    }
+}
+
+impl PartialEq for Header {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Header::String(ref a), Header::String(ref b)) => a == b,
+            (Header::FnWithRequest(ref a), Header::FnWithRequest(ref b)) => std::ptr::eq(
+                a.as_ref() as *const HeaderFnWithRequest as *const u8,
+                b.as_ref() as *const HeaderFnWithRequest as *const u8,
+            ),
+            _ => false,
+        }
+    }
+}
+
+type HeaderFnWithRequest = dyn Fn(&Request) -> String + Send + Sync;
 
 type BodyFnWithWriter = dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static;
 type BodyFnWithRequest = dyn Fn(&Request) -> Bytes + Send + Sync + 'static;
@@ -57,7 +87,7 @@ impl PartialEq for Body {
 impl Default for Response {
     fn default() -> Self {
         let mut headers = HeaderMap::with_capacity(1);
-        headers.insert("connection", "close".parse().unwrap());
+        headers.insert("connection", Header::String("close".to_string()));
         Self {
             status: StatusCode::OK,
             headers,
