@@ -388,7 +388,7 @@ impl Mock {
     /// ```
     /// let mut s = mockito::Server::new();
     ///
-    /// let _m = s.mock("GET", mockito::Matcher::Any).with_header_from_request("user", |request| {
+    /// let _m = s.mock("GET", mockito::Matcher::Any).with_header_from_request("x-user", |request| {
     ///     if request.path() == "/bob" {
     ///         "bob".into()
     ///     } else if request.path() == "/alice" {

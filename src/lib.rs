@@ -493,7 +493,6 @@
 //!             request.utf8_lossy_body().unwrap().contains("hello")
 //!     })
 //!     .create();
-//!
 //! ```
 //!
 //! # Asserts
@@ -673,7 +672,7 @@
 //!
 //! # Non-matching calls
 //!
-//! Any calls to the Mockito server that are not matched will return *501 Mock Not Found*.
+//! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.
 //!
 //! Note that **mocks are matched in reverse order** - the most recent one wins.
 //!
