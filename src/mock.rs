@@ -9,12 +9,10 @@ use bytes::Bytes;
 use http::{HeaderMap, HeaderName, StatusCode};
 use rand::distr::Alphanumeric;
 use rand::Rng;
-use std::convert::Into;
 use std::fmt;
 use std::io;
 use std::ops::Drop;
 use std::path::Path;
-use std::string::ToString;
 use std::sync::Arc;
 use std::sync::RwLock;
 
