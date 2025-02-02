@@ -7,8 +7,8 @@ use crate::Request;
 use crate::{Error, ErrorKind};
 use bytes::Bytes;
 use http::{HeaderMap, HeaderName, StatusCode};
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::distr::Alphanumeric;
+use rand::Rng;
 use std::convert::Into;
 use std::fmt;
 use std::io;
@@ -153,7 +153,7 @@ impl Mock {
         assert_on_drop: bool,
     ) -> Mock {
         let inner = InnerMock {
-            id: thread_rng()
+            id: rand::rng()
                 .sample_iter(&Alphanumeric)
                 .map(char::from)
                 .take(24)
