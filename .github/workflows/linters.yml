@@ -29,6 +29,15 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Resolve MSRV aware dependencies
+        run: cargo update
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      - uses: actions-rs/toolchain@v1
+        with:
           toolchain: 1.70.0
           profile: minimal
           components: clippy, rustfmt
