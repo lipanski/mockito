@@ -2,7 +2,7 @@
 extern crate serde_json;
 
 use mockito::{Matcher, Server, ServerOpts};
-use rand::distributions::Alphanumeric;
+use rand::distr::Alphanumeric;
 use rand::Rng;
 use std::fmt::Display;
 use std::fs;
@@ -1017,7 +1017,7 @@ fn test_all_of_missing_match_header() {
 #[test]
 fn test_large_utf8_body() {
     let mut s = Server::new();
-    let mock_body: String = rand::thread_rng()
+    let mock_body: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .map(char::from)
         .take(3 * 1024) // Must be larger than the request read buffer
