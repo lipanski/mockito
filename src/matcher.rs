@@ -3,13 +3,11 @@ use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
 use http::header::HeaderValue;
 use regex::Regex;
 use std::collections::HashMap;
-use std::convert::From;
 use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::path::Path;
-use std::string::ToString;
 use std::sync::Arc;
 
 ///
