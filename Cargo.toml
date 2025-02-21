@@ -33,7 +33,7 @@ regex = "1.7"
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 similar = "2.2"
-tokio = { version = "1.25", features = ["net", "parking_lot", "rt", "sync"] }
+tokio = { version = "1.25", features = ["net", "rt", "sync"] }
 
 [dev-dependencies]
 env_logger = "0.8"
@@ -43,5 +43,7 @@ reqwest = { version = "0.12", default-features = false, features = ["http2"] }
 tokio = { version = "1.25", features = ["macros", "rt-multi-thread"] }
 
 [features]
-default = ["color"]
+default = ["color", "parking_lot"]
 color = ["colored"]
+
+parking_lot = ["tokio/parking_lot"]
