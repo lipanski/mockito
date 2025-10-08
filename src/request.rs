@@ -1,5 +1,5 @@
 use crate::{Error, ErrorKind};
-use http::header::{AsHeaderName, HeaderValue};
+use http::header::{AsHeaderName, HeaderMap, HeaderValue};
 use http::Request as HttpRequest;
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
