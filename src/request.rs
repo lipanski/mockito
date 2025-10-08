@@ -51,6 +51,11 @@ impl Request {
         self.inner.headers().contains_key(header_name)
     }
 
+    /// Returns a reference to all HTTP headers associated with the request
+    pub fn headers(&self) -> &HeaderMap<HeaderValue> {
+        self.inner.headers()
+    }
+
     /// Returns the request body or an error, if the body hasn't been read
     /// yet.
     pub fn body(&self) -> Result<&Vec<u8>, Error> {
