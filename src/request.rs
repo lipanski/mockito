@@ -1,5 +1,5 @@
 use crate::{Error, ErrorKind};
-use http::header::{AsHeaderName, HeaderValue};
+use http::header::{AsHeaderName, HeaderMap, HeaderValue};
 use http::Request as HttpRequest;
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
@@ -49,6 +49,11 @@ impl Request {
     /// Checks whether the provided header field exists
     pub fn has_header<T: AsHeaderName>(&self, header_name: T) -> bool {
         self.inner.headers().contains_key(header_name)
+    }
+
+    /// Returns a reference to all HTTP headers associated with the request
+    pub fn headers(&self) -> &HeaderMap<HeaderValue> {
+        self.inner.headers()
     }
 
     /// Returns the request body or an error, if the body hasn't been read
