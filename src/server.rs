@@ -61,9 +61,14 @@ impl RemoteMock {
 
     fn body_matches(&self, request: &mut Request) -> bool {
         let body = request.body().unwrap();
-        let safe_body = &String::from_utf8_lossy(body);
 
-        self.inner.body.matches_value(safe_body) || self.inner.body.matches_binary_value(body)
+        // Try binary match first to avoid UTF-8 conversion overhead
+        if self.inner.body.matches_binary_value(body) {
+            return true;
+        }
+
+        let safe_body = &String::from_utf8_lossy(body);
+        self.inner.body.matches_value(safe_body)
     }
 
     fn request_matches(&self, request: &Request) -> bool {
