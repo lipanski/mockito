@@ -40,7 +40,7 @@ tokio = { version = "1.25", features = ["net", "rt", "sync"] }
 env_logger = "0.8"
 testing_logger = "0.1"
 futures = { version = "0.3", default-features = false, features = ["alloc", "async-await"] }
-reqwest = { version = "0.12", default-features = false, features = ["http2"] }
+reqwest = { version = "0.13", default-features = false, features = ["http2"] }
 tokio = { version = "1.25", features = ["macros", "rt-multi-thread"] }
 
 [features]
