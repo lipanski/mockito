@@ -1,6 +1,6 @@
 use crate::mock::InnerMock;
 use crate::request::Request;
-use crate::response::{Body as ResponseBody, ChunkedStream, Header};
+use crate::response::{Body as ResponseBody, ChunkedStream, Header, ResponseStatusCode};
 use crate::ServerGuard;
 use crate::{Error, ErrorKind, Matcher, Mock};
 use bytes::Bytes;
@@ -561,7 +561,15 @@ async fn handle_request(
 }
 
 fn respond_with_mock(request: Request, mock: &RemoteMock) -> Result<Response<Body>, Error> {
-    let status: StatusCode = mock.inner.response.status;
+    let status: StatusCode = match &mock.inner.response.status {
+        ResponseStatusCode::StatusCode(c) => *c,
+        ResponseStatusCode::FnWithRequest(status_code_fn) => {
+            let status = status_code_fn(&request);
+            StatusCode::from_u16(status as u16)
+                .map_err(|_| Error::new_with_context(ErrorKind::InvalidStatusCode, status))
+                .unwrap()
+        }
+    };
     let mut response = Response::builder().status(status);
 
     for (name, value) in mock.inner.response.headers.iter() {

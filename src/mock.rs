@@ -1,6 +1,6 @@
 use crate::diff;
 use crate::matcher::{Matcher, PathAndQueryMatcher, RequestMatcher};
-use crate::response::{Body, Header, Response};
+use crate::response::{Body, Header, Response, ResponseStatusCode};
 use crate::server::RemoteMock;
 use crate::server::State;
 use crate::Request;
@@ -346,10 +346,45 @@ impl Mock {
     ///
     #[track_caller]
     pub fn with_status(mut self, status: usize) -> Self {
-        self.inner.response.status = StatusCode::from_u16(status as u16)
-            .map_err(|_| Error::new_with_context(ErrorKind::InvalidStatusCode, status))
-            .unwrap();
+        self.inner.response.status = ResponseStatusCode::StatusCode(
+            StatusCode::from_u16(status as u16)
+                .map_err(|_| Error::new_with_context(ErrorKind::InvalidStatusCode, status))
+                .unwrap(),
+        );
+        self
+    }
 
+    ///
+    /// Sets the status code of the mock response dynamically while exposing the request object.
+    ///
+    /// You can use this method to provide custom status code for every incoming request.
+    ///
+    /// The function must be thread-safe. If it's a closure, it can't be borrowing its context.
+    /// Use `move` closures and `Arc` to share any data.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// let mut s = mockito::Server::new();
+    ///
+    /// let _m = s.mock("GET", mockito::Matcher::Any).with_status_code_from_request(|request| {
+    ///     if request.path() == "/bob" {
+    ///         500
+    ///     } else if request.path() == "/alice" {
+    ///         400
+    ///     } else {
+    ///         404
+    ///     }
+    /// });
+    /// ```
+    ///
+    #[track_caller]
+    pub fn with_status_code_from_request(
+        mut self,
+        callback: impl Fn(&Request) -> usize + Send + Sync + 'static,
+    ) -> Self {
+        self.inner.response.status =
+            ResponseStatusCode::FnWithRequest(Arc::new(move |req| callback(req)));
         self
     }
 
