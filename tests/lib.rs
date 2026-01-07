@@ -588,6 +588,20 @@ fn test_mock_with_custom_status() {
 }
 
 #[test]
+fn test_mock_with_status_code_from_request() {
+    let mut s = Server::new();
+    s.mock("GET", Matcher::Any)
+        .with_status_code_from_request(|request| if request.path() == "/world" { 500 } else { 404 })
+        .create();
+
+    let (status_line, _, _) = request(s.host_with_port(), "GET /world", "");
+    assert_eq!("HTTP/1.1 500 Internal Server Error\r\n", status_line);
+
+    let (status_line, _, _) = request(s.host_with_port(), "GET /", "");
+    assert_eq!("HTTP/1.1 404 Not Found\r\n", status_line);
+}
+
+#[test]
 fn test_mock_with_body() {
     let mut s = Server::new();
     s.mock("GET", "/").with_body("hello").create();

@@ -12,9 +12,42 @@ use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Response {
-    pub status: StatusCode,
+    pub status: ResponseStatusCode,
     pub headers: HeaderMap<Header>,
     pub body: Body,
+}
+
+#[derive(Clone)]
+pub(crate) enum ResponseStatusCode {
+    StatusCode(StatusCode),
+    FnWithRequest(Arc<StatusCodeFnWithRequest>),
+}
+
+impl fmt::Debug for ResponseStatusCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            ResponseStatusCode::StatusCode(ref s) => s.fmt(f),
+            ResponseStatusCode::FnWithRequest(_) => f.write_str("<callback>"),
+        }
+    }
+}
+
+impl PartialEq for ResponseStatusCode {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (ResponseStatusCode::StatusCode(ref a), ResponseStatusCode::StatusCode(ref b)) => {
+                a == b
+            }
+            (
+                ResponseStatusCode::FnWithRequest(ref a),
+                ResponseStatusCode::FnWithRequest(ref b),
+            ) => std::ptr::eq(
+                a.as_ref() as *const StatusCodeFnWithRequest as *const u8,
+                b.as_ref() as *const StatusCodeFnWithRequest as *const u8,
+            ),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -45,6 +78,7 @@ impl PartialEq for Header {
     }
 }
 
+type StatusCodeFnWithRequest = dyn Fn(&Request) -> usize + Send + Sync;
 type HeaderFnWithRequest = dyn Fn(&Request) -> String + Send + Sync;
 
 type BodyFnWithWriter = dyn Fn(&mut dyn io::Write) -> io::Result<()> + Send + Sync + 'static;
@@ -89,7 +123,7 @@ impl Default for Response {
         let mut headers = HeaderMap::with_capacity(1);
         headers.insert("connection", Header::String("close".to_string()));
         Self {
-            status: StatusCode::OK,
+            status: ResponseStatusCode::StatusCode(StatusCode::OK),
             headers,
             body: Body::Bytes(Bytes::new()),
         }
