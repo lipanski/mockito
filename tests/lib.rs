@@ -1651,6 +1651,9 @@ fn test_multiple_matched_mocks_apply_in_order() {
 
     let (_, _, body) = request(&host, "GET /hello", "");
     assert_eq!("bye", body);
+
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("bye", body, "Last mock keeps matching");
 }
 
 #[test]
@@ -1672,6 +1675,10 @@ fn test_multiple_matched_mocks_with_expect_apply_in_order() {
 
     let (_, _, body) = request(&host, "GET /hello", "");
     assert_eq!("bye", body);
+
+    // TODO: This is a bug, expect_at_most and expect shouldn't match beyond this point
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("bye", body, "Last mock keeps matching");
 }
 
 #[test]
