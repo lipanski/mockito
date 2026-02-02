@@ -674,7 +674,7 @@
 //!
 //! Any calls to the Mockito server that are not matched will return *501 Not Implemented*.
 //!
-//! Note that **mocks are matched in reverse order** - the most recent one wins.
+//! Note that **mocks are matched in the order they are defined**.
 //!
 //! # Cleaning up
 //!
