@@ -1640,6 +1640,41 @@ fn test_assert_with_last_unmatched_request_and_body() {
 }
 
 #[test]
+fn test_multiple_matched_mocks_apply_in_order() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    let _m1 = s.mock("GET", "/hello").with_body("hello").create();
+    let _m2 = s.mock("GET", "/hello").with_body("bye").create();
+
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("hello", body);
+
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("bye", body);
+}
+
+#[test]
+fn test_multiple_matched_mocks_with_expect_apply_in_order() {
+    let mut s = Server::new();
+    let host = s.host_with_port();
+    let _m1 = s
+        .mock("GET", "/hello")
+        .with_body("hello")
+        .expect(1)
+        .create();
+    let _m2 = s.mock("GET", "/hello").with_body("bye").expect(2).create();
+
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("hello", body);
+
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("bye", body);
+
+    let (_, _, body) = request(&host, "GET /hello", "");
+    assert_eq!("bye", body);
+}
+
+#[test]
 fn test_request_from_thread() {
     let mut s = Server::new();
     let host = s.host_with_port();
