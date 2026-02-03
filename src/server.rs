@@ -86,6 +86,12 @@ impl RemoteMock {
             (None, None) => self.inner.hits < 1,
         }
     }
+
+    fn has_exceeded_max_hits(&self) -> bool {
+        self.inner
+            .expected_hits_at_most
+            .map_or(false, |at_most| self.inner.hits >= at_most)
+    }
 }
 
 #[derive(Debug)]
@@ -546,7 +552,18 @@ async fn handle_request(
 
     let mock = match maybe_missing_hits {
         Some(m) => Some(m),
-        None => matching_mocks.last_mut(),
+        None => {
+            // Find last mock that has not exceeded its max
+            let non_exceeded_pos = matching_mocks
+                .iter()
+                .rposition(|m| !m.has_exceeded_max_hits());
+            match non_exceeded_pos {
+                Some(pos) => Some(&mut matching_mocks[pos]),
+                // All exceeded: only match if single mock (for assert() to detect violations)
+                None if matching_mocks.len() == 1 => matching_mocks.last_mut(),
+                None => None,
+            }
+        }
     };
 
     if let Some(mock) = mock {
