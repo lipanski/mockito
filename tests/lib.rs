@@ -1679,6 +1679,11 @@ fn test_multiple_matched_mocks_with_expect_apply_in_order() {
     // TODO: This is a bug, expect_at_most and expect shouldn't match beyond this point
     let (_, _, body) = request(&host, "GET /hello", "");
     assert_eq!("bye", body, "Last mock keeps matching");
+
+    // After all mocks have reached their expected hit counts, requests should return 501
+    let (status, _headers, body) = request(&host, "GET /hello", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
+    assert_eq!("", body);
 }
 
 #[test]
