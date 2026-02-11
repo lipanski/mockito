@@ -3,14 +3,14 @@
   <p align="center">
     <a href="https://docs.rs/mockito"><img src="https://docs.rs/mockito/badge.svg"></a>
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/v/mockito.svg"></a>
-    <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.70.0-orange">
+    <img src="https://img.shields.io/badge/rust%20version-%3E%3D1.85.0-orange">
     <a href="https://crates.io/crates/mockito"><img src="https://img.shields.io/crates/d/mockito"></a>
     <a href="https://github.com/lipanski/mockito/actions/workflows/tests.yml/?branch=master"><img src="https://github.com/lipanski/mockito/actions/workflows/tests.yml/badge.svg?branch=master"></a>
   </p>
   <p align="center"><em>HTTP mocking for Rust!</em></p>
 </p>
 
-Mockito is a library for **generating and delivering HTTP mocks** in Rust. You can use it for integration testing 
+Mockito is a library for **generating and delivering HTTP mocks** in Rust. You can use it for integration testing
 or offline work. Mockito runs a local pool of HTTP servers which create, deliver and remove the mocks.
 
 ## Features
@@ -24,7 +24,6 @@ or offline work. Mockito runs a local pool of HTTP servers which create, deliver
 - Prints out a colored diff of the last unmatched request in case of errors
 - Simple, intuitive API
 - An awesome logo
-
 
 The full documentation is available at <https://docs.rs/mockito>.
 
@@ -139,7 +138,7 @@ fn main() {
 
 ## Minimum supported Rust toolchain
 
-The current minimum support Rust toolchain is **1.70.0**
+The current minimum support Rust toolchain is **1.85.0**
 
 ## Contribution Guidelines
 
@@ -161,7 +160,7 @@ cargo test
 ...or run tests using a different toolchain:
 
 ```sh
-rustup run --install 1.70.0 cargo test
+rustup run --install 1.85.0 cargo test
 ```
 
 ...or run tests while disabling the default features (e.g. the colors):
