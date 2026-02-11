@@ -3,7 +3,7 @@ extern crate serde_json;
 
 use mockito::{Matcher, Server, ServerOpts};
 use rand::distr::Alphanumeric;
-use rand::Rng;
+use rand::RngExt;
 use std::fmt::Display;
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};

@@ -8,7 +8,7 @@ use crate::{Error, ErrorKind};
 use bytes::Bytes;
 use http::{HeaderMap, HeaderName, StatusCode};
 use rand::distr::Alphanumeric;
-use rand::Rng;
+use rand::RngExt;
 use std::fmt;
 use std::io;
 use std::ops::Drop;
