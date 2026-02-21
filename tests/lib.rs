@@ -1676,9 +1676,9 @@ fn test_multiple_matched_mocks_with_expect_apply_in_order() {
     let (_, _, body) = request(&host, "GET /hello", "");
     assert_eq!("bye", body);
 
-    // TODO: This is a bug, expect_at_most and expect shouldn't match beyond this point
-    let (_, _, body) = request(&host, "GET /hello", "");
-    assert_eq!("bye", body, "Last mock keeps matching");
+    // After both mocks have reached their expected hits, should return 501
+    let (status, _, _) = request(&host, "GET /hello", "");
+    assert_eq!("HTTP/1.1 501 Not Implemented\r\n", status);
 }
 
 #[test]
