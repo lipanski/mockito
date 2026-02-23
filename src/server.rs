@@ -86,6 +86,12 @@ impl RemoteMock {
             (None, None) => self.inner.hits < 1,
         }
     }
+
+    fn has_reached_max_hits(&self) -> bool {
+        self.inner
+            .expected_hits_at_most
+            .is_some_and(|at_most| self.inner.hits >= at_most)
+    }
 }
 
 #[derive(Debug)]
@@ -546,7 +552,9 @@ async fn handle_request(
 
     let mock = match maybe_missing_hits {
         Some(m) => Some(m),
-        None => matching_mocks.last_mut(),
+        None => matching_mocks
+            .iter_mut()
+            .rfind(|m| !m.has_reached_max_hits()),
     };
 
     if let Some(mock) = mock {
@@ -555,6 +563,10 @@ async fn handle_request(
         respond_with_mock(request, mock)
     } else {
         log::debug!("Mock not found");
+        if let Some(last_matching) = matching_mocks.last_mut() {
+            log::debug!("Mock exceeded max hits");
+            last_matching.inner.hits += 1;
+        }
         state.unmatched_requests.push(request);
         respond_with_mock_not_found()
     }
